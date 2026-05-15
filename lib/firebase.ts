@@ -199,8 +199,15 @@ export async function addMessageToRequest(requestId: string, message: Omit<ChatM
 export function listenToSupportRequests(callback: (requests: SupportRequest[]) => void): () => void {
   const requestsRef = ref(db, 'support-requests');
   const unsubscribe = onValue(requestsRef, (snapshot) => {
-    const data = snapshot.val();
-    callback(data ? Object.values(data) : []);
+    const raw = snapshot.val();
+    if (!raw) { callback([]); return; }
+    const requests: SupportRequest[] = Object.values(raw);
+    requests.forEach(r => {
+      if (r.messages && !Array.isArray(r.messages)) {
+        r.messages = Object.values(r.messages);
+      }
+    });
+    callback(requests);
   });
   return unsubscribe;
 }
@@ -208,7 +215,13 @@ export function listenToSupportRequests(callback: (requests: SupportRequest[]) =
 export function listenToSupportRequest(requestId: string, callback: (request: SupportRequest | null) => void): () => void {
   const requestRef = ref(db, `support-requests/${requestId}`);
   const unsubscribe = onValue(requestRef, (snapshot) => {
-    callback(snapshot.val());
+    const data = snapshot.val();
+    if (data) {
+      if (data.messages && !Array.isArray(data.messages)) {
+        data.messages = Object.values(data.messages);
+      }
+    }
+    callback(data);
   });
   return unsubscribe;
 }
