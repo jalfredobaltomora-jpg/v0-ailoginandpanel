@@ -122,7 +122,7 @@ export default function ITManagerPage() {
       )}
 
       {view === 'support' && (
-        <Card className="mx-auto max-w-4xl border-primary/20 bg-card/95">
+        <Card className="mx-auto max-w-6xl border-primary/20 bg-card/95">
           <CardHeader>
             <CardTitle className="text-primary">Solicitudes de Soporte</CardTitle>
           </CardHeader>
