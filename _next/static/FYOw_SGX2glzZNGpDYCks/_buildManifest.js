@@ -1,7 +1,12 @@
 self.__BUILD_MANIFEST = {
   "__rewrites": {
     "afterFiles": [],
-    "beforeFiles": [],
+    "beforeFiles": [
+      {
+        "source": "/v0-ailoginandpanel//_next/:path+",
+        "destination": "/v0-ailoginandpanel/_next/:path+"
+      }
+    ],
     "fallback": []
   },
   "sortedPages": [
