@@ -2,7 +2,6 @@
 const nextConfig = {
 	output: 'export',
   basePath: '/v0-ailoginandpanel',
-  assetPrefix: '/v0-ailoginandpanel/',
   trailingSlash: true,
   typescript: {
     ignoreBuildErrors: true,
