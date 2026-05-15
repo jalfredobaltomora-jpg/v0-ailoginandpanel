@@ -19,6 +19,53 @@ interface AIValidation {
   suggestion: string;
 }
 
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function similarity(a: string, b: string): number {
+  const dist = levenshtein(a.toLowerCase(), b.toLowerCase());
+  const maxLen = Math.max(a.length, b.length);
+  return maxLen === 0 ? 100 : Math.round((1 - dist / maxLen) * 100);
+}
+
+function validateUsernameLocal(value: string, allUsers: { username: string }[]): AIValidation {
+  const input = value.toLowerCase().trim();
+  const usernames = allUsers.map(u => u.username);
+
+  if (input.length < 3) {
+    return { match: 'none', matchedUser: null, similarity: 0, suggestion: 'IA: Por favor ingrese al menos 3 caracteres.' };
+  }
+
+  const exact = usernames.find(u => u.toLowerCase() === input);
+  if (exact) {
+    return { match: 'exact', matchedUser: exact, similarity: 100, suggestion: 'IA: Usuario reconocido. Por favor ingrese su PIN.' };
+  }
+
+  const scored = usernames
+    .map(u => ({ username: u, score: similarity(input, u) }))
+    .filter(s => s.score >= 40)
+    .sort((a, b) => b.score - a.score);
+
+  if (scored.length > 0 && scored[0].score >= 70) {
+    const best = scored[0];
+    return { match: 'similar', matchedUser: best.username, similarity: best.score, suggestion: `IA: Quizas quiso decir "${best.username}"? (${best.score}% de coincidencia)` };
+  }
+
+  return { match: 'none', matchedUser: null, similarity: 0, suggestion: 'IA: Usuario no encontrado en el sistema.' };
+}
+
 export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) {
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
@@ -40,7 +87,7 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
     loadUsers();
   }, []);
 
-  const validateUsername = async (value: string) => {
+  const handleValidateUsername = (value: string) => {
     setUsername(value);
     setShowSupportBtn(false);
     setSimilarUser(null);
@@ -53,38 +100,25 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
     setIsValidating(true);
     setAiMessage('IA: Analizando...');
 
-    try {
-      const response = await fetch('/api/ai/validate-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: value,
-          allUsers: allUsers.filter(u => u.activo).map(u => ({ username: u.username })),
-        }),
-      });
+    const result = validateUsernameLocal(value, allUsers.filter(u => u.activo).map(u => ({ username: u.username })));
 
-      const result: AIValidation = await response.json();
-
-      if (result.match === 'exact') {
-        const user = allUsers.find(u => u.username.toLowerCase() === result.matchedUser?.toLowerCase());
-        if (user) {
-          setMatchedUser(user);
-          setStep('pin');
-          setAiMessage('IA: Usuario reconocido. Por favor ingrese su PIN.');
-        }
-      } else if (result.match === 'similar') {
-        setSimilarUser(result.matchedUser);
-        setShowSupportBtn(true);
-        setAiMessage(`IA: ${result.suggestion}`);
-      } else {
-        setAiMessage('IA: Usuario no encontrado en el sistema.');
-        setShowSupportBtn(true);
+    if (result.match === 'exact') {
+      const user = allUsers.find(u => u.username.toLowerCase() === result.matchedUser?.toLowerCase());
+      if (user) {
+        setMatchedUser(user);
+        setStep('pin');
+        setAiMessage('IA: Usuario reconocido. Por favor ingrese su PIN.');
       }
-    } catch {
-      setAiMessage('IA: Error de validación. Intente de nuevo.');
-    } finally {
-      setIsValidating(false);
+    } else if (result.match === 'similar') {
+      setSimilarUser(result.matchedUser);
+      setShowSupportBtn(true);
+      setAiMessage(result.suggestion);
+    } else {
+      setAiMessage('IA: Usuario no encontrado en el sistema.');
+      setShowSupportBtn(true);
     }
+
+    setIsValidating(false);
   };
 
   const validatePIN = async (value: string) => {
@@ -154,7 +188,7 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
               type="text"
               placeholder="Usuario"
               value={username}
-              onChange={(e) => validateUsername(e.target.value)}
+              onChange={(e) => handleValidateUsername(e.target.value)}
               className="border-border bg-input text-foreground placeholder:text-muted-foreground focus:border-primary"
             />
           )}
