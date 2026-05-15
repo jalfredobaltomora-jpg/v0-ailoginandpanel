@@ -8,7 +8,11 @@ import { Button } from '@/components/ui/button';
 import {
   listenToSupportRequest,
   addMessageToRequest,
+  getUsuarioByUsername,
+  getEmpleadoByCodigo,
   type SupportRequest,
+  type UsuarioIT,
+  type Empleado,
 } from '@/lib/firebase';
 
 interface SupportChatProps {
@@ -23,36 +27,26 @@ interface AiMessage {
   content: string;
 }
 
+type AiContext = 'greeting' | 'awaiting_intent' | 'awaiting_confirmation' | 'done';
+
 const aiResponses: { pattern: RegExp; reply: string }[] = [
   { pattern: /(hola|buenas|buen[ao]s|saludos)/i, reply: 'Hola! Soy el asistente virtual de IT. En que puedo ayudarte hoy?' },
   { pattern: /(ayuda|soporte|asistencia|problema)/i, reply: 'Claro, estoy aqui para ayudarte. Puedes consultarme sobre:\n- Problemas de acceso\n- Restablecimiento de credenciales\n- Dudas sobre el sistema\n\nDescribe tu situacion y te orientare.' },
-  { pattern: /(usuario|username|acceder|login|ingresar)/i, reply: 'Si tienes problemas para acceder, puedo ayudarte con la verificacion de identidad. Necesitare hacerte algunas preguntas de seguridad para confirmar quien eres. Estas de acuerdo?' },
-  { pattern: /(pin|clave|contraseña|password|credencial)/i, reply: 'Para restablecer tu PIN, primero necesito verificar tu identidad. Por favor proporciona:\n1. Tus nombres completos\n2. Tu numero de cedula\n3. El area donde trabajas' },
   { pattern: /(gracias|ok|vale|perfecto|excelente)/i, reply: 'De nada! Si necesitas ayuda adicional, no dudes en escribirme. Si el problema persiste, un tecnico de IT se comunicara contigo pronto.' },
   { pattern: /(cedula|cedula|\d{3}-\d{6}-\d{4}[A-Z]?)/i, reply: 'Gracias. Ahora, para confirmar tu identidad, podrias decirme cual es tu area de trabajo y tu cargo actual?' },
   { pattern: /(tecnico|humano|persona|agente|escalar)/i, reply: 'Entiendo. Voy a escalar tu caso a un tecnico de IT humano. Ellos revisaran tu solicitud y te atenderan a la brevedad. Mientras tanto, quedate atento a este chat.' },
+  { pattern: /(no puedo|no funciona|error|falla|bug)/i, reply: 'Lamento escuchar eso. Describe el error exacto que ves en pantalla y desde cuando ocurre para poder ayudarte mejor.' },
+  { pattern: /(acceso|permiso|bloqueado|restringido)/i, reply: 'Parece que tienes un problema de permisos. Puedo ayudarte con tus credenciales de acceso. Que necesitas exactamente, tu usuario o tu contraseña?' },
+  { pattern: /(fecha|cumpleaños|feliz|birthday)/i, reply: 'Si necesitas informacion sobre fechas especiales o cumpleaños, puedes consultarlo en el modulo de RRHH del panel.' },
+  { pattern: /(foto|fotografia|imagen|subir)/i, reply: 'Para subir o actualizar tu foto de perfil, ve a RRHH > Catalogo, busca tu registro y haz doble clic. Ahi podras cambiar tu foto.' },
 ];
 
-function generateReply(message: string): string {
+function getGenericReply(message: string): string | null {
   const lower = message.toLowerCase().trim();
-
   for (const { pattern, reply } of aiResponses) {
     if (pattern.test(lower)) return reply;
   }
-
-  const keywords = [
-    { words: ['no puedo', 'no funciona', 'error', 'falla', 'bug'], reply: 'Lamento escuchar eso. Describe el error exacto que ves en pantalla y desde cuando ocurre para poder ayudarte mejor.' },
-    { words: ['acceso', 'permiso', 'bloqueado', 'restringido'], reply: 'Parece que tienes un problema de permisos. Puedo verificarlo si me confirmas tu nombre de usuario y area de trabajo.' },
-    { words: ['olvide', 'olvido', 'recuperar', 'perdi', 'perdida'], reply: 'No te preocupes, es algo comun. Voy a iniciar el proceso de verificacion de identidad para restablecer tus credenciales.' },
-    { words: ['fecha', 'cumpleaños', 'feliz', 'birthday'], reply: 'Si necesitas informacion sobre fechas especiales o cumpleaños, puedes consultarlo en el modulo de RRHH del panel.' },
-    { words: ['foto', 'fotografia', 'imagen', 'subir'], reply: 'Para subir o actualizar tu foto de perfil, ve a RRHH > Catalogo, busca tu registro y haz doble clic. Ahi podras cambiar tu foto.' },
-  ];
-
-  for (const { words, reply } of keywords) {
-    if (words.some(w => lower.includes(w))) return reply;
-  }
-
-  return 'Gracias por tu mensaje. He registrado tu consulta. Si necesitas ayuda con algo especifico, por favor indicamelo con mas detalle y con gusto te asistire.';
+  return null;
 }
 
 export function SupportChat({ requestId, username, onClose }: SupportChatProps) {
@@ -60,7 +54,11 @@ export function SupportChat({ requestId, username, onClose }: SupportChatProps) 
   const [inputValue, setInputValue] = useState('');
   const [aiMessages, setAiMessages] = useState<AiMessage[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
+  const [userData, setUserData] = useState<UsuarioIT | null>(null);
+  const [empleadoData, setEmpleadoData] = useState<Empleado | null>(null);
+  const [context, setContext] = useState<AiContext>('greeting');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const userDataLoaded = useRef(false);
 
   useEffect(() => {
     const unsubscribe = listenToSupportRequest(requestId, setRequest);
@@ -68,8 +66,40 @@ export function SupportChat({ requestId, username, onClose }: SupportChatProps) 
   }, [requestId]);
 
   useEffect(() => {
+    if (request?.status === 'ai-active' && !userDataLoaded.current) {
+      userDataLoaded.current = true;
+      getUsuarioByUsername(username).then(async (u) => {
+        if (u) {
+          setUserData(u);
+          const emp = await getEmpleadoByCodigo(u.codigo);
+          setEmpleadoData(emp);
+        }
+      });
+    }
+  }, [request?.status, username]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [request?.messages, aiMessages]);
+
+  const wantsPassword = useCallback((msg: string): boolean => {
+    const lower = msg.toLowerCase();
+    return /(pin|clave|contraseña|password|credencial|pass|pwd)/i.test(lower)
+      && !/(usuario|username|user|id|identidad)/i.test(lower);
+  }, []);
+
+  const wantsUsername = useCallback((msg: string): boolean => {
+    const lower = msg.toLowerCase();
+    return /(usuario|username|user|id|identidad|mi nombre)/i.test(lower)
+      && !/(clave|contraseña|password|pin|pass|pwd)/i.test(lower);
+  }, []);
+
+  const wantsBoth = useCallback((msg: string): boolean => {
+    const lower = msg.toLowerCase();
+    const hasCred = /(pin|clave|contraseña|password|pass|pwd)/i.test(lower);
+    const hasUser = /(usuario|username|user|id|identidad)/i.test(lower);
+    return hasCred && hasUser;
+  }, []);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
@@ -82,10 +112,64 @@ export function SupportChat({ requestId, username, onClose }: SupportChatProps) 
       setAiMessages(prev => [...prev, userMsg]);
       setAiLoading(true);
 
-      // Simulate slight delay for realism
       await new Promise(r => setTimeout(r, 600));
 
-      const reply = generateReply(message);
+      let reply: string;
+
+      if (wantsBoth(message)) {
+        reply = 'Por seguridad, solo puedo revelar un dato a la vez. Necesitas tu usuario o tu contraseña?';
+        setContext('awaiting_intent');
+      } else if (wantsUsername(message)) {
+        if (userData) {
+          const name = empleadoData ? `${empleadoData.nombres} ${empleadoData.apellidos}` : '';
+          reply = `Claro ${name ? name + ', ' : ''}tu usuario es: "${userData.username}"\n\nNecesitas tambien tu contraseña o algo mas?`;
+          setContext('done');
+        } else {
+          reply = 'Estoy verificando tus datos. Un momento por favor...';
+          setContext('awaiting_confirmation');
+        }
+      } else if (wantsPassword(message)) {
+        if (userData) {
+          const name = empleadoData ? `${empleadoData.nombres} ${empleadoData.apellidos}` : '';
+          reply = `Claro ${name ? name + ', ' : ''}tu contraseña (PIN) es: "${userData.pin}"\n\nNecesitas tambien tu usuario o algo mas?`;
+          setContext('done');
+        } else {
+          reply = 'Estoy verificando tus datos. Un momento por favor...';
+          setContext('awaiting_confirmation');
+        }
+      } else if (context === 'awaiting_intent') {
+        if (wantsUsername(message)) {
+          if (userData) {
+            reply = `Tu usuario es: "${userData.username}". Necesitas algo mas?`;
+            setContext('done');
+          } else {
+            reply = 'No pude encontrar tus datos. Un tecnico de IT te ayudara en breve.';
+            setContext('done');
+          }
+        } else if (wantsPassword(message)) {
+          if (userData) {
+            reply = `Tu contraseña (PIN) es: "${userData.pin}". Necesitas algo mas?`;
+            setContext('done');
+          } else {
+            reply = 'No pude encontrar tus datos. Un tecnico de IT te ayudara en breve.';
+            setContext('done');
+          }
+        } else {
+          reply = 'No entendi. Necesitas tu usuario o tu contraseña?';
+        }
+      } else {
+        const generic = getGenericReply(message);
+        if (generic) {
+          reply = generic;
+          if (/usuario|username|acceder|login|ingresar|olvide|olvido|recuperar|perdi|perdida/i.test(message)) {
+            setContext('awaiting_intent');
+          }
+        } else {
+          reply = 'En que puedo ayudarte? Puedo decirte tu usuario o restablecer tu contraseña.';
+          setContext('awaiting_intent');
+        }
+      }
+
       setAiMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: reply }]);
       setAiLoading(false);
     } else {
