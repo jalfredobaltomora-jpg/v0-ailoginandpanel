@@ -1,5 +1,16 @@
-const CACHE = 'jabm-cache-v2';
-const ASSETS = ['/', '/icon.png', '/manifest.json'];
+const CACHE = 'jabm-panel-v2';
+const BASE = '/v0-ailoginandpanel';
+const ASSETS = [
+  BASE + '/',
+  BASE + '/panel/',
+  BASE + '/panel/it-manager/',
+  BASE + '/panel/qa-reports/',
+  BASE + '/panel/rrhh/',
+  BASE + '/manifest.json',
+  BASE + '/icon-192x192.png',
+  BASE + '/icon-512x512.png',
+  BASE + '/icon.svg',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
@@ -31,7 +42,6 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Manejar clic en notificación
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
@@ -39,7 +49,7 @@ self.addEventListener('notificationclick', (event) => {
       if (clientList.length > 0) {
         return clientList[0].focus();
       }
-      return clients.openWindow('/');
+      return clients.openWindow(BASE + '/');
     })
   );
 });
