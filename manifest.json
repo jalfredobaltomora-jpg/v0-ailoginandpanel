@@ -1,0 +1,29 @@
+{
+  "name": "SYSTEM JABM - Control Administrativo",
+  "short_name": "JABM Control",
+  "description": "Sistema de Control Administrativo con IA",
+  "start_url": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait-primary",
+  "background_color": "#0a0f1a",
+  "theme_color": "#1e3a5f",
+  "categories": ["business", "productivity"],
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
