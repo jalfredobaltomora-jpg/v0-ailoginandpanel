@@ -1,7 +1,7 @@
 const CACHE = 'jabm-cache-v1';
 const ASSETS = [
   '/',
-  '/icon.svg',
+  '/icon.png',
   '/manifest.json',
 ];
 
