@@ -1,2 +1,2 @@
 :HL["/v0-ailoginandpanel/_next/static/chunks/0uuv7h9u38xjz.css","style"]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"panel","param":null,"prefetchHints":0,"slots":{"children":{"name":"it-manager","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"S3oVNJ1bSfqdFkCm6oNw_"}
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"panel","param":null,"prefetchHints":0,"slots":{"children":{"name":"it-manager","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"IKFy0xf5IRKZndrpo_Utj"}
