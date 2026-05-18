@@ -1,6 +1,6 @@
 {
-  "name": "SYSTEM JABM - Control Administrativo",
-  "short_name": "JABM Control",
+  "name": "SCA - JB",
+  "short_name": "SCA - JB",
   "description": "Sistema de Control Administrativo con IA",
   "start_url": "/",
   "display": "standalone",
