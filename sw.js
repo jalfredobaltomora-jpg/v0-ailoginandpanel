@@ -1,14 +1,8 @@
-const CACHE = 'jabm-cache-v1';
-const ASSETS = [
-  '/',
-  '/icon.png',
-  '/manifest.json',
-];
+const CACHE = 'jabm-cache-v2';
+const ASSETS = ['/', '/icon.png', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS))
-  );
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
   self.skipWaiting();
 });
 
@@ -23,17 +17,29 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request).then((response) => {
-        if (response && response.status === 200) {
-          const clone = response.clone();
+      const fetched = fetch(event.request).then((res) => {
+        if (res && res.status === 200) {
+          const clone = res.clone();
           caches.open(CACHE).then((cache) => cache.put(event.request, clone));
         }
-        return response;
+        return res;
       }).catch(() => cached);
-      return cached || fetchPromise;
+      return cached || fetched;
+    })
+  );
+});
+
+// Manejar clic en notificación
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      if (clientList.length > 0) {
+        return clientList[0].focus();
+      }
+      return clients.openWindow('/');
     })
   );
 });
