@@ -111,6 +111,7 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
   const [title, setTitle] = useState('¡Feliz Cumpleanos!');
   const [isEditing, setIsEditing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -152,13 +153,19 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
 
   const handleDownload = async () => {
     if (!cardRef.current) return;
+    setDownloading(true);
     try {
       const html2canvas = (await import('html2canvas')).default;
       const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
+        scale: 3,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: null,
+        backgroundColor: '#ffffff',
+        onclone: (doc) => {
+          doc.querySelectorAll('[class*="animate-"]').forEach(el => {
+            (el as HTMLElement).style.animationPlayState = 'paused';
+          });
+        },
       });
       const link = document.createElement('a');
       const namePart = `${empleado.nombres}_${empleado.apellidos}`.replace(/\s+/g, '_');
@@ -167,6 +174,9 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
       link.click();
     } catch (err) {
       console.error('Error downloading card:', err);
+      alert('Error al descargar la tarjeta. Intenta con la opcion Imprimir.');
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -455,10 +465,15 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
               <div className="space-y-2 pt-2 border-t border-border">
                 <Button
                   onClick={handleDownload}
+                  disabled={downloading}
                   className="w-full bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white h-10"
                 >
-                  <Download className="mr-2 h-4 w-4" />
-                  Descargar PNG
+                  {downloading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
+                  {downloading ? 'Generando...' : 'Descargar PNG'}
                 </Button>
                 <Button
                   onClick={handlePrint}
