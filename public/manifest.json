@@ -1,0 +1,29 @@
+{
+  "name": "SCA - JB",
+  "short_name": "SCA - JB",
+  "description": "Sistema de Control Administrativo con IA",
+  "start_url": "/v0-ailoginandpanel/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#39474e",
+  "theme_color": "#39474e",
+  "categories": ["business", "productivity"],
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/v0-ailoginandpanel/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/v0-ailoginandpanel/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
