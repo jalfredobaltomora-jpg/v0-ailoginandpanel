@@ -9,7 +9,6 @@ node_modules
 .env*.local
 .DS_Store
 out/
-pnpm-workspace.yaml
 next
 npm
 JB - SCA.png

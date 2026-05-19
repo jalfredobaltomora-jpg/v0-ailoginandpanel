@@ -1,0 +1,5 @@
+allowBuilds:
+  '@firebase/util': true
+  date-fns: true
+  protobufjs: true
+  sharp: true
