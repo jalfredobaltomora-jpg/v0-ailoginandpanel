@@ -5,7 +5,8 @@ import { Eye, EyeOff, MessageCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { getUsuariosIT, type UsuarioIT } from '@/lib/firebase';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { getUsuariosIT, getEmpleadoByCodigo, type UsuarioIT, type Empleado } from '@/lib/firebase';
 
 interface LoginCardProps {
   onLoginSuccess: (user: UsuarioIT) => void;
@@ -86,6 +87,7 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
   const [showSupportBtn, setShowSupportBtn] = useState(false);
   const [pinAttempts, setPinAttempts] = useState(0);
   const [allUsers, setAllUsers] = useState<UsuarioIT[]>([]);
+  const [employee, setEmployee] = useState<Empleado | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const usernameRef = useRef('');
 
@@ -96,6 +98,14 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
     }
     loadUsers();
   }, []);
+
+  useEffect(() => {
+    if (matchedUser) {
+      getEmpleadoByCodigo(matchedUser.codigo).then(setEmployee);
+    } else {
+      setEmployee(null);
+    }
+  }, [matchedUser]);
 
   const doValidate = useCallback(() => {
     const value = usernameRef.current;
@@ -181,25 +191,19 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
 
   return (
     <Card className="w-full max-w-lg border-primary/20 bg-card/95 shadow-[0_0_30px_rgba(0,242,255,0.1)] backdrop-blur-xl">
-      <style>{`
-@keyframes rotateJB {
-  0% { transform: perspective(800px) rotateY(-18deg); }
-  50% { transform: perspective(800px) rotateY(18deg); }
-  100% { transform: perspective(800px) rotateY(-18deg); }
-}
-.logo-jb {
-  animation: rotateJB 4s ease-in-out infinite;
-  transform-style: preserve-3d;
-}
-`}</style>
       <CardContent className="flex items-center gap-6 p-8">
-        {/* Logo */}
-        <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-visible rounded-xl border-2 border-border bg-background">
-          <img
-            src="/v0-ailoginandpanel/logo.png"
-            alt="JB"
-            className="logo-jb h-24 w-auto"
-          />
+        {/* Avatar / Employee Photo */}
+        <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-border bg-background">
+          {matchedUser && employee?.foto ? (
+            <Avatar className="h-full w-full rounded-none">
+              <AvatarImage src={employee.foto} alt={matchedUser.username} className="h-full w-full object-cover" />
+              <AvatarFallback className="rounded-none text-2xl font-bold text-primary">
+                {matchedUser.username.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          ) : (
+            <MessageCircle className="h-12 w-12 text-primary" />
+          )}
         </div>
 
         {/* Form Section */}

@@ -200,6 +200,25 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/10 p-4">
+      {/* Rotating JB Logo */}
+      <style>{`
+@keyframes rotateJB {
+  0% { transform: perspective(800px) rotateY(-18deg); }
+  50% { transform: perspective(800px) rotateY(18deg); }
+  100% { transform: perspective(800px) rotateY(-18deg); }
+}
+.logo-jb {
+  animation: rotateJB 4s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+`}</style>
+      <div className="fixed left-4 top-4 z-[60] flex h-16 w-16 items-center justify-center overflow-visible rounded-xl border border-primary/20 bg-background/80 shadow-lg backdrop-blur-sm">
+        <img
+          src="/v0-ailoginandpanel/logo.png"
+          alt="JB"
+          className="logo-jb h-12 w-auto"
+        />
+      </div>
       <div className="w-full max-w-lg">
         {/* Tarjeta principal */}
         <div className="rounded-2xl border border-primary/20 bg-card/95 p-8 shadow-2xl backdrop-blur-sm">

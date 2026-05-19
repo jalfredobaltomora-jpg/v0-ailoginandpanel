@@ -54,6 +54,26 @@ export default function LoginPage() {
         <div className="absolute -bottom-40 -right-40 h-80 w-80 rounded-full bg-primary/5 blur-3xl" />
       </div>
 
+      {/* Rotating JB Logo */}
+      <style>{`
+@keyframes rotateJB {
+  0% { transform: perspective(800px) rotateY(-18deg); }
+  50% { transform: perspective(800px) rotateY(18deg); }
+  100% { transform: perspective(800px) rotateY(-18deg); }
+}
+.logo-jb {
+  animation: rotateJB 4s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+`}</style>
+      <div className="fixed left-4 top-4 z-10 flex h-16 w-16 items-center justify-center overflow-visible rounded-xl border border-primary/20 bg-background/80 shadow-lg backdrop-blur-sm">
+        <img
+          src="/v0-ailoginandpanel/logo.png"
+          alt="JB"
+          className="logo-jb h-12 w-auto"
+        />
+      </div>
+
       {/* Login Card */}
       {!showChat && (
         <LoginCard
