@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Sparkles, ArrowRight, Coffee, LogOut, Clock, Calendar, Baby, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getEmpleadoByCodigo, onValue, ref, db, saveUserSchedule, type Empleado, type UsuarioIT, type UserSchedule } from '@/lib/firebase';
 import {
   getGreeting, getMotivationalPhrase, getDayEndTime, getDayEndAdjusted,
@@ -222,11 +223,20 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
       <div className="w-full max-w-lg">
         {/* Tarjeta principal */}
         <div className="rounded-2xl border border-primary/20 bg-card/95 p-8 shadow-2xl backdrop-blur-sm">
-          {/* IA Avatar */}
+          {/* Employee Photo */}
           <div className="mb-6 flex justify-center">
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/50 shadow-[0_0_40px_rgba(0,150,255,0.3)]">
-              <Sparkles className="h-10 w-10 text-white" />
-            </div>
+            {empleado?.foto ? (
+              <Avatar className="h-24 w-24 ring-2 ring-primary/50 ring-offset-2 ring-offset-background">
+                <AvatarImage src={empleado.foto} alt={`${empleado.nombres} ${empleado.apellidos}`} className="object-cover" />
+                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/50 text-2xl font-bold text-white">
+                  {empleado.nombres?.charAt(0)}{empleado.apellidos?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/50 shadow-[0_0_40px_rgba(0,150,255,0.3)]">
+                <Sparkles className="h-10 w-10 text-white" />
+              </div>
+            )}
           </div>
 
           {loading ? (
