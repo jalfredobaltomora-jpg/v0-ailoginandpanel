@@ -88,6 +88,25 @@ function parseNum(valor: unknown): number {
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const DAYS = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
 
+function getMonthSplit(startDate: string, endDate: string): { year: number; month: number; days: number; factor: number }[] {
+  const start = new Date(startDate + 'T12:00:00');
+  const end = new Date(endDate + 'T12:00:00');
+  const totalDays = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+  const result: { year: number; month: number; days: number; factor: number }[] = [];
+  let d = new Date(start);
+  while (d <= end) {
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1;
+    let days = 0;
+    while (d <= end && d.getMonth() + 1 === month) {
+      days++;
+      d.setDate(d.getDate() + 1);
+    }
+    result.push({ year, month, days, factor: days / totalDays });
+  }
+  return result;
+}
+
 function DateRangePicker({ startDate, endDate, onChange }: { startDate: string; endDate: string; onChange: (s: string, e: string) => void }) {
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
@@ -329,7 +348,8 @@ export function WeeklyIssues() {
     const monday = new Date(s + 'T12:00:00');
     const days = Math.floor((monday.getTime() - jan1.getTime()) / 86400000);
     const weekNumber = Math.ceil((days + jan1.getDay() + 1) / 7);
-    const record = {
+    const monthSplit = getMonthSplit(s, e);
+    const record: any = {
       weekNumber,
       year: startYear,
       month: startMonth,
@@ -340,6 +360,7 @@ export function WeeklyIssues() {
       factories,
       totals,
     };
+    if (monthSplit.length > 1) record._monthSplit = monthSplit;
     const newRef = push(ref(db, 'qa-reports/weekly-registry'));
     await set(newRef, record);
     await loadRecentRecords();

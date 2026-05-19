@@ -76,11 +76,20 @@ export function MonthlyIssues() {
 
       const grouped: Record<string, WeeklyRecord[]> = {};
       records.forEach(r => {
-        const m = getMonthFromDate(r.startDate);
-        const y = getYearFromDate(r.startDate);
-        const key = `${y}-${String(m).padStart(2, '0')}`;
-        if (!grouped[key]) grouped[key] = [];
-        grouped[key].push(r);
+        const split = (r as any)._monthSplit;
+        if (split && split.length > 1) {
+          split.forEach((ms: { year: number; month: number; days: number; factor: number }) => {
+            const key = `${ms.year}-${String(ms.month).padStart(2, '0')}`;
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push({ ...r, _weight: ms.factor });
+          });
+        } else {
+          const m = getMonthFromDate(r.startDate);
+          const y = getYearFromDate(r.startDate);
+          const key = `${y}-${String(m).padStart(2, '0')}`;
+          if (!grouped[key]) grouped[key] = [];
+          grouped[key].push(r);
+        }
       });
 
       const result: MonthGroup[] = Object.entries(grouped)
@@ -97,18 +106,28 @@ export function MonthlyIssues() {
             return `${dd}/${mm}/${d.getFullYear()}`;
           };
           const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+          const round = (n: number) => Math.round(n);
           const factoryMap: Record<string, FactoryRow> = {};
           weeks.forEach(week => {
+            const w = (week as any)._weight || 1;
             (week.factories || []).forEach(f => {
               if (!factoryMap[f.factoryBuyer]) {
-                factoryMap[f.factoryBuyer] = { ...f };
+                factoryMap[f.factoryBuyer] = {
+                  ...f,
+                  totalAudit: round(f.totalAudit * w),
+                  totalFail: round(f.totalFail * w),
+                  measQty: round(f.measQty * w),
+                  measDef: round(f.measDef * w),
+                  visQty: round(f.visQty * w),
+                  visDef: round(f.visDef * w),
+                };
               } else {
-                factoryMap[f.factoryBuyer].totalAudit += f.totalAudit;
-                factoryMap[f.factoryBuyer].totalFail += f.totalFail;
-                factoryMap[f.factoryBuyer].measQty += f.measQty;
-                factoryMap[f.factoryBuyer].measDef += f.measDef;
-                factoryMap[f.factoryBuyer].visQty += f.visQty;
-                factoryMap[f.factoryBuyer].visDef += f.visDef;
+                factoryMap[f.factoryBuyer].totalAudit += round(f.totalAudit * w);
+                factoryMap[f.factoryBuyer].totalFail += round(f.totalFail * w);
+                factoryMap[f.factoryBuyer].measQty += round(f.measQty * w);
+                factoryMap[f.factoryBuyer].measDef += round(f.measDef * w);
+                factoryMap[f.factoryBuyer].visQty += round(f.visQty * w);
+                factoryMap[f.factoryBuyer].visDef += round(f.visDef * w);
               }
             });
           });
@@ -383,7 +402,7 @@ export function MonthlyIssues() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      {group.weeks.map(w => <span key={w.id} className="rounded bg-muted/30 px-2 py-0.5">S{w.weekNumber}</span>)}
+                      {group.weeks.map((w, wi) => <span key={`${w.id}-${wi}`} className="rounded bg-muted/30 px-2 py-0.5">S{w.weekNumber}</span>)}
                     </div>
                   </div>
 
