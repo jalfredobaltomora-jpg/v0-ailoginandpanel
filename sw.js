@@ -1,12 +1,5 @@
-const CACHE = 'jabm-panel-v3';
-const BASE = '/v0-ailoginandpanel';
-const ASSETS = [
-  BASE + '/',
-  BASE + '/manifest.json',
-  BASE + '/icon-192x192.png',
-  BASE + '/icon-512x512.png',
-  BASE + '/icon.svg',
-];
+const CACHE = 'jabm-cache-v2';
+const ASSETS = ['/', '/icon.png', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
@@ -24,35 +17,21 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-
-  if (event.request.mode === 'navigate') {
-    // Network-first for pages — siempre ultima version
-    event.respondWith(
-      fetch(event.request).then((res) => {
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      const fetched = fetch(event.request).then((res) => {
         if (res && res.status === 200) {
           const clone = res.clone();
           caches.open(CACHE).then((cache) => cache.put(event.request, clone));
         }
         return res;
-      }).catch(() => caches.match(event.request))
-    );
-  } else {
-    // Cache-first for assets (JS/CSS/images)
-    event.respondWith(
-      caches.match(event.request).then((cached) => {
-        const fetched = fetch(event.request).then((res) => {
-          if (res && res.status === 200) {
-            const clone = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(event.request, clone));
-          }
-          return res;
-        }).catch(() => cached);
-        return cached || fetched;
-      })
-    );
-  }
+      }).catch(() => cached);
+      return cached || fetched;
+    })
+  );
 });
 
+// Manejar clic en notificación
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
@@ -60,7 +39,7 @@ self.addEventListener('notificationclick', (event) => {
       if (clientList.length > 0) {
         return clientList[0].focus();
       }
-      return clients.openWindow(BASE + '/');
+      return clients.openWindow('/');
     })
   );
 });
