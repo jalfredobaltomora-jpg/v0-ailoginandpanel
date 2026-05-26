@@ -1,9 +1,9 @@
 1:"$Sreact.fragment"
-2:I[99416,["/v0-ailoginandpanel/_next/static/chunks/0udd03z-mn2iz.js","/v0-ailoginandpanel/_next/static/chunks/03ngr2_8jhhtk.js"],"ClientPageRoot"]
-3:I[55383,["/v0-ailoginandpanel/_next/static/chunks/0udd03z-mn2iz.js","/v0-ailoginandpanel/_next/static/chunks/03ngr2_8jhhtk.js","/v0-ailoginandpanel/_next/static/chunks/119r4sm-ce4qz.js","/v0-ailoginandpanel/_next/static/chunks/0way5ztj4pb5o.js","/v0-ailoginandpanel/_next/static/chunks/16wlyre1uj1c_.js","/v0-ailoginandpanel/_next/static/chunks/0udzjgv_6ldpd.js"],"default"]
-6:I[87840,["/v0-ailoginandpanel/_next/static/chunks/0udd03z-mn2iz.js","/v0-ailoginandpanel/_next/static/chunks/03ngr2_8jhhtk.js"],"OutletBoundary"]
+2:I[88285,["/v0-ailoginandpanel/_next/static/chunks/0ao~faj.zgaoe.js","/v0-ailoginandpanel/_next/static/chunks/023vb3rs7rqw-.js"],"ClientPageRoot"]
+3:I[55383,["/v0-ailoginandpanel/_next/static/chunks/0ao~faj.zgaoe.js","/v0-ailoginandpanel/_next/static/chunks/023vb3rs7rqw-.js","/v0-ailoginandpanel/_next/static/chunks/16orhqi6lh3h3.js","/v0-ailoginandpanel/_next/static/chunks/0x1fr-3-efk1..js","/v0-ailoginandpanel/_next/static/chunks/15zr1o8mc-pkv.js","/v0-ailoginandpanel/_next/static/chunks/0itddus92fb_m.js"],"default"]
+6:I[42910,["/v0-ailoginandpanel/_next/static/chunks/0ao~faj.zgaoe.js","/v0-ailoginandpanel/_next/static/chunks/023vb3rs7rqw-.js"],"OutletBoundary"]
 7:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/v0-ailoginandpanel/_next/static/chunks/16wlyre1uj1c_.js","async":true}],["$","script","script-1",{"src":"/v0-ailoginandpanel/_next/static/chunks/0udzjgv_6ldpd.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"gEhVdknqfHkTzXMi3tmTR"}
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/v0-ailoginandpanel/_next/static/chunks/15zr1o8mc-pkv.js","async":true}],["$","script","script-1",{"src":"/v0-ailoginandpanel/_next/static/chunks/0itddus92fb_m.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"yX-VesCnNy05qZef1GoL5"}
 4:{}
 5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
 8:null
