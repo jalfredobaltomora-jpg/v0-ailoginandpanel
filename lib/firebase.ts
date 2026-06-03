@@ -887,3 +887,134 @@ export async function deleteQADHUCatalogItem(id: string): Promise<boolean> {
     return false;
   }
 }
+
+// ─── QA DHU Defect Catalog ──────────────────────────────────────
+
+export interface QADHUDefectCatalogItem {
+  id: string;
+  defectCode: string;
+  defectDescription: string;
+  catEnglish: string;
+  acr: string;
+  defectCatEnglish: string;
+  descripcionDefecto: string;
+  catEspanol: string;
+  acrSpanish: string;
+  defectCatSpanish: string;
+  createdAt: number;
+  createdBy: string;
+}
+
+export async function saveQADHUDefectCatalogItem(data: Omit<QADHUDefectCatalogItem, 'id'>): Promise<string> {
+  await _init();
+  const newRef = push(ref(db, 'qa-dhu-defect-catalog'));
+  const id = newRef.key!;
+  await set(newRef, { ...data, id });
+  return id;
+}
+
+export async function getQADHUDefectCatalogItems(): Promise<QADHUDefectCatalogItem[]> {
+  try {
+    await _init();
+    const snapshot = await get(ref(db, 'qa-dhu-defect-catalog'));
+    const raw: Record<string, QADHUDefectCatalogItem> = snapshot.val() || {};
+    return Object.values(raw).sort((a, b) => a.defectCode.localeCompare(b.defectCode));
+  } catch {
+    return [];
+  }
+}
+
+export function listenToQADHUDefectCatalog(callback: (items: QADHUDefectCatalogItem[]) => void): () => void {
+  const r = ref(db, 'qa-dhu-defect-catalog');
+  return onValue(r, (snap) => {
+    const raw: Record<string, QADHUDefectCatalogItem> = snap.val() || {};
+    callback(Object.values(raw).sort((a, b) => a.defectCode.localeCompare(b.defectCode)));
+  });
+}
+
+export async function deleteQADHUDefectCatalogItem(id: string): Promise<boolean> {
+  try {
+    await _init();
+    await remove(ref(db, `qa-dhu-defect-catalog/${id}`));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ─── In Line Defect Records ────────────────────────────────────
+
+export interface InLineDefectRecord {
+  id: string;
+  item: string;
+  inspectionDate: string;
+  week: number;
+  month: string;
+  factory: string;
+  line: string;
+  po: string;
+  color: string;
+  buyer: string;
+  auditor: string;
+  style: string;
+  defect: string;
+  total: number;
+  defectCode: string;
+  defectDescription: string;
+  catEnglish: string;
+  acr: string;
+  defectCatEnglish: string;
+  descripcionDefecto: string;
+  catEspanol: string;
+  acrSpanish: string;
+  defectCatSpanish: string;
+  createdAt: number;
+  createdBy: string;
+}
+
+export async function saveInLineDefectRecord(record: Omit<InLineDefectRecord, 'id'>): Promise<string> {
+  await _init();
+  const newRef = push(ref(db, 'in-line-defect-records'));
+  const id = newRef.key!;
+  await set(newRef, { ...record, id });
+  return id;
+}
+
+export async function updateInLineDefectRecord(id: string, data: Partial<InLineDefectRecord>): Promise<boolean> {
+  try {
+    await _init();
+    await update(ref(db, `in-line-defect-records/${id}`), data);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function getInLineDefectRecords(): Promise<InLineDefectRecord[]> {
+  try {
+    await _init();
+    const snapshot = await get(ref(db, 'in-line-defect-records'));
+    const raw: Record<string, InLineDefectRecord> = snapshot.val() || {};
+    return Object.values(raw).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  } catch {
+    return [];
+  }
+}
+
+export function listenToInLineDefectRecords(callback: (records: InLineDefectRecord[]) => void): () => void {
+  const r = ref(db, 'in-line-defect-records');
+  return onValue(r, (snap) => {
+    const raw: Record<string, InLineDefectRecord> = snap.val() || {};
+    callback(Object.values(raw).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
+  });
+}
+
+export async function deleteInLineDefectRecord(id: string): Promise<boolean> {
+  try {
+    await _init();
+    await remove(ref(db, `in-line-defect-records/${id}`));
+    return true;
+  } catch {
+    return false;
+  }
+}
