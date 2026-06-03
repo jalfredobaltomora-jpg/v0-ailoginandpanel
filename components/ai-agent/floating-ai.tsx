@@ -1,0 +1,541 @@
+'use client';
+
+/**
+ * JAB - Premium AI Assistant with EVA Design
+ * Enhanced UI/UX with premium animations, professional styling, and optimized visuals
+ * Single unified AI with EVA appearance and JARVIS capabilities
+ */
+
+import { useCallback, useRef, useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { 
+  X, Send, Mic, MicOff, Music, Sparkles, ChevronDown, Bot, EyeOff, 
+  Settings, HelpCircle, MessageSquare, Zap, Volume2, VolumeX 
+} from 'lucide-react';
+import { getStoredUser } from '@/lib/auth-store';
+import { useLang } from '@/lib/lang-context';
+import { EVARobotComponent, type EVAExpression } from './eva-design';
+import { executeJARVISCommand } from '@/lib/jarvis-commands';
+import { askAI } from '@/lib/ai-client';
+import { transcribeAudio } from '@/lib/transcribe-client';
+import { useWakeWord } from '@/lib/use-wake-word';
+
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
+interface Message { role: 'user' | 'assistant'; content: string; timestamp: number; }
+
+const LS_MESSAGES = 'jab-messages';
+const LS_SETTINGS = 'jab-settings';
+
+// Auto-responses
+const AUTO_RESPONSES: { pattern: RegExp; es: string; en: string }[] = [
+  { pattern: /(gracias|thanks|thank you)/i, es: 'De nada! 🫶', en: 'You\'re welcome! 🫶' },
+  { pattern: /(bien\b|fine|good|doing well)/i, es: 'Excelente! ¿Necesitas algo?', en: 'Great! Need anything?' },
+  { pattern: /(quien eres|what are you|who are you)/i, es: 'Soy JAB, tu asistente inteligente 🤖 con tecnología EVA. ¡Siempre listo para ayudarte!', en: 'I\'m JAB, your intelligent assistant 🤖 with EVA technology. Always ready to help!' },
+];
+
+export function FloatingAI() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputText, setInputText] = useState('');
+  const { lang, toggleLang } = useLang();
+  const [expression, setExpression] = useState<EVAExpression>('idle');
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [userName, setUserName] = useState('User');
+  const [isMobile, setIsMobile] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const processingRef = useRef(false);
+
+  // ─── Setup ───
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  // Load user
+  useEffect(() => {
+    try {
+      const user = getStoredUser();
+      if (user) {
+        import('@/lib/firebase').then(({ getEmpleadoByCodigo }) => {
+          getEmpleadoByCodigo(user.codigo).then((emp: any) => {
+            setUserName(emp?.nombres?.split(' ')[0] || 'User');
+          });
+        });
+      }
+    } catch {}
+  }, []);
+
+  // Load messages & settings
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LS_MESSAGES);
+      if (saved) setMessages(JSON.parse(saved));
+      const settings = localStorage.getItem(LS_SETTINGS);
+      if (settings) {
+        const { sound } = JSON.parse(settings);
+        if (sound !== undefined) setSoundEnabled(sound);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(LS_MESSAGES, JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem(LS_SETTINGS, JSON.stringify({ sound: soundEnabled }));
+  }, [soundEnabled]);
+
+  // Auto-expression animation (idle life)
+  const exprTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const states: EVAExpression[] = ['idle', 'idle', 'curious', 'idle', 'thinking', 'idle', 'surprised'];
+    let i = 0;
+    const tick = () => {
+      setExpression((prev) => {
+        if (prev === 'idle' || prev === 'curious' || prev === 'thinking' || prev === 'surprised') {
+          return states[(i++) % states.length];
+        }
+        return prev;
+      });
+      exprTimeoutRef.current = setTimeout(tick, 4500 + Math.random() * 3000);
+    };
+    exprTimeoutRef.current = setTimeout(tick, 3000);
+    return () => { if (exprTimeoutRef.current) clearTimeout(exprTimeoutRef.current); };
+  }, []);
+
+  // Wake word detection (Capacitor/mobile)
+  const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+  useWakeWord({
+    enabled: isCapacitor || (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)),
+    onWake: (text) => {
+      setIsChatOpen(true);
+      setIsVisible(true);
+      setExpression('happy');
+      processMessage(text.replace(/\bjabe?\b/i, '').trim());
+    },
+    onListeningChange: setIsListening,
+  });
+
+  // Greeting
+  const greetedRef = useRef(false);
+  useEffect(() => {
+    if (isChatOpen && !greetedRef.current) {
+      greetedRef.current = true;
+      const hours = new Date().getHours();
+      const greeting = hours >= 6 && hours < 12 ? (lang === 'es' ? 'Buenos días' : 'Good morning')
+        : hours >= 12 && hours < 18 ? (lang === 'es' ? 'Buenas tardes' : 'Good afternoon')
+        : (lang === 'es' ? 'Buenas noches' : 'Good evening');
+
+      const intro = lang === 'es'
+        ? `${greeting} ${userName}! 👋\n\nSoy JAB, tu asistente inteligente 🤖\n\nPuedo ayudarte con:\n✨ Navegación del sistema\n🔍 Búsquedas en Google\n🎵 Reproducción de música\n⚙️ Comandos del sistema\n💬 Conversación natural\n\nDigitaliza "jab help" para más info`
+        : `${greeting} ${userName}! 👋\n\nI'm JAB, your intelligent assistant 🤖\n\nI can help with:\n✨ System navigation\n🔍 Google search\n🎵 Music playback\n⚙️ System commands\n💬 Natural conversation\n\nType "jab help" for more info`;
+
+      setMessages([{ role: 'assistant', content: intro, timestamp: Date.now() }]);
+    }
+  }, [isChatOpen, lang, userName]);
+
+  const speak = useCallback(
+    (text: string, cb?: () => void) => {
+      if (!soundEnabled || !window.speechSynthesis) {
+        cb?.();
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(text.replace(/\bJAB\b/gi, 'Jab'));
+      utterance.lang = lang === 'es' ? 'es-CO' : 'en-US';
+      utterance.rate = 1.1;
+      utterance.pitch = 0.9;
+
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+        setExpression('processing');
+      };
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        setExpression('happy');
+        cb?.();
+      };
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+        setExpression('concerned');
+      };
+
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    },
+    [lang, soundEnabled]
+  );
+
+  const addMessage = useCallback((role: 'user' | 'assistant', content: string) => {
+    setMessages((prev) => [...prev, { role, content, timestamp: Date.now() }]);
+  }, []);
+
+  const processMessage = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed || processingRef.current) return;
+      processingRef.current = true;
+
+      addMessage('user', trimmed);
+      setInputText('');
+      setIsLoading(true);
+      setExpression('scanning');
+
+      // Auto-response
+      const autoResp = AUTO_RESPONSES.find(r => r.pattern.test(trimmed));
+      if (autoResp) {
+        const response = lang === 'es' ? autoResp.es : autoResp.en;
+        addMessage('assistant', response);
+        setExpression('happy');
+        speak(response);
+        setIsLoading(false);
+        processingRef.current = false;
+        return;
+      }
+
+      // JARVIS commands
+      try {
+        const jarvisResult = await executeJARVISCommand(trimmed);
+        if (jarvisResult) {
+          addMessage('assistant', jarvisResult);
+          setExpression('happy');
+          speak(jarvisResult);
+          setIsLoading(false);
+          processingRef.current = false;
+          return;
+        }
+      } catch {}
+
+      // AI fallback
+      try {
+        const history = messages.slice(-4).map(m => ({ role: m.role, content: m.content }));
+        const aiResponse = await askAI(trimmed, lang, userName, undefined, history);
+        if (aiResponse?.content) {
+          addMessage('assistant', aiResponse.content);
+          setExpression('happy');
+          speak(aiResponse.content);
+        } else {
+          const fallback = lang === 'es'
+            ? 'No entendí bien. Di "Ayuda" para ver todo lo que puedo hacer.'
+            : 'I didn\'t understand. Say "Help" to see everything I can do.';
+          addMessage('assistant', fallback);
+          setExpression('concerned');
+          speak(fallback);
+        }
+      } catch (error) {
+        const errMsg = lang === 'es' ? 'Disculpa, ocurrió un error.' : 'Sorry, an error occurred.';
+        addMessage('assistant', errMsg);
+        setExpression('concerned');
+        speak(errMsg);
+      } finally {
+        setIsLoading(false);
+        processingRef.current = false;
+      }
+    },
+    [messages, lang, userName, addMessage, speak]
+  );
+
+  const toggleListening = useCallback(() => {
+    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SR || isCapacitor) {
+      if (!isListening) {
+        setIsListening(true);
+        setExpression('scanning');
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+          const mr = new MediaRecorder(stream);
+          const chunks: BlobPart[] = [];
+
+          mr.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
+          mr.onstop = async () => {
+            setIsListening(false);
+            stream.getTracks().forEach(t => t.stop());
+            const blob = new Blob(chunks);
+            if (blob.size < 400) return;
+
+            const text = await transcribeAudio(blob);
+            if (text) {
+              setInputText(text);
+              processMessage(text);
+            }
+          };
+
+          mr.start();
+          setTimeout(() => mr.state === 'recording' && mr.stop(), isCapacitor ? 10000 : 8000);
+        }).catch(() => {
+          setIsListening(false);
+          setExpression('concerned');
+        });
+      } else {
+        setIsListening(false);
+      }
+      return;
+    }
+
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SR();
+    recognition.lang = lang === 'es' ? 'es-CO' : 'en-US';
+    recognition.continuous = false;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setExpression('scanning');
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setInputText(transcript);
+      setIsListening(false);
+      processMessage(transcript);
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+      setExpression('concerned');
+    };
+
+    recognition.start();
+  }, [isListening, lang, processMessage]);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
+
+  if (pathname === '/') return null;
+
+  return (
+    <>
+      {isVisible && (
+        <>
+          {/* JAB Robot - Floating Button */}
+          <div
+            className="fixed z-[60] cursor-pointer group"
+            style={{
+              right: isMobile ? '1rem' : '2rem',
+              bottom: isMobile ? '1rem' : '2rem',
+              filter: 'drop-shadow(0 8px 16px rgba(6, 182, 212, 0.3))',
+            }}
+            onClick={() => setIsChatOpen(!isChatOpen)}
+          >
+            <div className="relative">
+              <EVARobotComponent
+                expression={expression}
+                isSpeaking={isSpeaking}
+                isListening={isListening}
+                scale={isMobile ? 0.9 : 1}
+                interactive
+              />
+              <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0d1117] animate-pulse ${
+                isListening ? 'bg-green-400' : isSpeaking ? 'bg-orange-400' : 'bg-cyan-400'
+              }`} />
+            </div>
+          </div>
+
+          {/* Chat Panel - Premium Design */}
+          {isChatOpen && (
+            <div
+              className="fixed z-[70] bottom-32 right-4 md:right-6 w-[calc(100vw-2rem)] md:w-96 max-h-[70vh] rounded-3xl shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-gradient-to-b from-[#0d1117] to-[#161b22] border border-cyan-500/20 rounded-3xl flex flex-col h-full">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-b border-cyan-500/20 px-6 py-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <Sparkles className="w-5 h-5 text-cyan-400 animate-pulse" />
+                      <div>
+                        <p className="text-sm font-bold text-white">JAB AI Assistant</p>
+                        <p className="text-xs text-cyan-300">{lang === 'es' ? 'En línea' : 'Online'}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setIsChatOpen(false)}
+                      className="p-2 hover:bg-[#21262d] rounded-lg text-gray-400 hover:text-cyan-400 transition"
+                    >
+                      <ChevronDown className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Messages */}
+                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
+                  {messages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+                      <Sparkles className="w-12 h-12 text-cyan-400 opacity-50" />
+                      <p className="text-sm text-gray-400">{lang === 'es' ? 'Inicia una conversación' : 'Start a conversation'}</p>
+                    </div>
+                  ) : (
+                    messages.map((msg, i) => (
+                      <div
+                        key={i}
+                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}
+                      >
+                        <div
+                          className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                            msg.role === 'user'
+                              ? 'bg-gradient-to-r from-cyan-600/40 to-blue-600/40 text-white border border-cyan-500/50 shadow-lg'
+                              : 'bg-gradient-to-r from-[#21262d] to-[#161b22] text-gray-100 border border-cyan-500/10'
+                          }`}
+                        >
+                          {msg.content}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  {isLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-[#21262d] rounded-2xl px-4 py-3 border border-cyan-500/10">
+                        <div className="flex gap-2">
+                          <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Input Section */}
+                <div className="border-t border-cyan-500/10 bg-gradient-to-t from-[#161b22] to-[#0d1117] p-4 space-y-3">
+                  {/* Controls */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={toggleListening}
+                      disabled={isLoading}
+                      className={`flex-1 p-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 font-medium text-sm ${
+                        isListening
+                          ? 'bg-red-500/20 border border-red-500/50 text-red-400 animate-pulse'
+                          : 'bg-cyan-600/20 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-600/30'
+                      }`}
+                    >
+                      {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                      <span className="hidden sm:inline">{lang === 'es' ? 'Escuchar' : 'Listen'}</span>
+                    </button>
+                    <button
+                      onClick={() => setShowHelp(!showHelp)}
+                      className="p-3 rounded-xl bg-blue-600/20 border border-blue-500/50 text-blue-400 hover:bg-blue-600/30 transition"
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setShowSettings(!showSettings)}
+                      className="p-3 rounded-xl bg-purple-600/20 border border-purple-500/50 text-purple-400 hover:bg-purple-600/30 transition"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Input */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && !isLoading && processMessage(inputText)}
+                      disabled={isLoading}
+                      className="flex-1 bg-[#0d1117] border border-cyan-500/30 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 transition disabled:opacity-50"
+                      placeholder={lang === 'es' ? 'Escribe o habla...' : 'Type or speak...'}
+                    />
+                    <button
+                      onClick={() => processMessage(inputText)}
+                      disabled={!inputText.trim() || isLoading}
+                      className="p-3 rounded-xl bg-gradient-to-r from-cyan-600/40 to-blue-600/40 border border-cyan-500/50 text-cyan-400 hover:from-cyan-600/60 hover:to-blue-600/60 disabled:opacity-50 transition"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Settings Panel */}
+                  {showSettings && (
+                    <div className="bg-[#21262d] border border-cyan-500/20 rounded-xl p-4 space-y-3 animate-in fade-in">
+                      <button
+                        onClick={() => setSoundEnabled(!soundEnabled)}
+                        className="w-full flex items-center justify-between p-3 hover:bg-[#161b22] rounded-lg transition"
+                      >
+                        <span className="text-sm text-gray-300">{lang === 'es' ? 'Sonido' : 'Sound'}</span>
+                        {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-gray-500" />}
+                      </button>
+                      <button
+                        onClick={() => toggleLang()}
+                        className="w-full flex items-center justify-between p-3 hover:bg-[#161b22] rounded-lg transition text-sm text-gray-300"
+                      >
+                        {lang === 'es' ? 'Español' : 'English'}
+                        <span className="text-xs font-bold text-cyan-400 bg-cyan-500/20 px-2 py-1 rounded">
+                          {lang === 'es' ? 'ES' : 'EN'}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Help Panel */}
+                  {showHelp && (
+                    <div className="bg-[#21262d] border border-blue-500/20 rounded-xl p-4 space-y-2 text-xs text-gray-300 animate-in fade-in max-h-48 overflow-y-auto">
+                      <p className="font-bold text-blue-400">💡 {lang === 'es' ? 'Comandos Útiles' : 'Useful Commands'}:</p>
+                      <p>• "jab status" - {lang === 'es' ? 'Estado del sistema' : 'System status'}</p>
+                      <p>• "jab open google" - {lang === 'es' ? 'Abrir URL' : 'Open URL'}</p>
+                      <p>• "jab battery" - {lang === 'es' ? 'Batería' : 'Battery'}</p>
+                      <p>• "jab screenshot" - {lang === 'es' ? 'Captura' : 'Screenshot'}</p>
+                    </div>
+                  )}
+
+                  {/* Status Bar */}
+                  <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-cyan-500/10">
+                    <span>{new Date().toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                    {isSpeaking && <span className="text-cyan-400 animate-pulse">🔊 {lang === 'es' ? 'Hablando' : 'Speaking'}</span>}
+                    {isLoading && <span className="text-cyan-400 animate-pulse">⚙️ {lang === 'es' ? 'Procesando' : 'Processing'}</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Hidden Toggle */}
+          {!isVisible && (
+            <button
+              onClick={() => setIsVisible(true)}
+              className="fixed z-[60] bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-cyan-600/40 to-blue-600/40 border border-cyan-500/50 shadow-xl hover:shadow-2xl hover:scale-110 transition-all flex items-center justify-center text-cyan-400 animate-pulse"
+            >
+              <Sparkles className="w-6 h-6" />
+            </button>
+          )}
+        </>
+      )}
+
+      {/* Visibility Toggle in Chat */}
+      {isChatOpen && (
+        <button
+          onClick={() => setIsVisible(false)}
+          className="fixed z-[65] top-[2rem] right-[calc(2rem+1.5rem)] md:right-[calc(1.5rem+25rem)] p-2 rounded-lg bg-[#21262d] border border-cyan-500/30 text-gray-400 hover:text-red-400 transition"
+          title={lang === 'es' ? 'Ocultar' : 'Hide'}
+        >
+          <EyeOff className="w-4 h-4" />
+        </button>
+      )}
+    </>
+  );
+}

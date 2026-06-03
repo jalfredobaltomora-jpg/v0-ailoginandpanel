@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Control Administrative JB - PowerBI Executive Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { background-color: #0d1117; }
+        .jbi-card { background-color: #161b22; border: 1px solid #30363d; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #8b949e; }
+        .sticky-header { position: sticky; top: 0; z-index: 10; background-color: #1c2128; }
+        .sticky-header-2 { position: sticky; top: 31px; z-index: 9; background-color: #1c2128; }
+
+        #biAnalyticWindow {
+            position: fixed; top: 2.5%; left: 2.5%; width: 95%; height: 95%;
+            background-color: #161b22; border: 2px solid #06b6d4;
+            display: none; flex-direction: column; border-radius: 12px; z-index: 100;
+        }
+        #biAnalyticWindow.minimized {
+            height: 45px !important;
+            top: auto !important; bottom: 20px !important;
+            left: 20px !important;
+            width: 300px !important;
+        }
+        th div { font-weight: 400; }
+    </style>
+</head>
+<body class="text-gray-200 font-sans min-h-screen flex flex-col" onclick="cerrarTodosLosDropdowns(event)">
+
+    <header class="jbi-card px-6 py-4 flex flex-wrap justify-between items-center shadow-lg border-b border-[#30363d]">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-r from-cyan-500 to-blue-600 text-gray-950 p-2 rounded-lg font-extrabold tracking-wider text-xs shadow-md">
+                SYSTEM JB
+            </div>
+            <div>
+                <h1 class="text-base font-bold tracking-wide text-white">Control Administrative</h1>
+                <p class="text-[11px] text-cyan-400 font-mono">Data Engine con Panel Analítico Flotante Estilo PowerBI v6</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+            <button id="btnDownload" onclick="descargarExcelDepurado()" class="hidden bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 text-white text-xs font-bold rounded-lg px-4 py-2 flex items-center space-x-2 transition-all shadow-md">
+                <i class="fa-solid fa-download"></i>
+                <span>Descargar Base Depurada</span>
+            </button>
+            <button id="btnOpenBI" onclick="abrirSubventanaAnalitica(event)" class="hidden bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white text-xs font-bold rounded-lg px-4 py-2 flex items-center space-x-2 transition-all shadow-md">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Generar Matriz Analítica IA</span>
+            </button>
+            <label class="cursor-pointer bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold text-xs py-2 px-4 rounded-lg flex items-center space-x-2 transition-all">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <span>Cargar Matriz de Datos</span>
+                <input type="file" id="excelFileRaw" accept=".xlsx, .xls, .csv" class="hidden" onchange="procesarFlujoPrincipal(event)">
+            </label>
+        </div>
+    </header>
+
+    <main class="flex-1 p-6 max-w-[1800px] mx-auto w-full flex flex-col z-10">
+        <section id="emptyPlaceholder" class="jbi-card p-12 rounded-xl text-center space-y-4 my-auto">
+            <div class="text-cyan-500 text-4xl"><i class="fa-solid fa-cube animate-pulse"></i></div>
+            <h2 class="text-sm font-semibold text-white">Base de Datos Lista para Extracción</h2>
+            <p class="text-xs text-gray-400 max-w-lg mx-auto">Carga la matriz de auditorías. Podrás abrir la subventana de Inteligencia Analítica para realizar comparativas dinámicas cruzadas en tiempo real.</p>
+        </section>
+
+        <section id="baseTableContainer" class="jbi-card rounded-xl overflow-hidden shadow-2xl hidden flex-1 flex flex-col">
+            <div class="p-3 bg-[#1c2128] border-b border-gray-800 flex justify-between items-center">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider"><i class="fa-solid fa-database mr-1"></i> Vista Base de Datos Original Relacional</span>
+                <span id="filteredCount" class="text-[10px] text-cyan-400"></span>
+            </div>
+            <div class="overflow-x-auto overflow-y-auto max-h-[650px] flex-1">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <!-- Fila 1: Group headers -->
+                        <tr class="sticky-header text-gray-400 font-bold border-b border-gray-700 bg-[#1c2128] text-[10px] text-center">
+                            <th colspan="9" class="p-1.5 border-r border-gray-800 text-left text-cyan-400">GENERAL</th>
+                            <th colspan="3" class="p-1.5 border-r border-gray-800 bg-blue-950/20 text-blue-300">TOTAL FINAL</th>
+                            <th colspan="3" class="p-1.5 border-r border-gray-800 bg-emerald-950/20 text-emerald-300">MEASUREMENT</th>
+                            <th colspan="3" class="p-1.5 border-r border-gray-800 bg-amber-950/20 text-amber-300">VISUAL</th>
+                            <th class="p-1.5">RESULT</th>
+                        </tr>
+                        <!-- Fila 2: Column headers -->
+                        <tr class="sticky-header-2 text-gray-300 font-semibold border-b border-gray-700 bg-[#21262d] text-[11px]">
+                            <th class="p-2 text-left">Fecha</th>
+                            <th class="p-2 text-left">Fábrica</th>
+                            <th class="p-2 text-left">Cliente</th>
+                            <th class="p-2 text-left">Estilo</th>
+                            <th class="p-2 text-left">PO</th>
+                            <th class="p-2 text-left">Type</th>
+                            <th class="p-2 text-left">Name</th>
+                            <th class="p-2 text-left">Stage</th>
+                            <th class="p-2 text-left border-r border-gray-800">Point</th>
+                            <th class="p-2 text-right">Audits</th>
+                            <th class="p-2 text-right">Failures</th>
+                            <th class="p-2 text-right border-r border-gray-800 text-blue-400">Failure Rate %</th>
+                            <th class="p-2 text-right">Insp Qty</th>
+                            <th class="p-2 text-right">Def Qty</th>
+                            <th class="p-2 text-right border-r border-gray-800 text-emerald-400">Def Rate %</th>
+                            <th class="p-2 text-right">Insp Qty</th>
+                            <th class="p-2 text-right">Def Qty</th>
+                            <th class="p-2 text-right border-r border-gray-800 text-amber-400">Def Rate %</th>
+                            <th class="p-2 text-center">Result</th>
+                        </tr>
+                    </thead>
+                    <tbody id="baseTbody" class="divide-y divide-gray-800/40"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Ventana Flotante BI -->
+    <div id="biAnalyticWindow" class="flex-col shadow-2xl">
+        <div id="biHeader" class="bg-gradient-to-r from-gray-900 to-[#1c2128] border-b border-gray-700 px-4 py-2.5 flex justify-between items-center shrink-0" style="cursor: move;">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-microchip text-amber-400 animate-pulse"></i>
+                <span class="text-xs font-bold tracking-wider text-white uppercase">Engine Monitor: Inteligencia Analítica</span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="minimizarSubventana(event)" class="text-amber-400 hover:text-amber-300 text-xs px-2 py-0.5 border border-amber-500/30 rounded bg-amber-500/10 transition-all">
+                    <i id="minIcon" class="fa-solid fa-window-minimize"></i> <span id="minText" class="text-[10px] font-bold">Minimizar</span>
+                </button>
+                <button onclick="cerrarSubventana(event)" class="text-gray-400 hover:text-red-400 text-sm"><i class="fa-solid fa-circle-xmark"></i></button>
+            </div>
+        </div>
+
+        <div id="biFilterContainer" class="p-4 border-b border-gray-700 bg-[#161b22] flex gap-4 items-center">
+            <span class="text-[10px] font-bold text-gray-400 uppercase">Filtros:</span>
+            <div class="relative" id="monthFilterWrapper">
+                <button onclick="toggleDropdown(event, 'dropMonth')" class="bg-[#0d1117] text-[10px] px-3 py-1.5 border border-gray-600 rounded text-white flex items-center gap-2 min-w-[120px]">
+                    <span id="lblMonth">-- TODOS --</span> <i class="fa-solid fa-chevron-down text-[8px]"></i>
+                </button>
+                <div id="dropMonth" class="absolute top-full left-0 mt-1 w-56 bg-[#21262d] border border-[#30363d] rounded-lg p-2 z-50 shadow-xl hidden max-h-48 overflow-y-auto"></div>
+            </div>
+            <div class="relative" id="factoryFilterWrapper">
+                <button onclick="toggleDropdown(event, 'dropFactory')" class="bg-[#0d1117] text-[10px] px-3 py-1.5 border border-gray-600 rounded text-white flex items-center gap-2 min-w-[120px]">
+                    <span id="lblFactory">-- TODOS --</span> <i class="fa-solid fa-chevron-down text-[8px]"></i>
+                </button>
+                <div id="dropFactory" class="absolute top-full left-0 mt-1 w-56 bg-[#21262d] border border-[#30363d] rounded-lg p-2 z-50 shadow-xl hidden max-h-48 overflow-y-auto"></div>
+            </div>
+            <div class="relative" id="buyerFilterWrapper">
+                <button onclick="toggleDropdown(event, 'dropBuyer')" class="bg-[#0d1117] text-[10px] px-3 py-1.5 border border-gray-600 rounded text-white flex items-center gap-2 min-w-[120px]">
+                    <span id="lblBuyer">-- TODOS --</span> <i class="fa-solid fa-chevron-down text-[8px]"></i>
+                </button>
+                <div id="dropBuyer" class="absolute top-full left-0 mt-1 w-56 bg-[#21262d] border border-[#30363d] rounded-lg p-2 z-50 shadow-xl hidden max-h-48 overflow-y-auto"></div>
+            </div>
+            <div class="relative" id="pointFilterWrapper">
+                <button onclick="toggleDropdown(event, 'dropPoint')" class="bg-[#0d1117] text-[10px] px-3 py-1.5 border border-gray-600 rounded text-white flex items-center gap-2 min-w-[120px]">
+                    <span id="lblPoint">-- TODOS --</span> <i class="fa-solid fa-chevron-down text-[8px]"></i>
+                </button>
+                <div id="dropPoint" class="absolute top-full left-0 mt-1 w-56 bg-[#21262d] border border-[#30363d] rounded-lg p-2 z-50 shadow-xl hidden max-h-48 overflow-y-auto"></div>
+            </div>
+            <button onclick="compilarYRenderizarMatrizBI()" class="bg-cyan-700 hover:bg-cyan-600 text-white px-3 py-1.5 rounded text-[10px]">Actualizar</button>
+        </div>
+
+        <div id="biBody" class="flex-1 p-4 overflow-y-auto space-y-6 bg-[#11151c]">
+            <div class="jbi-card p-3 rounded-lg flex flex-col">
+                <div class="flex flex-wrap gap-3 items-end mb-3">
+                    <div>
+                        <label class="text-[9px] text-cyan-400 font-bold uppercase block mb-0.5">Tipo</label>
+                        <select id="chartType" onchange="toggleGoalInputs()" class="bg-[#0d1117] text-xs p-1.5 border border-gray-600 rounded text-white">
+                            <option value="bar">Barras</option>
+                            <option value="barMeta">Barras con Meta</option>
+                            <option value="line">Líneas</option>
+                            <option value="pie">Pastel</option>
+                            <option value="doughnut">Donas</option>
+                            <option value="polarArea">Área Polar</option>
+                            <option value="radar">Radar</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-cyan-400 font-bold uppercase block mb-0.5">Eje X</label>
+                        <select id="chartX" class="bg-[#0d1117] text-xs p-1.5 border border-gray-600 rounded text-white">
+                            <option value="factory">Fábrica</option>
+                            <option value="buyer">Cliente</option>
+                            <option value="point">Point</option>
+                            <option value="stage">Stage</option>
+                            <option value="month">Mes</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-cyan-400 font-bold uppercase block mb-0.5">Métricas</label>
+                        <div class="flex flex-wrap gap-x-3 gap-y-1 bg-[#0d1117] border border-gray-600 rounded p-1.5 text-[10px]">
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="chartY cb" value="audits" checked> Audits</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="chartY cb" value="failures"> Fallos</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="chartY cb" value="failureRate"> Total Failure Rate %</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="chartY cb" value="measDef"> Def. Medición</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="chartY cb" value="visDef"> Def. Visuales</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="chartY cb" value="measDefRate"> Measurement Defect Rate %</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="chartY cb" value="visDefRate"> Visual Defect Rate %</label>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-cyan-400 font-bold uppercase block mb-0.5">Estilo</label>
+                        <select id="chartStyle" class="bg-[#0d1117] text-xs p-1.5 border border-gray-600 rounded text-white">
+                            <option value="2d">2D</option>
+                            <option value="3d">3D</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-cyan-400 font-bold uppercase block mb-0.5">Agregación</label>
+                        <select id="chartAgg" class="bg-[#0d1117] text-xs p-1.5 border border-gray-600 rounded text-white">
+                            <option value="real">Datos Reales</option>
+                            <option value="sum">Suma</option>
+                            <option value="avg">Promedio</option>
+                            <option value="count">Conteo</option>
+                        </select>
+                    </div>
+                    <button onclick="generarGraficoConfigurado()" class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow-md transition-all">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Generar
+                    </button>
+                </div>
+                <div id="goalInputs" class="hidden flex flex-wrap gap-3 items-end mb-3 p-2 bg-[#0d1117] border border-amber-600/40 rounded-lg">
+                    <span class="text-[10px] text-amber-400 font-bold uppercase">Metas:</span>
+                    <div><label class="text-[9px] text-gray-400 block">Failure Rate %</label><input id="goalFailureRate" type="number" step="0.1" value="10" class="bg-[#21262d] text-xs p-1 w-20 border border-gray-600 rounded text-white"></div>
+                    <div><label class="text-[9px] text-gray-400 block">Meas Def Rate %</label><input id="goalMeasDefRate" type="number" step="0.1" value="15" class="bg-[#21262d] text-xs p-1 w-20 border border-gray-600 rounded text-white"></div>
+                    <div><label class="text-[9px] text-gray-400 block">Vis Def Rate %</label><input id="goalVisDefRate" type="number" step="0.1" value="20" class="bg-[#21262d] text-xs p-1 w-20 border border-gray-600 rounded text-white"></div>
+                </div>
+                <div class="flex-1 w-full relative" style="height:280px">
+                    <canvas id="canvasChartConfig"></canvas>
+                </div>
+            </div>
+
+            <div class="jbi-card rounded-lg overflow-hidden border border-gray-700 flex flex-col">
+                <div class="p-2.5 bg-[#1c2128] border-b border-gray-700 flex justify-between items-center">
+                    <span class="text-[10px] font-bold text-gray-300 tracking-wider uppercase"><i class="fa-solid fa-table-cells mr-1"></i> Matriz de Indicadores de Calidad de Alta Dirección</span>
+                    <span class="text-[10px] text-amber-400 font-mono italic">Prioridad de Fábrica: Technotex 1 ➔ Technotex 2 ➔ EINS</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-[#161b22] border-b border-gray-700 text-center text-[10px] tracking-wider text-gray-400 font-bold">
+                                <th colspan="3" class="p-2 border-r border-gray-800 text-left text-cyan-400">IDENTIFICACIÓN</th>
+                                <th colspan="3" class="p-2 border-r border-gray-800 bg-blue-950/20 text-blue-300">TOTAL FINAL (COMPILADO)</th>
+                                <th class="p-2 border-r border-gray-800 bg-emerald-950/20 text-emerald-300">MEASUREMENT</th>
+                                <th class="p-2 bg-amber-950/20 text-amber-300">VISUAL CONTROL</th>
+                            </tr>
+                            <tr class="bg-[#1c2128] text-[11px] border-b border-gray-700">
+                                <th class="p-2.5 font-medium text-left">Month</th>
+                                <th class="p-2.5 font-medium text-left">Factory</th>
+                                <th class="p-2.5 font-medium text-left border-r border-gray-800">Buyer</th>
+                                <th class="p-2.5 text-right font-mono">No. of Audit</th>
+                                <th class="p-2.5 text-right font-mono">No. of Failure</th>
+                                <th class="p-2.5 text-right font-mono border-r border-gray-800 text-blue-400">Failure Rate(%)</th>
+                                <th class="p-2.5 text-right font-mono text-emerald-400 border-r border-gray-800">Defect Rate(%)</th>
+                                <th class="p-2.5 text-right font-mono text-amber-400">Defect Rate(%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="biTableTbody" class="divide-y divide-gray-800/60 bg-[#161b22]/50"></tbody>
+                        <tfoot id="biTableTfoot" class="border-t-2 border-amber-500 font-bold text-gray-100 bg-[#18202c]"></tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="jbi-card py-2 px-6 text-center text-[10px] text-gray-500 border-t border-[#30363d] mt-auto">
+        System Control Administrative JB &copy; 2026 | Enterprise Business Intelligence Suite
+    </footer>
+
+<script>
+const NOMBRES_MESES = ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"];
+const ORDEN_ESTRICTO_FABRICAS = [
+    "SAE-A TECHNOTEX, S.A(1)",
+    "SAE-A TECHNOTEX, S.A(2)",
+    "EINS, S.A.(2)"
+];
+
+window.datasetMaestro = [];
+window.registrosFiltradosGlobal = [];
+window.valoresFiltrosActivos = { meses: [], fabricas: [], buyers: [], points: [] };
+
+let chartConfigInstance = null;
+
+function toggleDropdown(event, id) {
+    event.stopPropagation();
+    const el = document.getElementById(id);
+    if (el.classList.contains('hidden')) {
+        cerrarTodosLosDropdowns();
+        el.classList.remove('hidden');
+    } else {
+        el.classList.add('hidden');
+    }
+}
+
+function cerrarTodosLosDropdowns() {
+    ['dropMonth','dropFactory','dropBuyer','dropPoint'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    });
+}
+
+function abrirSubventanaAnalitica(e) {
+    if(e) e.stopPropagation();
+    const win = document.getElementById('biAnalyticWindow');
+    win.style.display = 'flex';
+    win.classList.remove('minimized');
+    document.getElementById('biBody').style.display = 'block';
+    document.getElementById('biFilterContainer').style.display = 'flex';
+    document.getElementById('minIcon').className = "fa-solid fa-window-minimize";
+    document.getElementById('minText').innerText = "Minimizar";
+    compilarYRenderizarMatrizBI();
+}
+
+function cerrarSubventana(e) {
+    if(e) e.stopPropagation();
+    document.getElementById('biAnalyticWindow').style.display = 'none';
+}
+
+function minimizarSubventana(e) {
+    if(e) e.stopPropagation();
+    const win = document.getElementById('biAnalyticWindow');
+    const body = document.getElementById('biBody');
+    const filter = document.getElementById('biFilterContainer');
+    const icon = document.getElementById('minIcon');
+    const text = document.getElementById('minText');
+
+    if (win.classList.contains('minimized')) {
+        win.classList.remove('minimized');
+        body.style.display = 'block';
+        filter.style.display = 'flex';
+        icon.className = "fa-solid fa-window-minimize";
+        text.innerText = "Minimizar";
+    } else {
+        win.classList.add('minimized');
+        body.style.display = 'none';
+        filter.style.display = 'none';
+        icon.className = "fa-solid fa-window-restore";
+        text.innerText = "Expandir";
+    }
+}
+
+function procesarFlujoPrincipal(event) {
+    const input = event.target;
+    if (!input.files.length) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const matrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+
+            ejecutarUnificacionDataset(matrix);
+            inicializarEstructuraFiltros();
+            filtrarYRenderizarTodo();
+
+            document.getElementById('emptyPlaceholder').classList.add('hidden');
+            document.getElementById('btnOpenBI').classList.remove('hidden');
+            document.getElementById('btnDownload').classList.remove('hidden');
+            document.getElementById('baseTableContainer').classList.remove('hidden');
+
+            alert("Datos cargados exitosamente: " + window.datasetMaestro.length + " registros.");
+        } catch (err) {
+            console.error(err);
+            alert("Error procesando el archivo Excel: " + err.message);
+        }
+    };
+    reader.readAsArrayBuffer(input.files[0]);
+}
+
+function ejecutarUnificacionDataset(matrix) {
+    window.datasetMaestro = [];
+    for (let i = 1; i < matrix.length; i++) {
+        const row = matrix[i];
+        if (!row || row.length === 0) continue;
+
+        let fecha = null;
+        const rawDate = row[1];
+        if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
+            fecha = rawDate;
+        } else if (typeof rawDate === 'number' && rawDate > 10000) {
+            fecha = new Date((rawDate - 25569) * 86400000);
+        } else if (rawDate) {
+            const d = new Date(String(rawDate).trim());
+            if (!isNaN(d.getTime())) fecha = d;
+        }
+        if (!fecha) continue;
+
+        const factory = String(row[3] || '').trim();
+        const buyer = String(row[4] || '').trim();
+        if (/^\d+$/.test(factory) || buyer === 'NIC') continue;
+
+        const m = fecha.getMonth();
+        const y = fecha.getFullYear();
+        const mesFiltroKey = y + '-' + String(m + 1).padStart(2, '0');
+        const mesTexto = NOMBRES_MESES[m] + ' ' + y;
+
+        window.datasetMaestro.push({
+            fecha: fecha,
+            mesFiltroKey: mesFiltroKey,
+            mesTexto: mesTexto,
+            factory: factory,
+            buyer: buyer,
+            // Columnas del Excel completo (sin eliminar)
+            colL: String(row[11] || '').trim(),    // col L (index 11) — Type
+            colM: String(row[12] || '').trim(),    // col M (index 12) — Name
+            stage: String(row[13] || '').trim(),   // col N (index 13) — Stage
+            point: String(row[14] || '').trim(),   // col O (index 14) — Point (Dupros, Inline, PreFinal, Final)
+            style: String(row[6] || '').trim(),    // col G (index 6) — Estilo
+            po: String(row[7] || '').trim(),       // col H (index 7) — PO
+            result: String(row[16] || '').trim() || 'N/A', // col Q (index 16)
+            audits: parseInt(row[17]) || 0,        // col R (index 17)
+            failures: parseInt(row[18]) || 0,      // col S (index 18)
+            failureRate: parseFloat(row[19]) || 0, // col T (index 19) — Failure Rate %
+            measIns: parseFloat(row[20]) || 0,     // col U (index 20) — Meas Insp Qty
+            measDef: parseFloat(row[21]) || 0,     // col V (index 21) — Meas Def Qty
+            measDefRate: parseFloat(row[22]) || 0, // col W (index 22) — Meas Def Rate %
+            visIns: parseFloat(row[23]) || 0,      // col X (index 23) — Vis Insp Qty
+            visDef: parseFloat(row[24]) || 0,      // col Y (index 24) — Vis Def Qty
+            visDefRate: parseFloat(row[25]) || 0   // col Z (index 25) — Vis Def Rate %
+        });
+    }
+    console.log("Registros extraídos:", window.datasetMaestro.length);
+}
+
+function inicializarEstructuraFiltros() {
+    const mesesMap = {};
+    const fabricasSet = new Set();
+    const buyersSet = new Set();
+    const pointsSet = new Set();
+
+    window.datasetMaestro.forEach(row => {
+        mesesMap[row.mesFiltroKey] = row.mesTexto;
+        fabricasSet.add(row.factory);
+        buyersSet.add(row.buyer);
+        if (row.point) pointsSet.add(row.point);
+    });
+
+    window.valoresFiltrosActivos.meses = Object.keys(mesesMap).sort().reverse();
+    window.valoresFiltrosActivos.fabricas = Array.from(fabricasSet).sort();
+    window.valoresFiltrosActivos.buyers = Array.from(buyersSet).sort();
+    window.valoresFiltrosActivos.points = Array.from(pointsSet).sort();
+
+    inyectarCheckboxes('dropMonth', window.valoresFiltrosActivos.meses, mesesMap, 'meses');
+    inyectarCheckboxes('dropFactory', window.valoresFiltrosActivos.fabricas, null, 'fabricas');
+    inyectarCheckboxes('dropBuyer', window.valoresFiltrosActivos.buyers, null, 'buyers');
+    inyectarCheckboxes('dropPoint', window.valoresFiltrosActivos.points, null, 'points');
+}
+
+function inyectarCheckboxes(containerId, lista, mapaTextos, llaveFiltro) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = "";
+    lista.forEach(val => {
+        const txt = mapaTextos ? mapaTextos[val] : val;
+        const label = document.createElement('label');
+        label.className = "flex items-center space-x-2 p-1.5 hover:bg-[#2d333b] rounded cursor-pointer text-xs text-gray-300";
+        label.onclick = (e) => e.stopPropagation();
+        label.innerHTML = `
+            <input type="checkbox" value="${val}" checked class="rounded border-gray-700 bg-[#0d1117] text-cyan-500 focus:ring-0 cursor-pointer"
+                onchange="cambioFiltroUI('${containerId}', '${llaveFiltro}')">
+            <span class="truncate">${txt}</span>
+        `;
+        container.appendChild(label);
+    });
+}
+
+function cambioFiltroUI(containerId, llaveFiltro) {
+    const container = document.getElementById(containerId);
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    const seleccionados = [];
+    checkboxes.forEach(cb => { if (cb.checked) seleccionados.push(cb.value); });
+
+    window.valoresFiltrosActivos[llaveFiltro] = seleccionados;
+
+    const labelId = (containerId==='dropMonth')?'lblMonth':(containerId==='dropFactory')?'lblFactory':(containerId==='dropBuyer')?'lblBuyer':'lblPoint';
+    document.getElementById(labelId).innerText = seleccionados.length === checkboxes.length ? "-- TODOS --" : seleccionados.length + " Sel.";
+
+    filtrarYRenderizarTodo();
+
+    if(document.getElementById('biAnalyticWindow').style.display === 'flex') {
+        compilarYRenderizarMatrizBI();
+    }
+}
+
+function filtrarYRenderizarTodo() {
+    window.registrosFiltradosGlobal = window.datasetMaestro.filter(row => {
+        return window.valoresFiltrosActivos.meses.includes(row.mesFiltroKey) &&
+               window.valoresFiltrosActivos.fabricas.includes(row.factory) &&
+               window.valoresFiltrosActivos.buyers.includes(row.buyer) &&
+               window.valoresFiltrosActivos.points.includes(row.point);
+    });
+
+    document.getElementById('filteredCount').innerText =
+        'Registros Activos: ' + window.registrosFiltradosGlobal.length + ' / ' + window.datasetMaestro.length;
+
+    const tbody = document.getElementById('baseTbody');
+    tbody.innerHTML = "";
+
+    const fmtPct = (v) => (v ? Number(v).toFixed(2) + '%' : '0.00%');
+
+    window.registrosFiltradosGlobal.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-[#1c2128]/50 text-gray-300";
+        tr.innerHTML = `
+            <td class="p-2 text-gray-400">${row.fecha instanceof Date ? row.fecha.toISOString().split('T')[0] : row.fecha}</td>
+            <td class="p-2 font-semibold text-white">${row.factory}</td>
+            <td class="p-2">${row.buyer}</td>
+            <td class="p-2 text-gray-400">${row.style}</td>
+            <td class="p-2 text-gray-400 font-mono">${row.po}</td>
+            <td class="p-2 text-gray-400">${row.colL}</td>
+            <td class="p-2 text-gray-400">${row.colM}</td>
+            <td class="p-2 text-cyan-400 font-medium">${row.stage}</td>
+            <td class="p-2 text-gray-400 border-r border-gray-800">${row.point}</td>
+            <td class="p-2 text-right font-mono">${row.audits}</td>
+            <td class="p-2 text-right font-mono text-red-400">${row.failures}</td>
+            <td class="p-2 text-right font-mono text-blue-400 border-r border-gray-800">${fmtPct(row.failureRate)}</td>
+            <td class="p-2 text-right font-mono">${row.measIns}</td>
+            <td class="p-2 text-right font-mono text-emerald-400">${row.measDef}</td>
+            <td class="p-2 text-right font-mono text-emerald-400 border-r border-gray-800">${fmtPct(row.measDefRate)}</td>
+            <td class="p-2 text-right font-mono">${row.visIns}</td>
+            <td class="p-2 text-right font-mono text-amber-400">${row.visDef}</td>
+            <td class="p-2 text-right font-mono text-amber-400 border-r border-gray-800">${fmtPct(row.visDefRate)}</td>
+            <td class="p-2 text-center"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${row.result==='PASS'?'bg-green-500/10 text-green-400':'bg-red-500/10 text-red-400'}">${row.result}</span></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function compilarYRenderizarMatrizBI() {
+    const datos = window.registrosFiltradosGlobal;
+    const biTbody = document.getElementById('biTableTbody');
+    const biTfoot = document.getElementById('biTableTfoot');
+    biTbody.innerHTML = "";
+    biTfoot.innerHTML = "";
+
+    if (datos.length === 0) {
+        biTbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-red-400 italic">No hay datos.</td></tr>';
+        destruirInstanciasGraficos();
+        return;
+    }
+
+    let gAudits = 0, gFailures = 0, gMeasIns = 0, gMeasDef = 0, gVisIns = 0, gVisDef = 0;
+    const agrupar = datos.reduce((acc, r) => {
+        const key = r.mesTexto + '|' + r.factory + '|' + r.buyer;
+        if (!acc[key]) acc[key] = { mes: r.mesTexto, factory: r.factory, buyer: r.buyer, audits: 0, failures: 0, measIns: 0, measDef: 0, visIns: 0, visDef: 0 };
+        acc[key].audits += r.audits;
+        acc[key].failures += r.failures;
+        acc[key].measIns += r.measIns;
+        acc[key].measDef += r.measDef;
+        acc[key].visIns += r.visIns;
+        acc[key].visDef += r.visDef;
+        gAudits += r.audits; gFailures += r.failures;
+        gMeasIns += r.measIns; gMeasDef += r.measDef;
+        gVisIns += r.visIns; gVisDef += r.visDef;
+        return acc;
+    }, {});
+
+    const filas = Object.values(agrupar).sort((a, b) =>
+        b.mes.localeCompare(a.mes) ||
+        ORDEN_ESTRICTO_FABRICAS.indexOf(a.factory) - ORDEN_ESTRICTO_FABRICAS.indexOf(b.factory) ||
+        a.buyer.localeCompare(b.buyer)
+    );
+
+    const fmt = (p, t) => (t > 0 ? (p / t * 100).toFixed(2) + '%' : '0.00%');
+
+    filas.forEach(d => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-gray-800/40 text-gray-300 border-b border-gray-800/50";
+        tr.innerHTML = `
+            <td class="p-2">${d.mes}</td>
+            <td class="p-2 font-bold text-white">${d.factory}</td>
+            <td class="p-2 border-r border-gray-800">${d.buyer}</td>
+            <td class="p-2 text-right font-mono">${d.audits.toLocaleString()}</td>
+            <td class="p-2 text-right font-mono text-red-400">${d.failures.toLocaleString()}</td>
+            <td class="p-2 text-right font-mono font-bold text-blue-400 border-r border-gray-800">${fmt(d.failures, d.audits)}</td>
+            <td class="p-2 text-right font-mono font-bold text-emerald-400 border-r border-gray-800">${fmt(d.measDef, d.measIns)}</td>
+            <td class="p-2 text-right font-mono font-bold text-amber-400">${fmt(d.visDef, d.visIns)}</td>
+        `;
+        biTbody.appendChild(tr);
+    });
+
+    biTfoot.innerHTML = `
+        <tr class="text-white text-[12px] bg-[#18202c]">
+            <td colspan="3" class="p-2.5 font-extrabold text-amber-400 border-r border-gray-800 uppercase">TOTAL GENERAL</td>
+            <td class="p-2.5 text-right font-mono font-bold">${gAudits.toLocaleString()}</td>
+            <td class="p-2.5 text-right font-mono font-bold text-red-400">${gFailures.toLocaleString()}</td>
+            <td class="p-2.5 text-right font-mono font-extrabold text-blue-400 border-r border-gray-800">${fmt(gFailures, gAudits)}</td>
+            <td class="p-2.5 text-right font-mono font-extrabold text-emerald-400 border-r border-gray-800">${fmt(gMeasDef, gMeasIns)}</td>
+            <td class="p-2.5 text-right font-mono font-extrabold text-amber-400">${fmt(gVisDef, gVisIns)}</td>
+        </tr>
+    `;
+
+}
+
+function toggleGoalInputs() {
+    const tipo = document.getElementById('chartType').value;
+    const isGoal = tipo === 'barMeta';
+    document.getElementById('goalInputs').classList.toggle('hidden', !isGoal);
+    // Default check: Failure Rate, Meas Def Rate, Vis Def Rate
+    document.querySelectorAll('.chartY').forEach(cb => {
+        cb.checked = isGoal ? ['failureRate','measDefRate','visDefRate'].includes(cb.value) : cb.checked;
+    });
+}
+
+function generarGraficoConfigurado() {
+    const tipo = document.getElementById('chartType').value;
+    const xDim = document.getElementById('chartX').value;
+    const agg = document.getElementById('chartAgg').value;
+    const isGoal = tipo === 'barMeta';
+
+    // Read selected metrics
+    const metricCbs = document.querySelectorAll('.chartY:checked');
+    if (metricCbs.length === 0) { alert("Selecciona al menos una métrica."); return; }
+    const metrics = Array.from(metricCbs).map(cb => cb.value);
+
+    const yLabels = {
+        audits: 'Auditorías', failures: 'Fallos', failureRate: 'Total Failure Rate %',
+        measDef: 'Def. Medición', visDef: 'Def. Visuales',
+        measDefRate: 'Measurement Defect Rate %', visDefRate: 'Visual Defect Rate %'
+    };
+
+    // Metric config: 'sum' metrics accumulate the field value; 'rate' metrics accumulate numerator/denominator separately
+    var metricCfg = {
+        audits: {type:'sum', field:'audits'},
+        failures: {type:'sum', field:'failures'},
+        failureRate: {type:'rate', num:'failures', den:'audits'},
+        measDef: {type:'sum', field:'measDef'},
+        visDef: {type:'sum', field:'visDef'},
+        measDefRate: {type:'rate', num:'measDef', den:'measIns'},
+        visDefRate: {type:'rate', num:'visDef', den:'visIns'},
+        measIns: {type:'sum', field:'measIns'},
+        visIns: {type:'sum', field:'visIns'},
+    };
+
+    function accumFor(m, r) {
+        var cfg = metricCfg[m];
+        if (!cfg) return 0;
+        if (cfg.type === 'sum') return r[cfg.field] || 0;
+        if (cfg.type === 'rate') return {num: r[cfg.num]||0, den: r[cfg.den]||0};
+        return 0;
+    }
+
+    function finalizeAcc(m, acc) {
+        var cfg = metricCfg[m];
+        if (!cfg) return 0;
+        if (cfg.type === 'sum') return acc;
+        if (cfg.type === 'rate') return acc.den > 0 ? (acc.num / acc.den) * 100 : 0;
+        return 0;
+    }
+
+    const getLabel = {
+        factory: r => r.factory, buyer: r => r.buyer,
+        point: r => r.point || '(sin punto)',
+        stage: r => r.stage || '(sin stage)',
+        month: r => r.mesTexto
+    }[xDim];
+
+    const datos = window.registrosFiltradosGlobal;
+    if (!datos || datos.length === 0) { alert("No hay datos filtrados para graficar."); return; }
+
+    var labels, groups;
+    if (agg === 'real') {
+        labels = datos.map(function(r) { return getLabel(r); });
+        groups = {};
+        metrics.forEach(function(m) {
+            groups[m] = datos.map(function(r) {
+                var v = accumFor(m, r);
+                return typeof v === 'object' ? (v.den > 0 ? (v.num / v.den) * 100 : 0) : v;
+            });
+        });
+    } else {
+        groups = {};
+        datos.forEach(function(r) {
+            var lbl = getLabel(r);
+            if (!groups[lbl]) groups[lbl] = {};
+            metrics.forEach(function(m) {
+                var cfg = metricCfg[m];
+                if (!groups[lbl][m]) groups[lbl][m] = cfg.type === 'rate' ? { num: 0, den: 0 } : { sum: 0, count: 0 };
+                var v = accumFor(m, r);
+                if (cfg.type === 'rate') { groups[lbl][m].num += v.num; groups[lbl][m].den += v.den; }
+                else { groups[lbl][m].sum += v; groups[lbl][m].count++; }
+            });
+        });
+
+        labels = Object.keys(groups);
+        var knownOrder = ORDEN_ESTRICTO_FABRICAS.filter(function(f) { return labels.indexOf(f) !== -1; });
+        var unknown = labels.filter(function(l) { return knownOrder.indexOf(l) === -1; }).sort();
+        labels = knownOrder.concat(unknown);
+    }
+
+    if (chartConfigInstance) { chartConfigInstance.destroy(); chartConfigInstance = null; }
+    const isPie = ['pie','doughnut','polarArea'].includes(tipo);
+    const aggLabel = {real:'Datos Reales',sum:'Suma',avg:'Promedio',count:'Conteo'}[agg];
+
+    const COLORS = ['#06b6d4','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#6366f1'];
+
+    function getData(m) {
+        if (agg === 'real') return groups[m];
+        var cfg = metricCfg[m];
+        return labels.map(function(l) {
+            var g = groups[l][m];
+            if (!g) return 0;
+            // Rate metrics always return the aggregate percentage
+            if (cfg.type === 'rate') return finalizeAcc(m, g);
+            // Sum metrics: sum / avg / count
+            if (agg === 'sum') return g.sum;
+            if (agg === 'avg') return g.count ? g.sum / g.count : 0;
+            if (agg === 'count') return g.count;
+            return 0;
+        });
+    }
+
+    function fmtVal(v, m) {
+        if (m === 'failureRate' || m === 'measDefRate' || m === 'visDefRate') return v.toFixed(2) + '%';
+        return Number.isInteger(v) ? v.toLocaleString() : v.toFixed(2);
+    }
+
+    const datasets = [];
+    if (isGoal) {
+        // Read goals per metric
+        const goalValues = {
+            failureRate: parseFloat(document.getElementById('goalFailureRate').value) || 0,
+            measDefRate: parseFloat(document.getElementById('goalMeasDefRate').value) || 0,
+            visDefRate: parseFloat(document.getElementById('goalVisDefRate').value) || 0,
+        };
+
+        metrics.forEach((m, mi) => {
+            const d = getData(m);
+            const color = COLORS[mi % COLORS.length];
+            datasets.push({
+                label: yLabels[m] + ' (' + aggLabel + ')',
+                data: d,
+                backgroundColor: color + '99',
+                borderColor: color,
+                borderWidth: 1.5,
+                order: 2
+            });
+
+            // Horizontal goal line for this metric
+            const goalVal = goalValues[m] !== undefined ? goalValues[m] : 0;
+            const goalColor = ['#FF0040','#FF8800','#CC00FF'][mi % 3];
+            datasets.push({
+                label: 'Meta ' + yLabels[m],
+                data: labels.map(() => goalVal),
+                type: 'line',
+                borderColor: goalColor,
+                borderWidth: 3,
+                pointRadius: 0,
+                pointHitRadius: 0,
+                fill: false,
+                tension: 0,
+                order: 1,
+                _isGoalLine: true
+            });
+        });
+    } else {
+        metrics.forEach((m, mi) => {
+            datasets.push({
+                label: yLabels[m] + ' (' + aggLabel + ')',
+                data: getData(m),
+                backgroundColor: isPie ? `hsla(${mi*360/metrics.length}, 70%, 55%, 0.7)` : COLORS[mi % COLORS.length] + '99',
+                borderColor: isPie ? `hsla(${mi*360/metrics.length}, 70%, 45%, 1)` : COLORS[mi % COLORS.length],
+                borderWidth: 1.5,
+                pointBackgroundColor: COLORS[mi % COLORS.length],
+                ...(isPie ? {} : { borderRadius: 3 })
+            });
+        });
+    }
+
+    // Value labels plugin (show values on bars)
+    const valueLabelPlugin = {
+        id: 'valueLabels',
+        afterDraw(chart) {
+            const ctx = chart.ctx;
+            // Map bar datasets to their metric names (skip goal lines)
+            var barDsIdx = 0;
+            chart.data.datasets.forEach((ds, di) => {
+                if (ds._isGoalLine) return;
+                const meta = chart.getDatasetMeta(di);
+                if (!meta || !meta.data) return;
+                const mName = metrics[barDsIdx] || '';
+                ctx.fillStyle = '#e5e7eb';
+                ctx.font = 'bold 9px monospace';
+                ctx.textAlign = 'center';
+                meta.data.forEach((bar, i) => {
+                    const val = ds.data[i];
+                    if (val === undefined || val === null) return;
+                    ctx.textBaseline = 'bottom';
+                    var yPos = bar.y - 4;
+                    // If text would clip above chart, place inside the bar instead
+                    if (yPos < 10) { yPos = bar.y + 10; ctx.textBaseline = 'top'; }
+                    ctx.fillText(fmtVal(val, mName), bar.x, yPos);
+                });
+                barDsIdx++;
+            });
+        }
+    };
+
+    // Per-bar metric label plugin (shows metric name under each bar, between bar and x-axis)
+    const barLabelPlugin = {
+        id: 'barLabels',
+        afterDraw(chart) {
+            if (isPie) return;
+            const ctx = chart.ctx;
+            const xScale = chart.scales.x;
+            if (!xScale || !xScale.ticks) return;
+            const barThickness = chart.data.datasets.reduce((min, ds, di) => {
+                if (ds.type === 'line') return min;
+                const meta = chart.getDatasetMeta(di);
+                return meta && meta.data && meta.data.length > 0 ? Math.min(min, Math.abs(meta.data[1]?.x - meta.data[0]?.x || 999)) : min;
+            }, 999) / chart.data.datasets.filter(ds => ds.type !== 'line').length;
+
+            // Only show metric labels on non-line datasets (skip goal lines)
+            var nonLineCount = chart.data.datasets.filter(function(d) { return !d._isGoalLine; }).length;
+            if (nonLineCount <= 1) return;
+            chart.data.datasets.forEach((ds, di) => {
+                if (ds._isGoalLine) return;
+                const meta = chart.getDatasetMeta(di);
+                if (!meta || !meta.data) return;
+                const mLabel = ds.label.replace(/ \(.*\)/, '');
+                meta.data.forEach((bar) => {
+                    ctx.fillStyle = '#9ca3af';
+                    ctx.font = '7px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'top';
+                    const yBottom = chart.scales.y.getPixelForValue(0);
+                    ctx.fillText(mLabel, bar.x, yBottom + 2);
+                });
+            });
+        }
+    };
+
+    var chartStyle = document.getElementById('chartStyle').value;
+    var is3D = chartStyle === '3d' && !isPie;
+
+    // 3D bar effect plugin
+    var bar3DPlugin = {
+        id: 'bar3D',
+        afterDatasetDraw: function(chart, args) {
+            if (!is3D) return;
+            var meta = args.meta;
+            if (!meta || meta.type !== 'bar') return;
+            var ctx = chart.ctx;
+            var depth = 5;
+            meta.data.forEach(function(bar) {
+                if (bar.hidden || bar.y === undefined || bar.base === undefined) return;
+                var x = bar.x, y = bar.y, base = bar.base, w = bar.width;
+                var dsIndex = args.index;
+                var ds = chart.data.datasets[dsIndex];
+                if (ds._isGoalLine) return;
+                var baseColor = ds.backgroundColor || 'rgba(6,182,212,0.4)';
+                // Extract/derive lighter and darker shades
+                ctx.save();
+
+                // Top face (lighter parallelogram)
+                ctx.beginPath();
+                ctx.moveTo(x - w/2, y);
+                ctx.lineTo(x - w/2 + depth, y - depth);
+                ctx.lineTo(x + w/2 + depth, y - depth);
+                ctx.lineTo(x + w/2, y);
+                ctx.closePath();
+                ctx.fillStyle = baseColor.replace('0.4','0.25').replace('0.6','0.4').replace('0.7','0.5').replace('0.99','0.6');
+                // If rgba not found, try hsla
+                if (ctx.fillStyle === baseColor.replace('0.4','0.25').replace('0.6','0.4').replace('0.7','0.5').replace('0.99','0.6')) {
+                    ctx.fillStyle = baseColor;
+                    ctx.globalAlpha = 0.3;
+                }
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+
+                // Right side face (darker parallelogram)
+                ctx.beginPath();
+                ctx.moveTo(x + w/2, y);
+                ctx.lineTo(x + w/2 + depth, y - depth);
+                ctx.lineTo(x + w/2 + depth, base - depth);
+                ctx.lineTo(x + w/2, base);
+                ctx.closePath();
+                ctx.fillStyle = baseColor.replace('0.4','0.6').replace('0.6','0.8').replace('0.7','0.85').replace('0.99','0.9');
+                if (ctx.fillStyle === baseColor.replace('0.4','0.6').replace('0.6','0.8').replace('0.7','0.85').replace('0.99','0.9')) {
+                    ctx.fillStyle = baseColor;
+                    ctx.globalAlpha = 0.5;
+                }
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+
+                ctx.restore();
+            });
+        }
+    };
+
+    // Goal label plugin: shows GOAL + percentage with arrow on each goal line
+    var goalLabelPlugin = {
+        id: 'goalLabels',
+        afterDraw: function(chart) {
+            if (!isGoal) return;
+            var ctx = chart.ctx;
+            var xScale = chart.scales.x;
+            var yScale = chart.scales.y;
+            if (!xScale || !yScale) return;
+
+            // Collect bar heights to find a clear spot
+            var barTopYByLabel = {};
+            chart.data.datasets.forEach(function(ds, di) {
+                if (ds._isGoalLine) return;
+                var meta = chart.getDatasetMeta(di);
+                if (!meta || !meta.data) return;
+                meta.data.forEach(function(bar, i) {
+                    var lbl = chart.data.labels[i];
+                    if (!barTopYByLabel[lbl] || bar.y < barTopYByLabel[lbl]) {
+                        barTopYByLabel[lbl] = bar.y;
+                    }
+                });
+            });
+
+            chart.data.datasets.forEach(function(ds, di) {
+                if (!ds._isGoalLine) return;
+                var meta = chart.getDatasetMeta(di);
+                if (!meta || !meta.data || meta.data.length === 0) return;
+                var goalVal = ds.data[0];
+                if (goalVal === undefined) return;
+                var yPx = meta.data[0].y;
+                var goalColor = ds.borderColor || '#FF0040';
+                var text = 'GOAL ' + goalVal.toFixed(1) + '%';
+
+                // Choose side: try right, if a tall bar is near the goal line at rightmost label, use left
+                var lastLabel = chart.data.labels[chart.data.labels.length - 1];
+                var firstLabel = chart.data.labels[0];
+                var useRight = true;
+                if (barTopYByLabel[lastLabel] !== undefined && Math.abs(barTopYByLabel[lastLabel] - yPx) < 25) {
+                    useRight = false;
+                }
+
+                // If we can't use the right side, try middle
+                var midLabel = chart.data.labels[Math.floor(chart.data.labels.length / 2)];
+                var useMid = false;
+                if (!useRight && barTopYByLabel[firstLabel] !== undefined && Math.abs(barTopYByLabel[firstLabel] - yPx) < 25) {
+                    useMid = true;
+                }
+
+                var xPx;
+                if (useMid) {
+                    var midIdx = Math.floor(chart.data.labels.length / 2);
+                    var midPoint = meta.data[midIdx];
+                    xPx = midPoint ? midPoint.x : xScale.left + (xScale.right - xScale.left) / 2;
+                } else if (useRight) {
+                    xPx = xScale.right - 8;
+                } else {
+                    xPx = xScale.left + 8;
+                }
+
+                ctx.save();
+                ctx.font = 'bold 8px monospace';
+                var tw = ctx.measureText(text).width;
+                var boxW = tw + 10;
+                var boxH = 14;
+                var boxX = useRight ? xPx - boxW : xPx - (useMid ? boxW / 2 : 0);
+                var boxY = yPx - boxH - 8;
+
+                // Arrow line from box to goal line
+                ctx.beginPath();
+                ctx.moveTo(boxX + boxW / 2, boxY + boxH);
+                ctx.lineTo(boxX + boxW / 2, yPx);
+                ctx.strokeStyle = goalColor;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Arrow head
+                ctx.beginPath();
+                ctx.moveTo(boxX + boxW / 2 - 4, yPx - 5);
+                ctx.lineTo(boxX + boxW / 2, yPx);
+                ctx.lineTo(boxX + boxW / 2 + 4, yPx - 5);
+                ctx.fillStyle = goalColor;
+                ctx.fill();
+
+                // Text box
+                ctx.fillStyle = 'rgba(0,0,0,0.85)';
+                ctx.fillRect(boxX, boxY, boxW, boxH);
+                ctx.strokeStyle = goalColor;
+                ctx.lineWidth = 1;
+                ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+                // Text
+                ctx.fillStyle = goalColor;
+                ctx.font = 'bold 8px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(text, boxX + boxW / 2, boxY + boxH / 2);
+                ctx.restore();
+            });
+        }
+    };
+
+    var chartType = isPie ? tipo : (isGoal ? 'bar' : tipo);
+    chartConfigInstance = new Chart(document.getElementById('canvasChartConfig').getContext('2d'), {
+        type: chartType,
+        data: { labels, datasets },
+        plugins: isPie ? [valueLabelPlugin] : [valueLabelPlugin, barLabelPlugin, bar3DPlugin, goalLabelPlugin],
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: '#8b949e', font: { size: 9 } } },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            const v = ctx.raw;
+                            const m = metrics[ctx.datasetIndex] || '';
+                            return ctx.dataset.label + ': ' + fmtVal(v, m);
+                        }
+                    }
+                }
+            },
+            scales: isPie ? {} : {
+                x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 8 } }, afterFit: function(scale) { scale.height += 10; } },
+                y: { grid: { color: '#21262d', drawBorder: false }, ticks: { color: '#8b949e', font: { size: 9 } }, beginAtZero: true }
+            }
+        }
+    });
+}
+
+function destruirInstanciasGraficos() {
+    if (chartConfigInstance) { chartConfigInstance.destroy(); chartConfigInstance = null; }
+}
+
+function descargarExcelDepurado() {
+    const datos = window.registrosFiltradosGlobal;
+    if (datos.length === 0) { alert("No hay datos filtrados para exportar."); return; }
+
+    const sorted = [...datos].sort((a, b) => {
+        if (a.mesFiltroKey !== b.mesFiltroKey) return a.mesFiltroKey.localeCompare(b.mesFiltroKey);
+        const fa = ORDEN_ESTRICTO_FABRICAS.indexOf(a.factory), fb = ORDEN_ESTRICTO_FABRICAS.indexOf(b.factory);
+        if (fa !== fb) return (fa === -1 ? 99 : fa) - (fb === -1 ? 99 : fb);
+        if (a.buyer !== b.buyer) return a.buyer.localeCompare(b.buyer);
+        if (a.point !== b.point) return a.point.localeCompare(b.point);
+        return (a.fecha instanceof Date ? a.fecha : new Date(a.fecha)) - (b.fecha instanceof Date ? b.fecha : new Date(b.fecha));
+    });
+
+    var LABEL = ['Fecha','Fábrica','Cliente','Estilo','PO','Type','Name','Stage','Point'];
+    var NUM = ['Audits','Failures','Failure Rate %','Meas Insp','Meas Def','Meas Def Rate %','Vis Insp','Vis Def','Vis Def Rate %'];
+    var HEADERS = LABEL.concat(NUM).concat(['Result']);
+    var L = LABEL.length;
+
+    function a0() { return {audits:0,failures:0,measIns:0,measDef:0,visIns:0,visDef:0}; }
+    function add(t,s) { t.audits+=s.audits; t.failures+=s.failures; t.measIns+=s.measIns; t.measDef+=s.measDef; t.visIns+=s.visIns; t.visDef+=s.visDef; }
+    function p(p,d) { return d>0?(p/d*100).toFixed(2)+'%':'0.00%'; }
+    function dr(r) {
+        var d = r.fecha instanceof Date ? r.fecha.toISOString().split('T')[0] : String(r.fecha);
+        return [d,r.factory,r.buyer,r.style,r.po,r.colL,r.colM,r.stage,r.point,
+                r.audits,r.failures,p(r.failures,r.audits),
+                r.measIns,r.measDef,p(r.measDef,r.measIns),
+                r.visIns,r.visDef,p(r.visDef,r.visIns),
+                r.result];
+    }
+    function sr(a,l) {
+        var o = [l]; for(var i=1;i<L;i++)o.push('');
+        o.push(a.audits,a.failures,p(a.failures,a.audits),a.measIns,a.measDef,p(a.measDef,a.measIns),a.visIns,a.visDef,p(a.visDef,a.visIns),'');
+        return o;
+    }
+
+    var out = [HEADERS];
+    var merges = [];
+    var rn = 1;
+
+    var pm='',pf='',pb='',pp='';
+    var am=a0(),af=a0(),ab=a0(),ap=a0();
+    var gt=a0();
+
+    function br() { out.push([]); rn++; } // blank row separator
+
+    function fp() {
+        if(pp==='')return;
+        var rr=rn; out.push(sr(ap,'  Subtotal '+pp)); merges.push({s:{r:rr,c:0},e:{r:rr,c:L-1}}); rn++;
+        add(ab,ap); ap=a0(); br();
+    }
+    function fb() {
+        if(pb==='')return;
+        fp();
+        var rr=rn; out.push(sr(ab,' Subtotal '+pb)); merges.push({s:{r:rr,c:0},e:{r:rr,c:L-1}}); rn++;
+        add(af,ab); ab=a0(); br();
+    }
+    function ff() {
+        if(pf==='')return;
+        fb();
+        var rr=rn; out.push(sr(af,'Total '+pf)); merges.push({s:{r:rr,c:0},e:{r:rr,c:L-1}}); rn++;
+        add(am,af); af=a0(); br();
+    }
+    function fm() {
+        if(pm==='')return;
+        ff();
+        var rr=rn; out.push(sr(am,'TOTAL '+pm)); merges.push({s:{r:rr,c:0},e:{r:rr,c:L-1}}); rn++;
+        add(gt,am); am=a0(); br();
+    }
+
+    sorted.forEach(function(r) {
+        if(r.mesFiltroKey!==pm){fm();pm=r.mesFiltroKey;pf='';pb='';pp='';}
+        if(r.factory!==pf){ff();pf=r.factory;pb='';pp='';}
+        if(r.buyer!==pb){fb();pb=r.buyer;pp='';}
+        if(r.point!==pp){fp();pp=r.point;}
+        add(ap,r);
+        out.push(dr(r));
+        rn++;
+    });
+    fm();
+    var rr=rn; out.push(sr(gt,'GRAN TOTAL')); merges.push({s:{r:rr,c:0},e:{r:rr,c:L-1}}); rn++;
+
+    var wb = XLSX.utils.book_new();
+    var ws = XLSX.utils.aoa_to_sheet(out);
+
+    // Insert title row
+    XLSX.utils.sheet_add_aoa(ws, [['CONTROL ADMINISTRATIVE — BASE DEPURADA']], { origin: 'A1' });
+    ws['!merges'] = merges.concat([{s:{r:0,c:0},e:{r:0,c:HEADERS.length-1}}]);
+    // Shift all existing data down by 1 (our row tracking is 1-based offset now)
+    // Actually, simpler: prepend title to out array and adjust merge references
+    // Since out is already built, let's shift via sheet_add_aoa at top
+    // Rebuild: we already wrote 'out' to sheet, now we insert title at top
+    // The easier approach: rebuild from scratch with title
+    // But we already pushed everything to sheet. Let's just use sheet_add_aoa to insert at row 0, which pushes existing rows down
+    // Actually XLSX.utils.sheet_add_aoa with origin inserts, not shifts. Let me redo this properly.
+
+    // Clean way: rebuild out array with title at top
+    out.unshift(['CONTROL ADMINISTRATIVE — BASE DEPURADA']);
+    // Shift merge references down by 1
+    for (var mi = 0; mi < merges.length; mi++) {
+        merges[mi].s.r += 1;
+        merges[mi].e.r += 1;
+    }
+
+    ws = XLSX.utils.aoa_to_sheet(out);
+    ws['!merges'] = merges.concat([{s:{r:0,c:0},e:{r:0,c:HEADERS.length-1}}]);
+    ws['!cols'] = HEADERS.map(function(h){return{wch:h==='Fábrica'?28:h==='Estilo'?24:h==='PO'?20:Math.max(h.length+3,14)};});
+
+    function sc(r,c,o) {
+        var addr = XLSX.utils.encode_cell({r:r,c:c});
+        var cell = ws[addr]; if(!cell) return;
+        var s = {border:{top:{style:'thin',color:{rgb:'A0A0A0'}},bottom:{style:'thin',color:{rgb:'A0A0A0'}},left:{style:'thin',color:{rgb:'A0A0A0'}},right:{style:'thin',color:{rgb:'A0A0A0'}}}};
+        if(o.fill) s.fill = {fgColor:{rgb:o.fill},patternType:'solid'};
+        if(o.font) s.font = o.font;
+        if(o.align) s.alignment = o.align;
+        if(o.numFmt) s.numFmt = o.numFmt;
+        cell.s = s;
+    }
+
+    // Title row
+    sc(0,0,{fill:'0B2B4A',font:{bold:true,color:{rgb:'FFD700'},sz:14,name:'Calibri'},align:{horizontal:'center',vertical:'center'}});
+    // Fill remaining title cells with same bg
+    for(var c=1;c<HEADERS.length;c++) sc(0,c,{fill:'0B2B4A'});
+
+    // Header row (now row 1)
+    for(var c=0;c<HEADERS.length;c++) sc(1,c,{fill:'1B3A5C',font:{bold:true,color:{rgb:'FFFFFF'},sz:10,name:'Calibri'},align:{horizontal:'center',vertical:'center',wrapText:true}});
+
+    var dataStartRow = 2;
+    for(var r=2;r<out.length;r++) {
+        var v = out[r][0];
+        // Detect numeric/finish result for conditional result column color
+        var resultVal = String(out[r][HEADERS.length-1]||'');
+        var isPASS = resultVal==='PASS';
+        var isFAIL = resultVal==='FAIL';
+
+        var isGT = v==='GRAN TOTAL';
+        var isMT = v && v.indexOf('TOTAL ')!==-1 && !isGT;
+        var isFT = v && v.indexOf('Total ')!==-1 && v.indexOf('TOTAL ')!==0;
+        var isBS = v && v.indexOf(' Subtotal ')!==-1;
+        var isPS = v && v.indexOf('  Subtotal ')!==-1;
+
+        for(var c=0;c<HEADERS.length;c++) {
+            var o = {};
+            if(isGT) {o.fill='1E3A8A';o.font={bold:true,color:{rgb:'FFFFFF'},sz:11,name:'Calibri'};}
+            else if(isMT) {o.fill='1E40AF';o.font={bold:true,color:{rgb:'DBEAFE'},sz:10,name:'Calibri'};}
+            else if(isFT) {o.fill='065F46';o.font={bold:true,color:{rgb:'D1FAE5'},sz:10,name:'Calibri'};}
+            else if(isBS) {o.fill='92400E';o.font={bold:true,color:{rgb:'FEF3C7'},sz:10,name:'Calibri'};}
+            else if(isPS) {o.fill='5B21B6';o.font={bold:true,color:{rgb:'EDE9FE'},sz:10,name:'Calibri'};}
+            else if(isPASS && c===HEADERS.length-1) {o.fill='064E3B';o.font={bold:true,color:{rgb:'6EE7B7'},sz:10,name:'Calibri'};}
+            else if(isFAIL && c===HEADERS.length-1) {o.fill='7F1D1D';o.font={bold:true,color:{rgb:'FCA5A5'},sz:10,name:'Calibri'};}
+            else if((r-dataStartRow)%2===0){o.fill='F0F4F8';o.font={color:{rgb:'1F2937'},sz:10,name:'Calibri'};}
+            else {o.fill='FFFFFF';o.font={color:{rgb:'1F2937'},sz:10,name:'Calibri'};}
+            if(c>=L&&c<HEADERS.length-1) o.align = {horizontal:'right'};
+            if(c===HEADERS.length-1) o.align = {horizontal:'center'};
+            sc(r,c,o);
+        }
+    }
+
+    XLSX.utils.book_append_sheet(wb, ws, "Base Depurada");
+    XLSX.writeFile(wb, "base_depurada.xlsx");
+}
+
+(function() {
+    const header = document.getElementById("biHeader");
+    const win = document.getElementById("biAnalyticWindow");
+    let isDragging = false, xOffset = 0, yOffset = 0, initialX, initialY;
+
+    header.addEventListener("mousedown", function(e) {
+        if (win.classList.contains('minimized')) return;
+        if (e.target !== header && !header.contains(e.target)) return;
+        isDragging = true;
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+    });
+
+    document.addEventListener("mousemove", function(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        xOffset = e.clientX - initialX;
+        yOffset = e.clientY - initialY;
+        win.style.transform = 'translate(' + xOffset + 'px, ' + yOffset + 'px)';
+    });
+
+    document.addEventListener("mouseup", function() {
+        isDragging = false;
+    });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SCA - JAB</string>
+    <string name="title_activity_main">SCA - JAB</string>
+    <string name="package_name">com.hrpanel.app</string>
+    <string name="custom_url_scheme">com.hrpanel.app</string>
+</resources>
