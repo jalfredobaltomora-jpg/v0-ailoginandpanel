@@ -775,3 +775,55 @@ export function listenToEquiposInventario(callback: (equipos: EquipoInventario[]
     callback(Object.values(raw));
   });
 }
+
+// ─── QA DHU Records ──────────────────────────────────────────────
+
+export interface QADHURecord {
+  id: string;
+  item: string;
+  inspectionDate: string;
+  week: number;
+  month: string;
+  factory: string;
+  line: string;
+  po: string;
+  color: string;
+  buyer: string;
+  auditor: string;
+  style: string;
+  visualSample: number;
+  visualReject: number;
+  visualApproved: number;
+  dhuScorePercent: number;
+  performanceDHU: string;
+  passRateScorePercent: number;
+  createdAt: number;
+  createdBy: string;
+}
+
+export async function saveQADHURecord(record: Omit<QADHURecord, 'id'>): Promise<string> {
+  await _init();
+  const newRef = push(ref(db, 'qa-dhu-records'));
+  const id = newRef.key!;
+  await set(newRef, { ...record, id });
+  return id;
+}
+
+export async function getQADHURecords(): Promise<QADHURecord[]> {
+  try {
+    await _init();
+    const snapshot = await get(ref(db, 'qa-dhu-records'));
+    const raw: Record<string, QADHURecord> = snapshot.val() || {};
+    return Object.values(raw).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  } catch {
+    return [];
+  }
+}
+
+export function listenToQADHURecords(callback: (records: QADHURecord[]) => void): () => void {
+  const r = ref(db, 'qa-dhu-records');
+  return onValue(r, (snap) => {
+    const raw: Record<string, QADHURecord> = snap.val() || {};
+    callback(Object.values(raw).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
+  });
+}
