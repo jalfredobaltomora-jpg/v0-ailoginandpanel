@@ -1,5 +1,5 @@
-const CACHE = 'jabm-panel-v4';
-const BASE = '/v0-ailoginandpanel';
+const CACHE = 'jabm-panel-v5';
+const BASE = self.location?.origin || '';
 const ASSETS = [
   BASE + '/',
   BASE + '/manifest.json',
@@ -59,7 +59,7 @@ self.addEventListener('notificationclick', (event) => {
       if (clientList.length > 0) {
         return clientList[0].focus();
       }
-      return clients.openWindow(BASE + '/');
+      return clients.openWindow('/');
     })
   );
 });
