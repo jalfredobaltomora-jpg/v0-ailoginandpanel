@@ -6,11 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getStoredUser } from '@/lib/auth-store';
-import { getEmpleadosActivos, getQADHURecords, saveQADHURecord, type Empleado } from '@/lib/firebase';
+import { getEmpleadosActivos, getQADHURecords, saveQADHURecord, updateQADHURecord, type Empleado } from '@/lib/firebase';
 
 interface QADHUModalProps {
   onClose: () => void;
   onSaved: () => void;
+  record?: any;
 }
 
 function getISOWeekNumber(date: Date): number {
@@ -24,23 +25,24 @@ function getISOWeekNumber(date: Date): number {
 const factories = ['TECHNOTEX #2', 'EINS', 'DASOLTEX SA'];
 const buyers = ['Target', "Kohl's", 'Walmart'];
 
-export function QADHUModal({ onClose, onSaved }: QADHUModalProps) {
+export function QADHUModal({ onClose, onSaved, record }: QADHUModalProps) {
+  const isEditing = !!record;
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const [item, setItem] = useState('');
-  const [inspectionDate, setInspectionDate] = useState(new Date().toISOString().split('T')[0]);
-  const [month, setMonth] = useState('');
-  const [factory, setFactory] = useState('');
-  const [line, setLine] = useState('');
-  const [po, setPo] = useState('');
-  const [color, setColor] = useState('');
-  const [buyer, setBuyer] = useState('');
-  const [auditor, setAuditor] = useState('');
-  const [style, setStyle] = useState('');
-  const [visualSample, setVisualSample] = useState(0);
-  const [visualReject, setVisualReject] = useState(0);
+  const [item, setItem] = useState(record?.item || '');
+  const [inspectionDate, setInspectionDate] = useState(record?.inspectionDate || new Date().toISOString().split('T')[0]);
+  const [month, setMonth] = useState(record?.month || '');
+  const [factory, setFactory] = useState(record?.factory || '');
+  const [line, setLine] = useState(record?.line || '');
+  const [po, setPo] = useState(record?.po || '');
+  const [color, setColor] = useState(record?.color || '');
+  const [buyer, setBuyer] = useState(record?.buyer || '');
+  const [auditor, setAuditor] = useState(record?.auditor || '');
+  const [style, setStyle] = useState(record?.style || '');
+  const [visualSample, setVisualSample] = useState(record?.visualSample ?? 0);
+  const [visualReject, setVisualReject] = useState(record?.visualReject ?? 0);
   const [dropdownOpen, setDropdownOpen] = useState<'factory' | 'buyer' | 'auditor' | null>(null);
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export function QADHUModal({ onClose, onSaved }: QADHUModalProps) {
   }, []);
 
   useEffect(() => {
+    if (isEditing) return;
     getQADHURecords().then(records => {
       let maxNum = 0;
       for (const r of records) {
@@ -59,7 +62,7 @@ export function QADHUModal({ onClose, onSaved }: QADHUModalProps) {
       }
       setItem(`#${String(maxNum + 1).padStart(3, '0')}`);
     });
-  }, []);
+  }, [isEditing]);
 
   const dateObj = useMemo(() => new Date(inspectionDate + 'T12:00:00'), [inspectionDate]);
   const week = useMemo(() => getISOWeekNumber(dateObj), [dateObj]);
@@ -84,7 +87,7 @@ export function QADHUModal({ onClose, onSaved }: QADHUModalProps) {
     setSaving(true);
     setError('');
     const user = getStoredUser();
-    const ok = await saveQADHURecord({
+    const data = {
       item,
       inspectionDate,
       week,
@@ -102,9 +105,15 @@ export function QADHUModal({ onClose, onSaved }: QADHUModalProps) {
       dhuScorePercent: Math.round(dhuScorePercent * 10000) / 10000,
       performanceDHU,
       passRateScorePercent: Math.round(passRateScorePercent * 10000) / 10000,
-      createdAt: Date.now(),
-      createdBy: user?.codigo || '',
-    });
+      createdAt: record?.createdAt || Date.now(),
+      createdBy: record?.createdBy || user?.codigo || '',
+    };
+    let ok: boolean;
+    if (isEditing) {
+      ok = await updateQADHURecord(record.id, data);
+    } else {
+      ok = !!(await saveQADHURecord(data));
+    }
     setSaving(false);
     if (ok) { onSaved(); onClose(); }
     else setError('Error al guardar. Intenta de nuevo.');
@@ -119,7 +128,7 @@ export function QADHUModal({ onClose, onSaved }: QADHUModalProps) {
       <Card className="w-full max-w-3xl border-primary/20 bg-card max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex-row items-center justify-between border-b border-border sticky top-0 bg-card z-10">
           <CardTitle className="flex items-center gap-2 text-primary text-base">
-            QA - DHU % SAE - Indicator IN LINE
+            {isEditing ? 'Editar Registro' : 'QA - DHU % SAE - Indicator IN LINE'}
           </CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-5 w-5" /></Button>
         </CardHeader>
@@ -210,7 +219,7 @@ export function QADHUModal({ onClose, onSaved }: QADHUModalProps) {
             <Button variant="outline" onClick={onClose}>Cancelar</Button>
             <Button onClick={handleSave} disabled={saving} className="bg-primary text-primary-foreground">
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              <Save className="mr-2 h-4 w-4" /> Guardar
+              <Save className="mr-2 h-4 w-4" /> {isEditing ? 'Actualizar' : 'Guardar'}
             </Button>
           </div>
         </CardContent>

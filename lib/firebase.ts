@@ -809,6 +809,16 @@ export async function saveQADHURecord(record: Omit<QADHURecord, 'id'>): Promise<
   return id;
 }
 
+export async function updateQADHURecord(id: string, data: Partial<QADHURecord>): Promise<boolean> {
+  try {
+    await _init();
+    await update(ref(db, `qa-dhu-records/${id}`), data);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function getQADHURecords(): Promise<QADHURecord[]> {
   try {
     await _init();
@@ -826,4 +836,54 @@ export function listenToQADHURecords(callback: (records: QADHURecord[]) => void)
     const raw: Record<string, QADHURecord> = snap.val() || {};
     callback(Object.values(raw).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
   });
+}
+
+export interface QADHUCatalogItem {
+  id: string;
+  item: string;
+  style: string;
+  factory: string;
+  line: string;
+  po: string;
+  color: string;
+  buyer: string;
+  createdAt: number;
+  createdBy: string;
+}
+
+export async function saveQADHUCatalogItem(data: Omit<QADHUCatalogItem, 'id'>): Promise<string> {
+  await _init();
+  const newRef = push(ref(db, 'qa-dhu-catalog'));
+  const id = newRef.key!;
+  await set(newRef, { ...data, id });
+  return id;
+}
+
+export async function getQADHUCatalogItems(): Promise<QADHUCatalogItem[]> {
+  try {
+    await _init();
+    const snapshot = await get(ref(db, 'qa-dhu-catalog'));
+    const raw: Record<string, QADHUCatalogItem> = snapshot.val() || {};
+    return Object.values(raw).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  } catch {
+    return [];
+  }
+}
+
+export function listenToQADHUCatalog(callback: (items: QADHUCatalogItem[]) => void): () => void {
+  const r = ref(db, 'qa-dhu-catalog');
+  return onValue(r, (snap) => {
+    const raw: Record<string, QADHUCatalogItem> = snap.val() || {};
+    callback(Object.values(raw).sort((a, b) => a.item.localeCompare(b.item)));
+  });
+}
+
+export async function deleteQADHUCatalogItem(id: string): Promise<boolean> {
+  try {
+    await _init();
+    await remove(ref(db, `qa-dhu-catalog/${id}`));
+    return true;
+  } catch {
+    return false;
+  }
 }
