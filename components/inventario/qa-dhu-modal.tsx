@@ -6,23 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getStoredUser } from '@/lib/auth-store';
-import { getEmpleados, saveQADHURecord, type Empleado } from '@/lib/firebase';
+import { getEmpleadosActivos, getQADHURecords, saveQADHURecord, type Empleado } from '@/lib/firebase';
 
 interface QADHUModalProps {
   onClose: () => void;
   onSaved: () => void;
 }
 
-function getWeekOfMonth(date: Date): number {
-  const start = new Date(date.getFullYear(), date.getMonth(), 1);
-  const diff = date.getDate() + start.getDay() - 1;
-  return Math.ceil(diff / 7);
-}
-
-function formatMonth(date: Date): string {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${day}. ${months[date.getMonth()]} ${date.getFullYear()}`;
+function getISOWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 }
 
 const factories = ['TECHNOTEX #2', 'EINS', 'DASOLTEX SA'];
@@ -35,6 +31,7 @@ export function QADHUModal({ onClose, onSaved }: QADHUModalProps) {
 
   const [item, setItem] = useState('');
   const [inspectionDate, setInspectionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [month, setMonth] = useState('');
   const [factory, setFactory] = useState('');
   const [line, setLine] = useState('');
   const [po, setPo] = useState('');
@@ -47,14 +44,25 @@ export function QADHUModal({ onClose, onSaved }: QADHUModalProps) {
   const [dropdownOpen, setDropdownOpen] = useState<'factory' | 'buyer' | 'auditor' | null>(null);
 
   useEffect(() => {
-    getEmpleados().then(list => {
-      setEmpleados(list.filter(e => e.activo && e.cargo?.toLowerCase().includes('auditor')));
+    getEmpleadosActivos().then(setEmpleados);
+  }, []);
+
+  useEffect(() => {
+    getQADHURecords().then(records => {
+      let maxNum = 0;
+      for (const r of records) {
+        const match = r.item?.match(/^#(\d+)$/);
+        if (match) {
+          const n = parseInt(match[1], 10);
+          if (n > maxNum) maxNum = n;
+        }
+      }
+      setItem(`#${String(maxNum + 1).padStart(3, '0')}`);
     });
   }, []);
 
   const dateObj = useMemo(() => new Date(inspectionDate + 'T12:00:00'), [inspectionDate]);
-  const week = useMemo(() => getWeekOfMonth(dateObj), [dateObj]);
-  const monthStr = useMemo(() => formatMonth(dateObj), [dateObj]);
+  const week = useMemo(() => getISOWeekNumber(dateObj), [dateObj]);
   const visualApproved = useMemo(() => Math.max(0, visualSample - visualReject), [visualSample, visualReject]);
   const dhuScorePercent = useMemo(() => visualSample > 0 ? visualReject / visualSample : 0, [visualReject, visualSample]);
   const performanceDHU = useMemo(() => {
@@ -80,7 +88,7 @@ export function QADHUModal({ onClose, onSaved }: QADHUModalProps) {
       item,
       inspectionDate,
       week,
-      month: monthStr,
+      month,
       factory,
       line,
       po,
@@ -119,8 +127,8 @@ export function QADHUModal({ onClose, onSaved }: QADHUModalProps) {
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
             <Field label="ITEM" value={item} onChange={setItem} required />
             <Field label="Inspection Date" type="date" value={inspectionDate} onChange={setInspectionDate} required />
-            <Field label="Week" value={String(week)} readOnly />
-            <Field label="Month" type="text" value={monthStr} readOnly />
+            <Field label="Week" value={`#${week}`} readOnly />
+            <Field label="Month" value={month} onChange={setMonth} placeholder="Ej: May 2026" required />
 
             {/* Factory */}
             <div className="relative">
@@ -211,7 +219,7 @@ export function QADHUModal({ onClose, onSaved }: QADHUModalProps) {
   );
 }
 
-function Field({ label, value, onChange, type = 'text', readOnly, required, accent, highlight }: {
+function Field({ label, value, onChange, type = 'text', readOnly, required, accent, highlight, placeholder }: {
   label: string;
   value: string;
   onChange?: (v: string) => void;
@@ -220,6 +228,7 @@ function Field({ label, value, onChange, type = 'text', readOnly, required, acce
   required?: boolean;
   accent?: boolean;
   highlight?: boolean;
+  placeholder?: string;
 }) {
   return (
     <div>
@@ -234,7 +243,7 @@ function Field({ label, value, onChange, type = 'text', readOnly, required, acce
         }`}>{value}</div>
       ) : (
         <Input type={type} value={value} onChange={e => onChange?.(e.target.value)}
-          className="border-border bg-input" required={required} />
+          className="border-border bg-input" required={required} placeholder={placeholder} />
       )}
     </div>
   );
