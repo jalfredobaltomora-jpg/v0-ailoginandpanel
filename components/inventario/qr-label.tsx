@@ -74,7 +74,8 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
         correctLevel: QRCode.CorrectLevel?.M || 0,
       });
       setQrReady(true);
-    } catch {
+    } catch (e) {
+      console.error('QR generation error:', e);
       setQrError(true);
     }
   }, [equipo, empleadoNombre, size]);
@@ -89,9 +90,7 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
     const dataUrl = getCanvasDataUrl();
     if (!dataUrl) return;
     const lines = buildLabelLines(equipo, empleadoNombre);
-    const win = window.open('', '_blank');
-    if (!win) return;
-    win.document.write(`<!DOCTYPE html><html><head>
+    const html = `<!DOCTYPE html><html><head>
       <title>Etiqueta - ${equipo.serialNumber}</title>
       <style>
         body { font-family: Arial, sans-serif; text-align: center; padding: 20px; margin: 0; }
@@ -105,9 +104,31 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
         ${lines.map(l => `<p>${l}</p>`).join('')}
         <img src="${dataUrl}" style="width:120px;height:120px;margin:8px auto;display:block" />
       </div>
-      <script>window.onload=function(){setTimeout(function(){window.print();window.close()},500)};<\/script>
-    </body></html>`);
-    win.document.close();
+    </body></html>`;
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;right:-9999px;bottom:-9999px;width:1px;height:1px;border:none';
+    document.body.appendChild(iframe);
+    const win = iframe.contentWindow;
+    if (!win) return;
+    const doc = win.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+    const cleanup = () => {
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      window.focus();
+    };
+    const doPrint = () => {
+      if (!win) return;
+      win.print();
+      win.addEventListener('afterprint', cleanup, { once: true });
+      setTimeout(cleanup, 2000);
+    };
+    if (win.document.readyState === 'complete') {
+      doPrint();
+    } else {
+      iframe.onload = doPrint;
+    }
   };
 
   return (

@@ -75,9 +75,6 @@ export function MonthlyInspectionReport({ equipos, empleadosMap }: MonthlyInspec
         th, td { border: 1px solid #999; padding: 4px 6px; text-align: left; }
         th { background: #06b6d4; color: #fff; font-weight: bold; }
         tr:nth-child(even) { background: #f5f5f5; }
-        .score-high { color: #16a34a; font-weight: bold; }
-        .score-mid { color: #ca8a04; font-weight: bold; }
-        .score-low { color: #dc2626; font-weight: bold; }
         .footer { text-align: center; font-size: 10px; color: #999; margin-top: 16px; }
         @media print { body { padding: 8px; } }
       </style></head><body>
@@ -85,17 +82,14 @@ export function MonthlyInspectionReport({ equipos, empleadosMap }: MonthlyInspec
       <p class="sub">${now} | Mes de referencia: ${mesActual()}</p>
       <table><thead><tr>
         <th>Usuario</th><th>Codigo</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serie</th>
-        <th>Comentario</th><th>Accesorios</th><th>Asignacion</th><th>Ult. Revision</th><th>Score</th>
+        <th>Comentario</th><th>Accesorios</th><th>Asignacion</th><th>Ult. Revision</th>
       </tr></thead><tbody>`;
     for (const r of rows) {
-      const scoreClass = r.ultimoScore === null ? '' :
-        r.ultimoScore >= 80 ? 'score-high' : r.ultimoScore >= 60 ? 'score-mid' : 'score-low';
       html += `<tr>
         <td>${r.empleadoNombre}</td><td>${r.empleadoCodigo}</td><td>${r.tipo}</td>
         <td>${r.marca}</td><td>${r.modelo}</td><td>${r.serialNumber}</td>
         <td>${r.comentario}</td><td>${r.accesorios}</td><td>${r.fechaAsignacion}</td>
         <td>${r.ultimaRevision}</td>
-        <td class="${scoreClass}">${r.ultimoScore !== null ? r.ultimoScore + '%' : '-'}</td>
       </tr>`;
     }
     html += `</tbody></table>
@@ -120,8 +114,6 @@ export function MonthlyInspectionReport({ equipos, empleadosMap }: MonthlyInspec
       Asignacion: r.fechaAsignacion,
       Mes_Inventario: r.mesInventario,
       Ultima_Revision: r.ultimaRevision,
-      Score_JAB: r.ultimoScore !== null ? r.ultimoScore + '%' : '-',
-      Comentario_Revision: r.ultimoComentario,
     }));
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(data);

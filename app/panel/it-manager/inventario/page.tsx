@@ -16,6 +16,7 @@ const QRLabel = dynamic(() => import('@/components/inventario/qr-label').then(m 
 const MonthlyCheckModal = dynamic(() => import('@/components/inventario/monthly-check-modal').then(m => m.MonthlyCheckModal), { ssr: false });
 const ReinspectionModal = dynamic(() => import('@/components/inventario/reinspection-modal').then(m => m.ReinspectionModal), { ssr: false });
 const MonthlyInspectionReport = dynamic(() => import('@/components/inventario/monthly-inspection-report').then(m => m.MonthlyInspectionReport), { ssr: false });
+const PhotoGallery = dynamic(() => import('@/components/inventario/photo-gallery').then(m => m.PhotoGallery), { ssr: false });
 
 export default function InventarioPage() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function InventarioPage() {
   const [empleadosMap, setEmpleadosMap] = useState<Record<string, string>>({});
   const [selectedEquipo, setSelectedEquipo] = useState<EquipoInventario | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+  const [photoGallery, setPhotoGallery] = useState<{ photos: { url: string; label: string }[]; index: number } | null>(null);
   const [checkEquipo, setCheckEquipo] = useState<EquipoInventario | null>(null);
   const [reinspectEquipo, setReinspectEquipo] = useState<EquipoInventario | null>(null);
 
@@ -306,7 +307,13 @@ export default function InventarioPage() {
                                 src={eq.fotos[key]}
                                 alt={label}
                                 className="h-full w-full object-cover"
-                                onClick={(e) => { e.stopPropagation(); setViewingPhoto(eq.fotos[key]); }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const ordered = fotoAngleLabels
+                                    .filter(f => eq.fotos[f.key])
+                                    .map(f => ({ url: eq.fotos[f.key], label: f.label }));
+                                  setPhotoGallery({ photos: ordered, index: Math.max(0, ordered.findIndex(p => p.url === eq.fotos[key])) });
+                                }}
                               />
                             ) : (
                               <div className="flex flex-col items-center gap-0.5 text-muted-foreground/40">
@@ -412,13 +419,12 @@ export default function InventarioPage() {
         />
       )}
 
-      {viewingPhoto && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 cursor-pointer"
-          onClick={() => setViewingPhoto(null)}
-        >
-          <img src={viewingPhoto} alt="Foto ampliada" className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain" />
-        </div>
+      {photoGallery && (
+        <PhotoGallery
+          photos={photoGallery.photos}
+          initialIndex={photoGallery.index}
+          onClose={() => setPhotoGallery(null)}
+        />
       )}
     </main>
   );

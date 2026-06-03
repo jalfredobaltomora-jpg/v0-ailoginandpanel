@@ -126,10 +126,12 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
     }));
   };
 
-  const handlePhotoUpload = (slot: keyof typeof defaultFotos) => {
+  const handlePhotoUpload = (slot: keyof typeof defaultFotos, autoAdvance = false) => {
+    const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
+    if (isMobile) input.capture = 'environment';
     input.onchange = async (e: any) => {
       const file = e.target?.files?.[0];
       if (!file) return;
@@ -142,6 +144,14 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
       reader.onload = async () => {
         const resized = await compressImageBase64(reader.result as string);
         setFormData(prev => ({ ...prev, fotos: { ...prev.fotos, [slot]: resized } }));
+        if (autoAdvance) {
+          const slotOrder: (keyof typeof defaultFotos)[] = ['frontal', 'trasero', 'lateralIzquierdo', 'lateralDerecho'];
+          const currentIdx = slotOrder.indexOf(slot);
+          const nextRemaining = slotOrder.slice(currentIdx + 1);
+          if (nextRemaining.length > 0) {
+            setTimeout(() => handlePhotoUpload(nextRemaining[0], true), 400);
+          }
+        }
       };
       reader.readAsDataURL(file);
     };
@@ -446,7 +456,7 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
                       </>
                     ) : isEditing ? (
                       <button
-                        onClick={() => handlePhotoUpload(key)}
+                        onClick={() => handlePhotoUpload(key, true)}
                         className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                       >
                         <Camera className="h-6 w-6" />
