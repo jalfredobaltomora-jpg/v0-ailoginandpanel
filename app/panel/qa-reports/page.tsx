@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ScanLine, CalendarDays, CalendarRange, BarChart3, Database } from 'lucide-react';
+import { ArrowLeft, ScanLine, CalendarDays, CalendarRange, BarChart3, Database, LineChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getStoredUser } from '@/lib/auth-store';
 import { tienePermisoEnGrupo, puedeVer } from '@/lib/permisos';
@@ -14,6 +14,7 @@ const WeeklyIssues = dynamic(() => import('@/components/qa-reports/weekly-issues
 const MonthlyIssues = dynamic(() => import('@/components/qa-reports/monthly-issues').then(m => m.MonthlyIssues), { ssr: false });
 const KpiReports = dynamic(() => import('@/components/qa-reports/kpi-reports').then(m => m.KpiReports), { ssr: false });
 const WeeklyRegistry = dynamic(() => import('@/components/qa-reports/weekly-registry').then(m => m.WeeklyRegistry), { ssr: false });
+const QADHUModal = dynamic(() => import('@/components/inventario/qa-dhu-modal').then(m => m.QADHUModal), { ssr: false });
 
 interface TileProps {
   title: string;
@@ -41,7 +42,18 @@ function Tile({ title, subtitle, icon, color, onClick }: TileProps) {
 export default function QAReportsPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UsuarioIT | null>(null);
-  const [view, setView] = useState<'tiles' | 'extractor' | 'weekly' | 'monthly' | 'kpi' | 'registry'>('tiles');
+  const [view, setView] = useState<'tiles' | 'extractor' | 'weekly' | 'monthly' | 'kpi' | 'registry' | 'dhu'>('tiles');
+  const [qaDhuOpen, setQaDhuOpen] = useState(false);
+  const [qaDhuRecords, setQaDhuRecords] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (view !== 'dhu') return;
+    let unsubscribe: () => void;
+    import('@/lib/firebase').then(({ listenToQADHURecords }) => {
+      unsubscribe = listenToQADHURecords((data: any) => setQaDhuRecords(data));
+    });
+    return () => { if (unsubscribe) unsubscribe(); };
+  }, [view]);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -122,6 +134,15 @@ export default function QAReportsPage() {
                 onClick={() => setView('kpi')}
               />
             )}
+            {puedeVer(currentUser, 'qa_dhu') && (
+              <Tile
+                title="QA - DHU % SAE"
+                subtitle="Indicator IN LINE"
+                icon={<LineChart className="h-8 w-8" />}
+                color="bg-gradient-to-br from-rose-500 to-rose-700"
+                onClick={() => setView('dhu')}
+              />
+            )}
           </div>
         )}
 
@@ -130,6 +151,66 @@ export default function QAReportsPage() {
         {view === 'monthly' && <MonthlyIssues />}
         {view === 'registry' && <WeeklyRegistry />}
         {view === 'kpi' && <KpiReports />}
+        {view === 'dhu' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">QA - DHU % SAE - Indicator IN LINE</h3>
+              <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => setQaDhuOpen(true)}>
+                + Nuevo Registro
+              </Button>
+            </div>
+
+            {qaDhuRecords.length === 0 ? (
+              <div className="py-12 text-center text-muted-foreground border rounded-lg border-border">
+                No hay registros QA DHU.
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-primary/10 border-b border-border">
+                      <th className="p-2 text-left font-medium text-primary">ITEM</th>
+                      <th className="p-2 text-left font-medium text-primary">Date</th>
+                      <th className="p-2 text-left font-medium text-primary">Week</th>
+                      <th className="p-2 text-left font-medium text-primary">Factory</th>
+                      <th className="p-2 text-left font-medium text-primary">Line</th>
+                      <th className="p-2 text-left font-medium text-primary">Buyer</th>
+                      <th className="p-2 text-left font-medium text-primary">Auditor</th>
+                      <th className="p-2 text-left font-medium text-primary">Sample</th>
+                      <th className="p-2 text-left font-medium text-primary">DHU %</th>
+                      <th className="p-2 text-left font-medium text-primary">Performance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {qaDhuRecords.map(r => (
+                      <tr key={r.id} className="border-b border-border hover:bg-muted/20">
+                        <td className="p-2 font-medium">{r.item}</td>
+                        <td className="p-2 text-xs">{r.inspectionDate}</td>
+                        <td className="p-2 text-xs">{r.week}</td>
+                        <td className="p-2 text-xs">{r.factory}</td>
+                        <td className="p-2 text-xs">{r.line || '-'}</td>
+                        <td className="p-2 text-xs">{r.buyer}</td>
+                        <td className="p-2 text-xs">{r.auditor}</td>
+                        <td className="p-2 text-xs">{r.visualSample}</td>
+                        <td className="p-2 text-xs">{(r.dhuScorePercent * 100).toFixed(2)}%</td>
+                        <td className="p-2">
+                          <span className={`text-xs font-bold ${
+                            r.performanceDHU === 'Excellent' ? 'text-green-500' :
+                            r.performanceDHU === 'Good' ? 'text-yellow-500' : 'text-red-500'
+                          }`}>{r.performanceDHU}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {qaDhuOpen && (
+              <QADHUModal onClose={() => setQaDhuOpen(false)} onSaved={() => {}} />
+            )}
+          </div>
+        )}
       </div>
     </main>
   );

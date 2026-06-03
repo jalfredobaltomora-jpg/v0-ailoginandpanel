@@ -8,14 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getStoredUser } from '@/lib/auth-store';
-import type { EquipoInventario, UsuarioIT, QADHURecord } from '@/lib/firebase';
+import type { EquipoInventario, UsuarioIT } from '@/lib/firebase';
 import { tienePermiso } from '@/lib/permisos';
 
 const EquipmentFormModal = dynamic(() => import('@/components/inventario/equipment-form-modal').then(m => m.EquipmentFormModal), { ssr: false });
 const QRLabel = dynamic(() => import('@/components/inventario/qr-label').then(m => m.QRLabel), { ssr: false });
 const PhotoGallery = dynamic(() => import('@/components/inventario/photo-gallery').then(m => m.PhotoGallery), { ssr: false });
 const MonthlyAuditModal = dynamic(() => import('@/components/inventario/monthly-audit-modal').then(m => m.MonthlyAuditModal), { ssr: false });
-const QADHUModal = dynamic(() => import('@/components/inventario/qa-dhu-modal').then(m => m.QADHUModal), { ssr: false });
 
 export default function InventarioPage() {
   const router = useRouter();
@@ -29,8 +28,6 @@ export default function InventarioPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [photoGallery, setPhotoGallery] = useState<{ photos: { url: string; label: string }[]; index: number } | null>(null);
   const [auditModalOpen, setAuditModalOpen] = useState(false);
-  const [qaDhuModalOpen, setQaDhuModalOpen] = useState(false);
-  const [qaDhuRecords, setQaDhuRecords] = useState<QADHURecord[]>([]);
 
   useEffect(() => {
     import('@/lib/inventory-reminder').then(({ scheduleReminderCheck }) => {
@@ -72,14 +69,6 @@ export default function InventarioPage() {
         setEquipos(data);
         setLoading(false);
       });
-    });
-    return () => { if (unsubscribe) unsubscribe(); };
-  }, []);
-
-  useEffect(() => {
-    let unsubscribe: () => void;
-    import('@/lib/firebase').then(({ listenToQADHURecords }) => {
-      unsubscribe = listenToQADHURecords((data) => setQaDhuRecords(data));
     });
     return () => { if (unsubscribe) unsubscribe(); };
   }, []);
@@ -272,10 +261,7 @@ export default function InventarioPage() {
                     <FileSpreadsheet className="mr-2 h-4 w-4" /> Generar Reporte
                   </Button>
                   <Button onClick={() => setAuditModalOpen(true)} className="bg-primary text-primary-foreground">
-                    <Plus className="mr-2 h-4 w-4" /> Agregar Auditoria
-                  </Button>
-                  <Button onClick={() => setQaDhuModalOpen(true)} variant="secondary" className="border-border">
-                    <Plus className="mr-2 h-4 w-4" /> QA - DHU % SAE
+                    <Plus className="mr-2 h-4 w-4" /> Agregar Auditoria de inventario
                   </Button>
                 </div>
               )}
@@ -375,107 +361,48 @@ export default function InventarioPage() {
               )}
 
               {activeTab === 'inspection' && (
-                <div className="space-y-8">
-                  {/* Inventory Audits */}
-                  <div>
-                    <h3 className="mb-3 text-sm font-semibold text-foreground flex items-center gap-2">
-                      <ClipboardCheck className="h-4 w-4 text-primary" />
-                      Auditorias de Inventario
-                    </h3>
-                    {allAudits.length === 0 ? (
-                      <div className="py-6 text-center text-muted-foreground text-sm border rounded-lg border-border">
-                        No hay auditorias registradas.
-                      </div>
-                    ) : (
-                      <div className="overflow-x-auto rounded-lg border border-border">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="bg-primary/10 border-b border-border">
-                              <th className="p-2 text-left font-medium text-primary">Serie</th>
-                              <th className="p-2 text-left font-medium text-primary">Tipo</th>
-                              <th className="p-2 text-left font-medium text-primary">Empleado</th>
-                              <th className="p-2 text-left font-medium text-primary">Mes</th>
-                              <th className="p-2 text-left font-medium text-primary">Score JAB</th>
-                              <th className="p-2 text-left font-medium text-primary">Comentarios</th>
-                              <th className="p-2 text-left font-medium text-primary">Fecha</th>
+                <div>
+                  {allAudits.length === 0 ? (
+                    <div className="py-12 text-center text-muted-foreground">
+                      No hay auditorias registradas. Presiona "Agregar Auditoria de inventario" para comenzar.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-lg border border-border">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-primary/10 border-b border-border">
+                            <th className="p-2 text-left font-medium text-primary">Serie</th>
+                            <th className="p-2 text-left font-medium text-primary">Tipo</th>
+                            <th className="p-2 text-left font-medium text-primary">Empleado</th>
+                            <th className="p-2 text-left font-medium text-primary">Mes</th>
+                            <th className="p-2 text-left font-medium text-primary">Score JAB</th>
+                            <th className="p-2 text-left font-medium text-primary">Comentarios</th>
+                            <th className="p-2 text-left font-medium text-primary">Fecha</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {allAudits.map((a, i) => (
+                            <tr key={`${a.equipoId}-${i}`} className="border-b border-border hover:bg-muted/20">
+                              <td className="p-2 font-mono text-xs text-primary">{a.serialNumber}</td>
+                              <td className="p-2">{a.tipo}</td>
+                              <td className="p-2 font-medium">{a.empleadoNombre}</td>
+                              <td className="p-2 text-xs">{a.historial.mes || '-'}</td>
+                              <td className="p-2">
+                                {a.historial.scoreJAB >= 0 ? (
+                                  <span className={`font-bold text-sm ${
+                                    a.historial.scoreJAB >= 80 ? 'text-green-500' :
+                                    a.historial.scoreJAB >= 60 ? 'text-yellow-500' : 'text-red-500'
+                                  }`}>{a.historial.scoreJAB}%</span>
+                                ) : (<span className="text-muted-foreground text-xs">-</span>)}
+                              </td>
+                              <td className="p-2 text-xs text-muted-foreground max-w-60 truncate">{a.historial.comentarios || '-'}</td>
+                              <td className="p-2 text-xs">{a.historial.timestamp ? new Date(a.historial.timestamp).toLocaleDateString('es-MX') : '-'}</td>
                             </tr>
-                          </thead>
-                          <tbody>
-                            {allAudits.map((a, i) => (
-                              <tr key={`${a.equipoId}-${i}`} className="border-b border-border hover:bg-muted/20">
-                                <td className="p-2 font-mono text-xs text-primary">{a.serialNumber}</td>
-                                <td className="p-2">{a.tipo}</td>
-                                <td className="p-2 font-medium">{a.empleadoNombre}</td>
-                                <td className="p-2 text-xs">{a.historial.mes || '-'}</td>
-                                <td className="p-2">
-                                  {a.historial.scoreJAB >= 0 ? (
-                                    <span className={`font-bold text-sm ${
-                                      a.historial.scoreJAB >= 80 ? 'text-green-500' :
-                                      a.historial.scoreJAB >= 60 ? 'text-yellow-500' : 'text-red-500'
-                                    }`}>{a.historial.scoreJAB}%</span>
-                                  ) : (<span className="text-muted-foreground text-xs">-</span>)}
-                                </td>
-                                <td className="p-2 text-xs text-muted-foreground max-w-60 truncate">{a.historial.comentarios || '-'}</td>
-                                <td className="p-2 text-xs">{a.historial.timestamp ? new Date(a.historial.timestamp).toLocaleDateString('es-MX') : '-'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* QA DHU Records */}
-                  <div>
-                    <h3 className="mb-3 text-sm font-semibold text-foreground flex items-center gap-2">
-                      QA - DHU % SAE - Indicator IN LINE
-                    </h3>
-                    {qaDhuRecords.length === 0 ? (
-                      <div className="py-6 text-center text-muted-foreground text-sm border rounded-lg border-border">
-                        No hay registros QA DHU. Presiona "QA - DHU % SAE" para agregar uno.
-                      </div>
-                    ) : (
-                      <div className="overflow-x-auto rounded-lg border border-border">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="bg-primary/10 border-b border-border">
-                              <th className="p-2 text-left font-medium text-primary">ITEM</th>
-                              <th className="p-2 text-left font-medium text-primary">Date</th>
-                              <th className="p-2 text-left font-medium text-primary">Week</th>
-                              <th className="p-2 text-left font-medium text-primary">Factory</th>
-                              <th className="p-2 text-left font-medium text-primary">Line</th>
-                              <th className="p-2 text-left font-medium text-primary">Buyer</th>
-                              <th className="p-2 text-left font-medium text-primary">Auditor</th>
-                              <th className="p-2 text-left font-medium text-primary">Sample</th>
-                              <th className="p-2 text-left font-medium text-primary">DHU %</th>
-                              <th className="p-2 text-left font-medium text-primary">Performance</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {qaDhuRecords.map(r => (
-                              <tr key={r.id} className="border-b border-border hover:bg-muted/20">
-                                <td className="p-2 font-medium">{r.item}</td>
-                                <td className="p-2 text-xs">{r.inspectionDate}</td>
-                                <td className="p-2 text-xs">{r.week}</td>
-                                <td className="p-2 text-xs">{r.factory}</td>
-                                <td className="p-2 text-xs">{r.line || '-'}</td>
-                                <td className="p-2 text-xs">{r.buyer}</td>
-                                <td className="p-2 text-xs">{r.auditor}</td>
-                                <td className="p-2 text-xs">{r.visualSample}</td>
-                                <td className="p-2 text-xs">{(r.dhuScorePercent * 100).toFixed(2)}%</td>
-                                <td className="p-2">
-                                  <span className={`text-xs font-bold ${
-                                    r.performanceDHU === 'Excellent' ? 'text-green-500' :
-                                    r.performanceDHU === 'Good' ? 'text-yellow-500' : 'text-red-500'
-                                  }`}>{r.performanceDHU}</span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -494,10 +421,6 @@ export default function InventarioPage() {
           onClose={() => setAuditModalOpen(false)}
           onSaved={() => {}}
         />
-      )}
-
-      {qaDhuModalOpen && (
-        <QADHUModal onClose={() => setQaDhuModalOpen(false)} onSaved={() => {}} />
       )}
 
       {photoGallery && (
