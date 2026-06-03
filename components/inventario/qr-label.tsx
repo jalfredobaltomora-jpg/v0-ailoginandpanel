@@ -16,10 +16,11 @@ const accesorioLabelsQR: Record<string, string> = {
   usbCable: 'Cable USB',
   chargerCube: 'Cubo Cargador',
   microSDTrayKey: 'Llave MicroSD',
+  cableOTG: 'Cable OTG',
 };
 
 function buildQRLines(equipo: EquipoInventario, empleadoNombre: string): string {
-  const accs = Object.entries(equipo.accesorios)
+  const accs = Object.entries(equipo.accesorios || {})
     .filter(([k, v]) => v && accesorioLabelsQR[k])
     .map(([k]) => accesorioLabelsQR[k])
     .join(', ');
