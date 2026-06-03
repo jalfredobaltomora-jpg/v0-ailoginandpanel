@@ -755,7 +755,7 @@ export async function saveEquipoInventario(equipo: Omit<EquipoInventario, 'id'>)
 export async function updateEquipoInventario(id: string, updates: Partial<EquipoInventario>): Promise<boolean> {
   try {
     await _init();
-    await set(ref(db, `equipos-inventario/${id}`), updates);
+    await update(ref(db, `equipos-inventario/${id}`), updates);
     return true;
   } catch { return false; }
 }

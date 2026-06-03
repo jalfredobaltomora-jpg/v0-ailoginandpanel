@@ -94,16 +94,20 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
     const html = `<!DOCTYPE html><html><head>
       <title>Etiqueta - ${equipo.serialNumber}</title>
       <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; margin: 0; }
-        .label { border: 2px solid #000; padding: 16px; display: inline-block; text-align: left; font-size: 14px; }
-        .label h2 { text-align: center; margin: 0 0 12px; font-size: 16px; }
-        .label p { margin: 4px 0; }
-        @media print { body { margin: 0; padding: 8px; } }
+        @page { size: 6cm 3.5cm; margin: 0; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; width: 6cm; height: 3.5cm; overflow: hidden; }
+        .label { width: 6cm; height: 3.5cm; box-sizing: border-box; border: 1.5px solid #000; padding: 4px 6px; display: flex; flex-direction: column; justify-content: space-between; font-size: 7px; }
+        .label h2 { text-align: center; margin: 0; font-size: 8px; font-weight: bold; }
+        .label .info { flex: 1; }
+        .label .info p { margin: 1px 0; line-height: 1.2; }
+        .label .qr-section { display: flex; justify-content: flex-end; }
+        .label .qr-section img { width: 1.2cm; height: 1.2cm; }
+        @media print { body { margin: 0; padding: 0; } }
       </style></head><body>
       <div class="label">
         <h2>INVENTARIO - ${equipo.tipo === 'tablet' ? 'TABLET' : 'SCANNER'}</h2>
-        ${lines.map(l => `<p>${l}</p>`).join('')}
-        <img src="${dataUrl}" style="width:120px;height:120px;margin:8px auto;display:block" />
+        <div class="info">${lines.map(l => `<p>${l}</p>`).join('')}</div>
+        <div class="qr-section"><img src="${dataUrl}" /></div>
       </div>
     </body></html>`;
     const iframe = document.createElement('iframe');
