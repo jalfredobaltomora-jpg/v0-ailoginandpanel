@@ -62,6 +62,7 @@ export default function QAReportsPage() {
   const [defectCatalogSearch, setDefectCatalogSearch] = useState('');
   const [empleados, setEmpleados] = useState<any[]>([]);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const isAdmin = currentUser?.rol === 'admin' || currentUser?.rol === 'it-manager';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -296,9 +297,9 @@ export default function QAReportsPage() {
                           <th className="p-2 text-left font-medium text-primary">Approved</th>
                           <th className="p-2 text-left font-medium text-primary">DHU %</th>
                           <th className="p-2 text-left font-medium text-primary">Performance</th>
-                          <th className="p-2 text-left font-medium text-primary">Pass Rate %</th>
-                          <th className="p-2 text-left font-medium text-primary">Creado por</th>
-                          <th className="p-2 text-center font-medium text-primary">Acciones</th>
+                           <th className="p-2 text-left font-medium text-primary">Pass Rate %</th>
+                           {isAdmin && <th className="p-2 text-left font-medium text-primary">Creado por</th>}
+                           <th className="p-2 text-center font-medium text-primary">Acciones</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -323,7 +324,7 @@ export default function QAReportsPage() {
                               <span className={`text-xs font-bold ${r.performanceDHU === 'Excellent' ? 'text-green-500' : r.performanceDHU === 'Good' ? 'text-yellow-500' : 'text-red-500'}`}>{r.performanceDHU}</span>
                             </td>
                             <td className="p-2 text-xs">{(r.passRateScorePercent * 100).toFixed(2)}%</td>
-                            <td className="p-2 text-xs">{r.createdBy || '-'}</td>
+                            {isAdmin && <td className="p-2 text-xs">{r.createdBy || '-'}</td>}
                             <td className="p-2 text-center">
                               <button onClick={() => handleEdit(r)} className="text-primary hover:text-primary/70" title="Editar">
                                 <Pencil className="h-4 w-4 inline" />
@@ -537,6 +538,7 @@ export default function QAReportsPage() {
                 empleados={empleados}
                 defectCatalogItems={defectCatalogItems}
                 onClose={() => setAnalyticsOpen(false)}
+                isAdmin={currentUser?.rol === 'admin' || currentUser?.rol === 'it-manager'}
               />
             )}
           </div>

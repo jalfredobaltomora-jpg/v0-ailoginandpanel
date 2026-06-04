@@ -18,6 +18,7 @@ interface AnalyticsModalProps {
   empleados: Empleado[];
   defectCatalogItems: QADHUDefectCatalogItem[];
   onClose: () => void;
+  isAdmin?: boolean;
 }
 
 function getAuditorName(code: string, empleados: Empleado[]): string {
@@ -29,7 +30,7 @@ function getAuditorName(code: string, empleados: Empleado[]): string {
 const factories = ['TECHNOTEX #2', 'EINS', 'DASOLTEX SA'];
 const buyers = ['Target', "Kohl's", 'Walmart', 'Carhartt'];
 
-export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defectCatalogItems, onClose }: AnalyticsModalProps) {
+export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defectCatalogItems, onClose, isAdmin }: AnalyticsModalProps) {
   const [tab, setTab] = useState<'inline' | 'defect'>('inline');
 
   // Filters
@@ -149,12 +150,13 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
 
   // --- Excel Export (HTML-based for full styling) ---
   const generateInlineHTML = () => {
-    const header = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Sample', 'Reject', 'Approved', 'DHU %', 'Performance', 'Pass Rate %', 'Created By'];
+    const header = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Sample', 'Reject', 'Approved', 'DHU %', 'Performance', 'Pass Rate %'];
+    if (isAdmin) header.push('Created By');
     const rows = filteredInline.map(r => {
       const perfClass = r.performanceDHU === 'Very Bad' ? 'perf-vbad' : r.performanceDHU === 'Excellent' ? 'perf-excellent' : 'perf-good';
       const dhuPct = (r.dhuScorePercent * 100).toFixed(2);
       const dhuClass = r.performanceDHU === 'Very Bad' ? 'perf-vbad' : r.performanceDHU === 'Excellent' ? 'perf-excellent' : '';
-      return [
+      const row = [
         r.item, r.inspectionDate, `#${r.week}`, r.month || '',
         r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
         getAuditorName(r.auditor, empleados), r.style || '',
@@ -162,8 +164,9 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
         `<span class="${dhuClass}">${dhuPct}%</span>`,
         `<span class="${perfClass}">${r.performanceDHU}</span>`,
         (r.passRateScorePercent * 100).toFixed(2) + '%',
-        r.createdBy || ''
       ];
+      if (isAdmin) row.push(r.createdBy || '');
+      return row;
     });
     return { header, rows };
   };
@@ -196,7 +199,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
   };
 
   // ─── Excel export with ExcelJS (professional .xlsx) ──────────
-  const inlineHeader = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Sample', 'Reject', 'Approved', 'DHU %', 'Performance', 'Pass Rate %', 'Created By'];
+  const inlineHeader = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Sample', 'Reject', 'Approved', 'DHU %', 'Performance', 'Pass Rate %'];
   const defectHeader = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Defecto', 'Total', 'Código Defecto', 'Descripción', 'CAT EN', 'ACR', 'Defect CAT EN', 'Descripción Defecto', 'CAT ES', 'ACR S', 'Defect CAT ES'];
 
   const headerStyle = {
@@ -248,8 +251,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
         r.visualSample, r.visualReject, r.visualApproved,
         (r.dhuScorePercent * 100).toFixed(2) + '%',
         r.performanceDHU,
-        (r.passRateScorePercent * 100).toFixed(2) + '%',
-        r.createdBy || ''
+        (r.passRateScorePercent * 100).toFixed(2) + '%'
       ];
       const row = ws.getRow(rowNum);
       values.forEach((v, ci) => { ws.getCell(rowNum, ci + 1).value = v; });
