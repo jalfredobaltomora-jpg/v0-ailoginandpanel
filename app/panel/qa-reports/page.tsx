@@ -59,11 +59,17 @@ export default function QAReportsPage() {
   const [savingDefectCat, setSavingDefectCat] = useState(false);
   const [importingExcel, setImportingExcel] = useState(false);
   const [importProgress, setImportProgress] = useState('');
+  const [importingInline, setImportingInline] = useState(false);
+  const [inlineImportProgress, setInlineImportProgress] = useState('');
+  const [importingDefect, setImportingDefect] = useState(false);
+  const [defectImportProgress, setDefectImportProgress] = useState('');
   const [defectCatalogSearch, setDefectCatalogSearch] = useState('');
   const [empleados, setEmpleados] = useState<any[]>([]);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const isAdmin = currentUser?.rol === 'admin' || currentUser?.rol === 'it-manager';
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inlineFileInputRef = useRef<HTMLInputElement>(null);
+  const defectFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (view !== 'dhu') return;
@@ -172,6 +178,128 @@ export default function QAReportsPage() {
     if (deleteInLineDefectRecord) await deleteInLineDefectRecord(id);
   };
 
+  function getISOWeekNumber(d: Date): number {
+    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNum = date.getUTCDay() || 7;
+    date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+    return Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  }
+
+  const handleImportInline = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportingInline(true);
+    setInlineImportProgress('Leyendo archivo...');
+    try {
+      const XLSX = await import('xlsx');
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array', cellText: true });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false });
+      const user = getStoredUser();
+      const { saveQADHURecord } = await import('@/lib/firebase');
+      let imported = 0; let skipped = 0;
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || !row[0]) { skipped++; continue; }
+        const item = (row[0] || '').toString().trim();
+        if (!item) { skipped++; continue; }
+        setInlineImportProgress(`Importando ${i}/${rows.length - 1}: ${item}`);
+        const inspectionDate = (row[1] || '').toString().trim();
+        const week = inspectionDate ? getISOWeekNumber(new Date(inspectionDate + 'T12:00:00')) : parseInt(row[2]) || 0;
+        const month = (row[3] || '').toString().trim();
+        const factory = (row[4] || '').toString().trim();
+        const line = (row[5] || '').toString().trim();
+        const po = (row[6] || '').toString().trim();
+        const color = (row[7] || '').toString().trim();
+        const buyer = (row[8] || '').toString().trim();
+        const auditor = (row[9] || '').toString().trim();
+        const style = (row[10] || '').toString().trim();
+        const visualSample = parseInt(String(row[11]).replace(/[^0-9.-]/g, '')) || 0;
+        const visualReject = parseInt(String(row[12]).replace(/[^0-9.-]/g, '')) || 0;
+        const visualApproved = Math.max(0, visualSample - visualReject);
+        const dhuScorePct = visualSample > 0 ? visualReject / visualSample : 0;
+        const perf = dhuScorePct <= 0.03 ? 'Excellent' : dhuScorePct <= 0.05 ? 'Good' : 'Very Bad';
+        const passRatePct = visualSample > 0 ? visualApproved / visualSample : 0;
+        await saveQADHURecord({
+          item, inspectionDate, week, month, factory, line, po, color, buyer,
+          auditor, style, visualSample, visualReject, visualApproved,
+          dhuScorePercent: Math.round(dhuScorePct * 10000) / 10000,
+          performanceDHU: perf,
+          passRateScorePercent: Math.round(passRatePct * 10000) / 10000,
+          createdAt: Date.now(), createdBy: user?.codigo || '',
+        });
+        imported++;
+      }
+      setInlineImportProgress(`✅ Importación completada: ${imported} registros${skipped > 0 ? `, ${skipped} omitidos` : ''}`);
+    } catch (err) {
+      setInlineImportProgress(`❌ Error: ${err instanceof Error ? err.message : 'Error desconocido'}`);
+    }
+    setImportingInline(false);
+    if (inlineFileInputRef.current) inlineFileInputRef.current.value = '';
+    setTimeout(() => setInlineImportProgress(''), 5000);
+  };
+
+  const handleImportDefect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportingDefect(true);
+    setDefectImportProgress('Leyendo archivo...');
+    try {
+      const XLSX = await import('xlsx');
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array', cellText: true });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false });
+      const user = getStoredUser();
+      const { saveInLineDefectRecord } = await import('@/lib/firebase');
+      let imported = 0; let skipped = 0;
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || !row[0]) { skipped++; continue; }
+        const item = (row[0] || '').toString().trim();
+        if (!item) { skipped++; continue; }
+        setDefectImportProgress(`Importando ${i}/${rows.length - 1}: ${item}`);
+        const inspectionDate = (row[1] || '').toString().trim();
+        const week = inspectionDate ? getISOWeekNumber(new Date(inspectionDate + 'T12:00:00')) : parseInt(row[2]) || 0;
+        const month = (row[3] || '').toString().trim();
+        const factory = (row[4] || '').toString().trim();
+        const line = (row[5] || '').toString().trim();
+        const po = (row[6] || '').toString().trim();
+        const color = (row[7] || '').toString().trim();
+        const buyer = (row[8] || '').toString().trim();
+        const auditor = (row[9] || '').toString().trim();
+        const style = (row[10] || '').toString().trim();
+        const defect = (row[11] || '').toString().trim();
+        const total = parseInt(String(row[12]).replace(/[^0-9.-]/g, '')) || 0;
+        const defectCode = (row[13] || '').toString().trim();
+        const defectDescription = (row[14] || '').toString().trim();
+        const catEnglish = (row[15] || '').toString().trim();
+        const acr = (row[16] || '').toString().trim();
+        const defectCatEnglish = (row[17] || '').toString().trim();
+        const descripcionDefecto = (row[18] || '').toString().trim();
+        const catEspanol = (row[19] || '').toString().trim();
+        const acrSpanish = (row[20] || '').toString().trim();
+        const defectCatSpanish = (row[21] || '').toString().trim();
+        await saveInLineDefectRecord({
+          item, inspectionDate, week, month, factory, line, po, color, buyer,
+          auditor, style, defect, total, defectCode, defectDescription,
+          catEnglish, acr, defectCatEnglish, descripcionDefecto,
+          catEspanol, acrSpanish, defectCatSpanish,
+          createdAt: Date.now(), createdBy: user?.codigo || '',
+        });
+        imported++;
+      }
+      setDefectImportProgress(`✅ Importación completada: ${imported} registros${skipped > 0 ? `, ${skipped} omitidos` : ''}`);
+    } catch (err) {
+      setDefectImportProgress(`❌ Error: ${err instanceof Error ? err.message : 'Error desconocido'}`);
+    }
+    setImportingDefect(false);
+    if (defectFileInputRef.current) defectFileInputRef.current.value = '';
+    setTimeout(() => setDefectImportProgress(''), 5000);
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       <div className="flex items-center justify-between border-b border-border bg-card/50 p-4">
@@ -241,14 +369,26 @@ export default function QAReportsPage() {
                   </Button>
                 )}
                 {dhuTab === 'inline' && (
-                  <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => { setEditingRecord(null); setQaDhuOpen(true); }}>
-                    + Nuevo Registro
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <input ref={inlineFileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImportInline} className="hidden" id="inline-excel-upload" />
+                    <Button size="sm" variant="outline" disabled={importingInline} onClick={() => document.getElementById('inline-excel-upload')?.click()}>
+                      <Upload className="mr-2 h-4 w-4" />{importingInline ? 'Importando...' : 'Importar Excel'}
+                    </Button>
+                    <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => { setEditingRecord(null); setQaDhuOpen(true); }}>
+                      + Nuevo Registro
+                    </Button>
+                  </div>
                 )}
                 {dhuTab === 'defect' && (
-                  <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => { setEditingDefectRecord(null); setInLineDefectOpen(true); }}>
-                    + Nuevo Defecto
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <input ref={defectFileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImportDefect} className="hidden" id="defect-excel-upload" />
+                    <Button size="sm" variant="outline" disabled={importingDefect} onClick={() => document.getElementById('defect-excel-upload')?.click()}>
+                      <Upload className="mr-2 h-4 w-4" />{importingDefect ? 'Importando...' : 'Importar Excel'}
+                    </Button>
+                    <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => { setEditingDefectRecord(null); setInLineDefectOpen(true); }}>
+                      + Nuevo Defecto
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -272,6 +412,11 @@ export default function QAReportsPage() {
             {/* IN LINE Tab */}
             {dhuTab === 'inline' && (
               <>
+                {inlineImportProgress && (
+                  <div className={`text-xs ${inlineImportProgress.includes('✅') ? 'text-green-500' : inlineImportProgress.includes('❌') ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {inlineImportProgress}
+                  </div>
+                )}
                 {qaDhuRecords.length === 0 ? (
                   <div className="py-12 text-center text-muted-foreground border rounded-lg border-border">
                     No hay registros QA DHU.
@@ -342,6 +487,11 @@ export default function QAReportsPage() {
             {/* In Line Defect Tab */}
             {dhuTab === 'defect' && (
               <>
+                {defectImportProgress && (
+                  <div className={`text-xs ${defectImportProgress.includes('✅') ? 'text-green-500' : defectImportProgress.includes('❌') ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {defectImportProgress}
+                  </div>
+                )}
                 {inLineDefectRecords.length === 0 ? (
                   <div className="py-12 text-center text-muted-foreground border rounded-lg border-border">
                     No hay registros de In Line Defect.
