@@ -124,29 +124,29 @@ export default function QAReportsPage() {
     try {
       const XLSX = await import('xlsx');
       const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array' });
+      const workbook = XLSX.read(data, { type: 'array', cellText: true });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false });
       const user = getStoredUser();
       const { saveQADHUDefectCatalogItem } = await import('@/lib/firebase');
       let imported = 0;
       let skipped = 0;
-      for (let i = 0; i < rows.length; i++) {
+      for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
-        if (!row || !row[0]) { skipped++; continue; }
-        const defectCode = String(row[0]).trim();
+        if (!row) { skipped++; continue; }
+        const defectCode = (row[0] || '').toString().trim();
         if (!defectCode) { skipped++; continue; }
-        setImportProgress(`Importando ${i + 1}/${rows.length}: ${defectCode}`);
+        setImportProgress(`Importando ${i}/${rows.length - 1}: ${defectCode}`);
         await saveQADHUDefectCatalogItem({
           defectCode,
-          defectDescription: String(row[1] || '').trim(),
-          catEnglish: String(row[2] || '').trim(),
-          acr: String(row[3] || '').trim(),
-          defectCatEnglish: String(row[4] || '').trim(),
-          descripcionDefecto: String(row[5] || '').trim(),
-          catEspanol: String(row[6] || '').trim(),
-          acrSpanish: String(row[7] || '').trim(),
-          defectCatSpanish: String(row[8] || '').trim(),
+          defectDescription: (row[1] || '').toString().trim(),
+          catEnglish: (row[2] || '').toString().trim(),
+          acr: (row[3] || '').toString().trim(),
+          defectCatEnglish: (row[4] || '').toString().trim(),
+          descripcionDefecto: (row[5] || '').toString().trim(),
+          catEspanol: (row[6] || '').toString().trim(),
+          acrSpanish: (row[7] || '').toString().trim(),
+          defectCatSpanish: (row[8] || '').toString().trim(),
           createdAt: Date.now(),
           createdBy: user?.codigo || '',
         });
