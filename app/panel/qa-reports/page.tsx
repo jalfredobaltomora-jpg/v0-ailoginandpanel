@@ -50,8 +50,6 @@ export default function QAReportsPage() {
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [qaDhuRecords, setQaDhuRecords] = useState<any[]>([]);
   const [catalogItems, setCatalogItems] = useState<any[]>([]);
-  const [newCatalog, setNewCatalog] = useState({ item: '', style: '', factory: '', line: '', po: '', color: '', buyer: '' });
-  const [savingCat, setSavingCat] = useState(false);
   const [inLineDefectOpen, setInLineDefectOpen] = useState(false);
   const [editingDefectRecord, setEditingDefectRecord] = useState<any>(null);
   const [inLineDefectRecords, setInLineDefectRecords] = useState<any[]>([]);
@@ -85,25 +83,6 @@ export default function QAReportsPage() {
     }
     setCurrentUser(user);
   }, [router]);
-
-  const handleSaveCatalog = async () => {
-    if (!newCatalog.item || !newCatalog.factory || !newCatalog.buyer) return;
-    setSavingCat(true);
-    const { saveQADHUCatalogItem } = await import('@/lib/firebase');
-    const user = getStoredUser();
-    await saveQADHUCatalogItem({
-      ...newCatalog,
-      createdAt: Date.now(),
-      createdBy: user?.codigo || '',
-    });
-    setNewCatalog({ item: '', style: '', factory: '', line: '', po: '', color: '', buyer: '' });
-    setSavingCat(false);
-  };
-
-  const handleDeleteCatalog = async (id: string) => {
-    const { deleteQADHUCatalogItem } = await import('@/lib/firebase');
-    await deleteQADHUCatalogItem(id);
-  };
 
   const handleEdit = (r: any) => {
     setEditingRecord(r);
@@ -382,63 +361,6 @@ export default function QAReportsPage() {
             {/* Catálogo de defectos Tab */}
             {dhuTab === 'catalog' && (
               <div className="space-y-6">
-                {/* Item Catalog Section */}
-                <div className="rounded-lg border border-border p-4">
-                  <h4 className="mb-3 text-sm font-semibold text-foreground">Catálogo de Items</h4>
-                  <div className="grid grid-cols-3 gap-3">
-                    <input className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground" placeholder="ITEM *" value={newCatalog.item} onChange={e => setNewCatalog(p => ({ ...p, item: e.target.value }))} />
-                    <input className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground" placeholder="Style" value={newCatalog.style} onChange={e => setNewCatalog(p => ({ ...p, style: e.target.value }))} />
-                    <input className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground" placeholder="Factory *" value={newCatalog.factory} onChange={e => setNewCatalog(p => ({ ...p, factory: e.target.value }))} />
-                    <input className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground" placeholder="Line" value={newCatalog.line} onChange={e => setNewCatalog(p => ({ ...p, line: e.target.value }))} />
-                    <input className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground" placeholder="PO" value={newCatalog.po} onChange={e => setNewCatalog(p => ({ ...p, po: e.target.value }))} />
-                    <input className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground" placeholder="Color" value={newCatalog.color} onChange={e => setNewCatalog(p => ({ ...p, color: e.target.value }))} />
-                    <input className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground" placeholder="Buyer *" value={newCatalog.buyer} onChange={e => setNewCatalog(p => ({ ...p, buyer: e.target.value }))} />
-                    <div className="flex items-end">
-                      <Button size="sm" className="bg-primary text-primary-foreground" onClick={handleSaveCatalog} disabled={savingCat || !newCatalog.item || !newCatalog.factory || !newCatalog.buyer}>
-                        {savingCat ? 'Guardando...' : 'Agregar'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {catalogItems.length > 0 && (
-                  <div className="overflow-x-auto rounded-lg border border-border">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-primary/10 border-b border-border">
-                          <th className="p-2 text-left font-medium text-primary">ITEM</th>
-                          <th className="p-2 text-left font-medium text-primary">Style</th>
-                          <th className="p-2 text-left font-medium text-primary">Factory</th>
-                          <th className="p-2 text-left font-medium text-primary">Line</th>
-                          <th className="p-2 text-left font-medium text-primary">PO</th>
-                          <th className="p-2 text-left font-medium text-primary">Color</th>
-                          <th className="p-2 text-left font-medium text-primary">Buyer</th>
-                          <th className="p-2 text-center font-medium text-primary">Accion</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {catalogItems.map(c => (
-                          <tr key={c.id} className="border-b border-border hover:bg-muted/20">
-                            <td className="p-2 font-medium">{c.item}</td>
-                            <td className="p-2 text-xs">{c.style || '-'}</td>
-                            <td className="p-2 text-xs">{c.factory}</td>
-                            <td className="p-2 text-xs">{c.line || '-'}</td>
-                            <td className="p-2 text-xs">{c.po || '-'}</td>
-                            <td className="p-2 text-xs">{c.color || '-'}</td>
-                            <td className="p-2 text-xs">{c.buyer}</td>
-                            <td className="p-2 text-center">
-                              <button onClick={() => handleDeleteCatalog(c.id)} className="text-destructive hover:text-destructive/70" title="Eliminar">
-                                <Trash2 className="h-4 w-4 inline" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {/* Defect Catalog Section */}
                 <div className="rounded-lg border border-border p-4">
                   <h4 className="mb-3 text-sm font-semibold text-foreground">Catálogo de Defectos</h4>
                   <div className="grid grid-cols-3 gap-3">
