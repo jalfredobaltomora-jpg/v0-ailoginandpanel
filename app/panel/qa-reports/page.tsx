@@ -185,6 +185,7 @@ export default function QAReportsPage() {
   };
 
   function getISOWeekNumber(d: Date): number {
+    if (isNaN(d.getTime())) return 0;
     const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     const dayNum = date.getUTCDay() || 7;
     date.setUTCDate(date.getUTCDate() + 4 - dayNum);
@@ -213,7 +214,8 @@ export default function QAReportsPage() {
         if (!item) { skipped++; continue; }
         setInlineImportProgress(`Importando ${i}/${rows.length - 1}: ${item}`);
         const inspectionDate = (row[1] || '').toString().trim();
-        const week = inspectionDate ? getISOWeekNumber(new Date(inspectionDate + 'T12:00:00')) : parseInt(row[2]) || 0;
+        const parsedDate = new Date(inspectionDate + 'T12:00:00');
+        const week = (!isNaN(parsedDate.getTime()) ? getISOWeekNumber(parsedDate) : parseInt(String(row[2]).replace(/[^0-9]/g, ''))) || 0;
         const month = (row[3] || '').toString().trim();
         const factory = (row[4] || '').toString().trim();
         const line = (row[5] || '').toString().trim();
@@ -268,7 +270,8 @@ export default function QAReportsPage() {
         if (!item) { skipped++; continue; }
         setDefectImportProgress(`Importando ${i}/${rows.length - 1}: ${item}`);
         const inspectionDate = (row[1] || '').toString().trim();
-        const week = inspectionDate ? getISOWeekNumber(new Date(inspectionDate + 'T12:00:00')) : parseInt(row[2]) || 0;
+        const parsedDate = new Date(inspectionDate + 'T12:00:00');
+        const week = (!isNaN(parsedDate.getTime()) ? getISOWeekNumber(parsedDate) : parseInt(String(row[2]).replace(/[^0-9]/g, ''))) || 0;
         const month = (row[3] || '').toString().trim();
         const factory = (row[4] || '').toString().trim();
         const line = (row[5] || '').toString().trim();
