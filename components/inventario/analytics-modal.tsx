@@ -170,46 +170,186 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     <table style="border-collapse:collapse;font-size:11px;font-family:Calibri,sans-serif;width:100%;">${hdr ? `<thead><tr>${hdr}</tr></thead>` : ''}<tbody>${body}</tbody></table><br/>`;
   };
 
-  const downloadStyledHTML = (title: string, header: string[], rows: any[][], filename: string) => {
-    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-    <head><meta charset="UTF-8">
-    <style>
-      th { background: #1a56db !important; color: #fff !important; font-weight: 700; }
-      .perf-vbad { background: #fecaca !important; color: #dc2626 !important; font-weight: 700; }
-      .perf-excellent { background: #bbf7d0 !important; color: #16a34a !important; font-weight: 700; }
-      .perf-good { background: #fef08a !important; color: #ca8a04 !important; font-weight: 700; }
-      td, th { border: 1px solid #d1d5db; padding: 4px 8px; white-space: nowrap; font-size: 11px; font-family: Calibri, sans-serif; }
-      table { border-collapse: collapse; width: 100%; }
-    </style></head><body>
-    ${tableToHTML(title, header, rows)}
-    </body></html>`;
-    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  // ─── Excel export with ExcelJS (professional .xlsx) ──────────
+  const inlineHeader = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Sample', 'Reject', 'Approved', 'DHU %', 'Performance', 'Pass Rate %', 'Created By'];
+  const defectHeader = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Defecto', 'Total', 'Código Defecto', 'Descripción', 'CAT EN', 'ACR', 'Defect CAT EN', 'Descripción Defecto', 'CAT ES', 'ACR S', 'Defect CAT ES'];
+
+  const headerStyle = {
+    fill: { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: 'FF1A56DB' } },
+    font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 11, name: 'Calibri' },
+    alignment: { horizontal: 'center' as const, vertical: 'center' as const, wrapText: true },
+    border: {
+      top: { style: 'thin' as const, color: { argb: 'FF1A56DB' } },
+      bottom: { style: 'thin' as const, color: { argb: 'FF1A56DB' } },
+      left: { style: 'thin' as const, color: { argb: 'FF1A56DB' } },
+      right: { style: 'thin' as const, color: { argb: 'FF1A56DB' } },
+    },
+  };
+
+  const cellBorder = {
+    top: { style: 'thin' as const, color: { argb: 'FFD1D5DB' } },
+    bottom: { style: 'thin' as const, color: { argb: 'FFD1D5DB' } },
+    left: { style: 'thin' as const, color: { argb: 'FFD1D5DB' } },
+    right: { style: 'thin' as const, color: { argb: 'FFD1D5DB' } },
+  };
+
+  const performanceStyles: Record<string, { fill: string; font: string }> = {
+    'Very Bad': { fill: 'FFFECACA', font: 'FFDC2626' },
+    'Good': { fill: 'FFFEF08A', font: 'FFCA8A04' },
+    'Excellent': { fill: 'FFBBF7D0', font: 'FF16A34A' },
+  };
+
+  const applyRowStyle = (row: any, fillColor: string, fontColor: string, bold: boolean) => {
+    row.eachCell({ includeEmpty: true }, (cell: any) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
+      cell.font = { ...cell.font, color: { argb: fontColor }, bold };
+      cell.border = cellBorder;
+    });
+  };
+
+  const buildInlineSheet = (ws: any, headerRow: number) => {
+    // Header
+    const hRow = ws.getRow(headerRow);
+    inlineHeader.forEach((h, i) => { ws.getColumn(i + 1).value = h; });
+    // Actually set values
+    inlineHeader.forEach((h, i) => { ws.getCell(headerRow, i + 1).value = h; });
+    hRow.eachCell({ includeEmpty: true }, (cell: any) => {
+      cell.fill = headerStyle.fill;
+      cell.font = headerStyle.font;
+      cell.alignment = headerStyle.alignment;
+      cell.border = headerStyle.border;
+    });
+    hRow.height = 22;
+
+    // Data
+    filteredInline.forEach((r, idx) => {
+      const rowNum = headerRow + 1 + idx;
+      const values = [
+        r.item, r.inspectionDate, `#${r.week}`, r.month || '',
+        r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
+        getAuditorName(r.auditor, empleados), r.style || '',
+        r.visualSample, r.visualReject, r.visualApproved,
+        (r.dhuScorePercent * 100).toFixed(2) + '%',
+        r.performanceDHU,
+        (r.passRateScorePercent * 100).toFixed(2) + '%',
+        r.createdBy || ''
+      ];
+      const row = ws.getRow(rowNum);
+      values.forEach((v, ci) => { ws.getCell(rowNum, ci + 1).value = v; });
+
+      // Apply performance-based row coloring
+      const perf = r.performanceDHU || '';
+      if (performanceStyles[perf]) {
+        applyRowStyle(row, performanceStyles[perf].fill, performanceStyles[perf].font, true);
+      } else {
+        row.eachCell({ includeEmpty: true }, (cell: any) => {
+          cell.border = cellBorder;
+        });
+      }
+      row.height = 18;
+    });
+
+    // Column widths
+    const colWidths = [10, 13, 8, 12, 16, 8, 14, 10, 12, 22, 14, 10, 10, 10, 10, 14, 12, 14];
+    colWidths.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+
+    // Auto-filter
+    ws.autoFilter = { from: { row: headerRow, col: 1 }, to: { row: headerRow + filteredInline.length, col: inlineHeader.length } };
+  };
+
+  const buildDefectSheet = (ws: any, headerRow: number) => {
+    const hRow = ws.getRow(headerRow);
+    defectHeader.forEach((h, i) => { ws.getCell(headerRow, i + 1).value = h; });
+    hRow.eachCell({ includeEmpty: true }, (cell: any) => {
+      cell.fill = headerStyle.fill;
+      cell.font = headerStyle.font;
+      cell.alignment = headerStyle.alignment;
+      cell.border = headerStyle.border;
+    });
+    hRow.height = 22;
+
+    filteredDefect.forEach((r, idx) => {
+      const rowNum = headerRow + 1 + idx;
+      const values = [
+        r.item, r.inspectionDate, `#${r.week}`, r.month || '',
+        r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
+        getAuditorName(r.auditor, empleados), r.style || '',
+        r.defect || '', r.total, r.defectCode,
+        r.defectDescription || '', r.catEnglish || '', r.acr || '',
+        r.defectCatEnglish || '', r.descripcionDefecto || '',
+        r.catEspanol || '', r.acrSpanish || '', r.defectCatSpanish || ''
+      ];
+      values.forEach((v, ci) => { ws.getCell(rowNum, ci + 1).value = v; });
+      const row = ws.getRow(rowNum);
+      row.eachCell({ includeEmpty: true }, (cell: any) => { cell.border = cellBorder; });
+      // Zebra striping for defect sheet
+      if (idx % 2 === 1) {
+        row.eachCell({ includeEmpty: true }, (cell: any) => {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+        });
+      }
+      row.height = 18;
+    });
+
+    const colWidths = [10, 13, 8, 12, 16, 8, 14, 10, 12, 22, 14, 14, 8, 14, 20, 14, 10, 18, 22, 14, 10, 18];
+    colWidths.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+
+    ws.autoFilter = { from: { row: headerRow, col: 1 }, to: { row: headerRow + filteredDefect.length, col: defectHeader.length } };
   };
 
   const exportStyledExcel = async (type: 'inline' | 'defect' | 'both') => {
     const dateStr = new Date().toISOString().split('T')[0];
+    try {
+      const mod = await import('exceljs');
+      const ExcelJS = mod.default || mod;
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'QA Analytics';
+      workbook.created = new Date();
 
-    if (type === 'both') {
-      const { header: h1, rows: r1 } = generateInlineHTML();
-      const { header: h2, rows: r2 } = generateDefectHTML();
-      downloadStyledHTML('IN LINE - QA DHU', h1, r1, `QA_INLINE_${dateStr}.xls`);
-      // Small delay to let browser handle first download
-      await new Promise(r => setTimeout(r, 300));
-      downloadStyledHTML('In Line Defect', h2, r2, `QA_Defect_${dateStr}.xls`);
-      return;
+      if (type === 'inline' || type === 'both') {
+        const ws = workbook.addWorksheet('IN LINE', { views: [{ state: 'frozen', ySplit: 1 }] });
+        buildInlineSheet(ws, 1);
+      }
+      if (type === 'defect' || type === 'both') {
+        const ws = workbook.addWorksheet('In Line Defect', { views: [{ state: 'frozen', ySplit: 1 }] });
+        buildDefectSheet(ws, 1);
+      }
+
+      const buf = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `QA_Report_${dateStr}.xlsx`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('ExcelJS export failed, falling back:', err);
+      // Fallback: basic xlsx via xlsx library
+      const XLSX = await import('xlsx');
+      const wb = XLSX.utils.book_new();
+      if (type === 'inline' || type === 'both') {
+        const data = filteredInline.map(r => inlineHeader.map(h => (r as any)[h] || ''));
+        const ws = XLSX.utils.aoa_to_sheet([inlineHeader, ...data]);
+        ws['!cols'] = inlineHeader.map(() => ({ wch: 14 }));
+        XLSX.utils.book_append_sheet(wb, ws, 'IN LINE');
+      }
+      if (type === 'defect' || type === 'both') {
+        const data = filteredDefect.map(r => defectHeader.map(h => (r as any)[h] || ''));
+        const ws = XLSX.utils.aoa_to_sheet([defectHeader, ...data]);
+        ws['!cols'] = defectHeader.map(() => ({ wch: 14 }));
+        XLSX.utils.book_append_sheet(wb, ws, 'In Line Defect');
+      }
+      const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `QA_Report_${dateStr}.xlsx`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
-
-    const isInline = type === 'inline';
-    const { header, rows } = isInline ? generateInlineHTML() : generateDefectHTML();
-    const title = isInline ? 'IN LINE - QA DHU' : 'In Line Defect';
-    const filename = `QA_Analytics_${isInline ? 'INLINE' : 'Defect'}_${dateStr}.xls`;
-    downloadStyledHTML(title, header, rows, filename);
   };
+
+
 
   const [exportOpen, setExportOpen] = useState(false);
 
