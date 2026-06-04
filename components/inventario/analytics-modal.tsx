@@ -171,6 +171,57 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
   };
 
   const exportStyledExcel = async (type: 'inline' | 'defect' | 'both') => {
+    // Use xlsx for multi-sheet ('both') since HTML can't do multiple sheets reliably
+    if (type === 'both') {
+      const XLSX = await import('xlsx');
+      const wb = XLSX.utils.book_new();
+      // IN LINE sheet
+      const inlineHeader = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Sample', 'Reject', 'Approved', 'DHU %', 'Performance', 'Pass Rate %', 'Created By'];
+      const inlineData = filteredInline.map(r => [
+        r.item, r.inspectionDate, `#${r.week}`, r.month || '',
+        r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
+        getAuditorName(r.auditor, empleados), r.style || '',
+        r.visualSample, r.visualReject, r.visualApproved,
+        (r.dhuScorePercent * 100).toFixed(2) + '%',
+        r.performanceDHU,
+        (r.passRateScorePercent * 100).toFixed(2) + '%',
+        r.createdBy || ''
+      ]);
+      const ws1 = XLSX.utils.aoa_to_sheet([inlineHeader, ...inlineData]);
+      ws1['!cols'] = inlineHeader.map(() => ({ wch: 14 }));
+      XLSX.utils.book_append_sheet(wb, ws1, 'IN LINE');
+
+      // In Line Defect sheet
+      const defectHeader = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Defecto', 'Total', 'Código Defecto', 'Descripción', 'CAT EN', 'ACR', 'Defect CAT EN', 'Descripción Defecto', 'CAT ES', 'ACR S', 'Defect CAT ES'];
+      const defectData = filteredDefect.map(r => [
+        r.item, r.inspectionDate, `#${r.week}`, r.month || '',
+        r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
+        getAuditorName(r.auditor, empleados), r.style || '',
+        r.defect || '', r.total, r.defectCode,
+        r.defectDescription || '', r.catEnglish || '', r.acr || '',
+        r.defectCatEnglish || '', r.descripcionDefecto || '',
+        r.catEspanol || '', r.acrSpanish || '', r.defectCatSpanish || ''
+      ]);
+      const ws2 = XLSX.utils.aoa_to_sheet([defectHeader, ...defectData]);
+      ws2['!cols'] = defectHeader.map(() => ({ wch: 14 }));
+      XLSX.utils.book_append_sheet(wb, ws2, 'In Line Defect');
+
+      const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `QA_Analytics_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    // Single-sheet: use full styled HTML
+    const isInline = type === 'inline';
+    const { header, rows } = isInline ? generateInlineHTML() : generateDefectHTML();
+    const title = isInline ? 'IN LINE - QA DHU' : 'In Line Defect';
+
     let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
     <head><meta charset="UTF-8">
     <style>
@@ -180,40 +231,16 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
       .perf-good { background: #fef08a !important; color: #ca8a04 !important; font-weight: 700; }
       td, th { border: 1px solid #d1d5db; padding: 4px 8px; white-space: nowrap; font-size: 11px; font-family: Calibri, sans-serif; }
       table { border-collapse: collapse; width: 100%; }
-    </style>
-    <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>
-    `;
-    let sheetCount = 0;
-    if (type === 'inline' || type === 'both') sheetCount++;
-    if (type === 'defect' || type === 'both') sheetCount++;
-    let sheetIdx = 1;
-    if (type === 'inline' || type === 'both') {
-      const { header, rows } = generateInlineHTML();
-      html += `<x:ExcelWorksheet><x:Name>IN LINE</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>`;
-    }
-    if (type === 'defect' || type === 'both') {
-      html += `<x:ExcelWorksheet><x:Name>In Line Defect</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>`;
-    }
-    html += `</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>`;
-
-    if (type === 'inline' || type === 'both') {
-      const { header, rows } = generateInlineHTML();
-      html += tableToHTML('IN LINE - QA DHU', header, rows);
-    }
-    if (type === 'defect' || type === 'both') {
-      const { header, rows } = generateDefectHTML();
-      html += tableToHTML('In Line Defect', header, rows);
-    }
+    </style></head><body>`;
+    html += tableToHTML(title, header, rows);
     html += '</body></html>';
 
     const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `QA_Analytics_${new Date().toISOString().split('T')[0]}.xls`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.download = `QA_Analytics_${isInline ? 'INLINE' : 'Defect'}_${new Date().toISOString().split('T')[0]}.xls`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
