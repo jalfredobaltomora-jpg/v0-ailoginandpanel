@@ -809,6 +809,16 @@ export async function saveQADHURecord(record: Omit<QADHURecord, 'id'>): Promise<
   return id;
 }
 
+export async function deleteQADHURecord(id: string): Promise<boolean> {
+  try {
+    await _init();
+    await remove(ref(db, `qa-dhu-records/${id}`));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function updateQADHURecord(id: string, data: Partial<QADHURecord>): Promise<boolean> {
   try {
     await _init();

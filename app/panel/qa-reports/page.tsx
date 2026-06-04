@@ -104,6 +104,12 @@ export default function QAReportsPage() {
     setQaDhuOpen(true);
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('¿Eliminar este registro de IN LINE?')) return;
+    const { deleteQADHURecord } = await import('@/lib/firebase');
+    if (deleteQADHURecord) await deleteQADHURecord(id);
+  };
+
   const handleSaveDefectCatalog = async () => {
     if (!newDefectCat.defectCode) return;
     setSavingDefectCat(true);
@@ -471,8 +477,11 @@ export default function QAReportsPage() {
                             <td className="p-2 text-xs">{(r.passRateScorePercent * 100).toFixed(2)}%</td>
                             {isAdmin && <td className="p-2 text-xs">{r.createdBy || '-'}</td>}
                             <td className="p-2 text-center">
-                              <button onClick={() => handleEdit(r)} className="text-primary hover:text-primary/70" title="Editar">
+                              <button onClick={() => handleEdit(r)} className="text-primary hover:text-primary/70 mr-2" title="Editar">
                                 <Pencil className="h-4 w-4 inline" />
+                              </button>
+                              <button onClick={() => handleDelete(r.id)} className="text-destructive hover:text-destructive/70" title="Eliminar">
+                                <Trash2 className="h-4 w-4 inline" />
                               </button>
                             </td>
                           </tr>
