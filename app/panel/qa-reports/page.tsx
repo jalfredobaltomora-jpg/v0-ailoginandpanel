@@ -66,6 +66,7 @@ export default function QAReportsPage() {
   const [defectCatalogSearch, setDefectCatalogSearch] = useState('');
   const [empleados, setEmpleados] = useState<any[]>([]);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [recalcProgress, setRecalcProgress] = useState('');
   const isAdmin = currentUser?.rol === 'admin' || currentUser?.rol === 'it-manager';
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inlineFileInputRef = useRef<HTMLInputElement>(null);
@@ -184,6 +185,34 @@ export default function QAReportsPage() {
     if (deleteInLineDefectRecord) await deleteInLineDefectRecord(id);
   };
 
+  function parseExcelDate(cell: any): { dateStr: string; dateObj: Date } {
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    if (typeof cell === 'number' && cell > 1) {
+      const d = new Date(excelEpoch.getTime() + cell * 86400000);
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      const dateObj = new Date(y, d.getUTCMonth(), d.getUTCDate(), 12, 0, 0);
+      return { dateStr: `${y}-${m}-${day}`, dateObj };
+    }
+    const str = String(cell || '').trim();
+    const iso = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) {
+      const d = new Date(+iso[1], +iso[2]-1, +iso[3], 12, 0, 0);
+      return { dateStr: str, dateObj: d };
+    }
+    const dmy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (dmy) {
+      const d = new Date(+dmy[3], +dmy[2]-1, +dmy[1], 12, 0, 0);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return { dateStr: `${y}-${m}-${day}`, dateObj: d };
+    }
+    const d = new Date(str + 'T12:00:00');
+    return { dateStr: str, dateObj: d };
+  }
+
   function getISOWeekNumber(d: Date): number {
     if (isNaN(d.getTime())) return 0;
     const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -201,9 +230,9 @@ export default function QAReportsPage() {
     try {
       const XLSX = await import('xlsx');
       const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array', cellText: true });
+      const workbook = XLSX.read(data, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false });
+      const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
       const user = getStoredUser();
       const { saveQADHURecord } = await import('@/lib/firebase');
       let imported = 0; let skipped = 0;
@@ -213,10 +242,17 @@ export default function QAReportsPage() {
         const item = (row[0] || '').toString().trim();
         if (!item) { skipped++; continue; }
         setInlineImportProgress(`Importando ${i}/${rows.length - 1}: ${item}`);
-        const inspectionDate = (row[1] || '').toString().trim();
-        const parsedDate = new Date(inspectionDate + 'T12:00:00');
-        const week = (!isNaN(parsedDate.getTime()) ? getISOWeekNumber(parsedDate) : parseInt(String(row[2]).replace(/[^0-9]/g, ''))) || 0;
-        const month = (row[3] || '').toString().trim();
+        const parsed = parseExcelDate(row[1]);
+        let inspectionDate: string;
+        let week: number;
+        if (!isNaN(parsed.dateObj.getTime())) {
+          inspectionDate = parsed.dateStr;
+          week = getISOWeekNumber(parsed.dateObj);
+        } else {
+          inspectionDate = String(row[1] ?? '').trim();
+          week = parseInt(String(row[2]).replace(/[^0-9]/g, '')) || 0;
+        }
+        const month = (row[3] ?? '').toString().trim();
         const factory = (row[4] || '').toString().trim();
         const line = (row[5] || '').toString().trim();
         const po = (row[6] || '').toString().trim();
@@ -257,9 +293,9 @@ export default function QAReportsPage() {
     try {
       const XLSX = await import('xlsx');
       const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array', cellText: true });
+      const workbook = XLSX.read(data, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false });
+      const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
       const user = getStoredUser();
       const { saveInLineDefectRecord } = await import('@/lib/firebase');
       let imported = 0; let skipped = 0;
@@ -269,10 +305,17 @@ export default function QAReportsPage() {
         const item = (row[0] || '').toString().trim();
         if (!item) { skipped++; continue; }
         setDefectImportProgress(`Importando ${i}/${rows.length - 1}: ${item}`);
-        const inspectionDate = (row[1] || '').toString().trim();
-        const parsedDate = new Date(inspectionDate + 'T12:00:00');
-        const week = (!isNaN(parsedDate.getTime()) ? getISOWeekNumber(parsedDate) : parseInt(String(row[2]).replace(/[^0-9]/g, ''))) || 0;
-        const month = (row[3] || '').toString().trim();
+        const parsed = parseExcelDate(row[1]);
+        let inspectionDate: string;
+        let week: number;
+        if (!isNaN(parsed.dateObj.getTime())) {
+          inspectionDate = parsed.dateStr;
+          week = getISOWeekNumber(parsed.dateObj);
+        } else {
+          inspectionDate = String(row[1] ?? '').trim();
+          week = parseInt(String(row[2]).replace(/[^0-9]/g, '')) || 0;
+        }
+        const month = (row[3] ?? '').toString().trim();
         const factory = (row[4] || '').toString().trim();
         const line = (row[5] || '').toString().trim();
         const po = (row[6] || '').toString().trim();
@@ -307,6 +350,39 @@ export default function QAReportsPage() {
     setImportingDefect(false);
     if (defectFileInputRef.current) defectFileInputRef.current.value = '';
     setTimeout(() => setDefectImportProgress(''), 5000);
+  };
+
+  const handleRecalculateWeeks = async () => {
+    if (!confirm('¿Recalcular semanas para todos los registros IN LINE e In Line Defect?')) return;
+    setRecalcProgress('Recalculando...');
+    try {
+      const { updateQADHURecord, updateInLineDefectRecord } = await import('@/lib/firebase');
+      let updated = 0;
+      for (const r of qaDhuRecords) {
+        const parsed = parseExcelDate(r.inspectionDate);
+        if (!isNaN(parsed.dateObj.getTime())) {
+          const newWeek = getISOWeekNumber(parsed.dateObj);
+          if (newWeek !== r.week) {
+            await updateQADHURecord(r.id, { week: newWeek });
+            updated++;
+          }
+        }
+      }
+      for (const r of inLineDefectRecords) {
+        const parsed = parseExcelDate(r.inspectionDate);
+        if (!isNaN(parsed.dateObj.getTime())) {
+          const newWeek = getISOWeekNumber(parsed.dateObj);
+          if (newWeek !== r.week) {
+            await updateInLineDefectRecord(r.id, { week: newWeek });
+            updated++;
+          }
+        }
+      }
+      setRecalcProgress(`✅ Semanas recalculadas: ${updated} registros actualizados`);
+    } catch (err) {
+      setRecalcProgress(`❌ Error: ${err instanceof Error ? err.message : 'Error desconocido'}`);
+    }
+    setTimeout(() => setRecalcProgress(''), 5000);
   };
 
   return (
@@ -372,10 +448,16 @@ export default function QAReportsPage() {
               </h3>
               <div className="flex gap-2">
                 {(dhuTab === 'inline' || dhuTab === 'defect') && puedeVer(currentUser, 'qa_analytics') && (
-                  <Button size="sm" variant="outline" onClick={() => setAnalyticsOpen(true)}
-                    className="border-primary/50 text-primary hover:bg-primary/10">
-                    <Activity className="mr-2 h-4 w-4" /> Analytics
-                  </Button>
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => setAnalyticsOpen(true)}
+                      className="border-primary/50 text-primary hover:bg-primary/10">
+                      <Activity className="mr-2 h-4 w-4" /> Analytics
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={handleRecalculateWeeks}
+                      className="border-orange-400 text-orange-500 hover:bg-orange-500/10">
+                      Recalcular Semanas
+                    </Button>
+                  </>
                 )}
                 {dhuTab === 'inline' && (
                   <div className="flex items-center gap-2">
@@ -424,6 +506,11 @@ export default function QAReportsPage() {
                 {inlineImportProgress && (
                   <div className={`text-xs ${inlineImportProgress.includes('✅') ? 'text-green-500' : inlineImportProgress.includes('❌') ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {inlineImportProgress}
+                  </div>
+                )}
+                {recalcProgress && (
+                  <div className={`text-xs ${recalcProgress.includes('✅') ? 'text-green-500' : recalcProgress.includes('❌') ? 'text-destructive' : 'text-orange-500'}`}>
+                    {recalcProgress}
                   </div>
                 )}
                 {qaDhuRecords.length === 0 ? (
@@ -502,6 +589,11 @@ export default function QAReportsPage() {
                 {defectImportProgress && (
                   <div className={`text-xs ${defectImportProgress.includes('✅') ? 'text-green-500' : defectImportProgress.includes('❌') ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {defectImportProgress}
+                  </div>
+                )}
+                {recalcProgress && (
+                  <div className={`text-xs ${recalcProgress.includes('✅') ? 'text-green-500' : recalcProgress.includes('❌') ? 'text-destructive' : 'text-orange-500'}`}>
+                    {recalcProgress}
                   </div>
                 )}
                 {inLineDefectRecords.length === 0 ? (

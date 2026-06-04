@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { X, BarChart3, Download, Table2, FileDown, TrendingUp, PieChart as PieIcon, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList,
   BarChart, Bar, AreaChart, Area, ComposedChart, PieChart as RePieChart, Pie, Cell,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts';
@@ -70,8 +70,20 @@ function getMetricValue(r: any, metric: string): number {
   return r[metric] || 0;
 }
 
+function parseDateToTimestamp(val: string): number {
+  if (!val) return 0;
+  const iso = val.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return new Date(+iso[1], +iso[2]-1, +iso[3]).getTime();
+  const dmy = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (dmy) return new Date(+dmy[3], +dmy[2]-1, +dmy[1]).getTime();
+  return new Date(val).getTime() || 0;
+}
+
 function sortForExport(a: any, b: any) {
-  const fields = ['inspectionDate', 'factory', 'line', 'po', 'color', 'buyer'];
+  const dateA = parseDateToTimestamp(a.inspectionDate);
+  const dateB = parseDateToTimestamp(b.inspectionDate);
+  if (dateA !== dateB) return dateA - dateB;
+  const fields = ['factory', 'line', 'po', 'color', 'buyer'];
   for (const f of fields) {
     const va = (a[f] || '').toString().toLowerCase();
     const vb = (b[f] || '').toString().toLowerCase();
@@ -87,6 +99,8 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
   const [chartXAxis, setChartXAxis] = useState('week');
   const [chartMetrics, setChartMetrics] = useState<string[]>(['dhuPct']);
   const [chartAgg, setChartAgg] = useState<'sum' | 'avg'>('avg');
+  const [chartTitle, setChartTitle] = useState('');
+  const [showDataLabels, setShowDataLabels] = useState(false);
 
   const toggleMetric = (m: string) => {
     setChartMetrics(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
@@ -307,7 +321,9 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
             <Tooltip contentStyle={{ fontSize: 12, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
             {chartMetrics.map((m, i) => (
-              <Bar key={m} dataKey={m} name={metricOptions.find(o => o.value === m)?.label || m} fill={PIE_COLORS[i % PIE_COLORS.length]} radius={[0, 2, 2, 0]} />
+              <Bar key={m} dataKey={m} name={metricOptions.find(o => o.value === m)?.label || m} fill={PIE_COLORS[i % PIE_COLORS.length]} radius={[0, 2, 2, 0]}>
+                {showDataLabels && <LabelList dataKey={m} position="right" fontSize={10} />}
+              </Bar>
             ))}
           </BarChart>
         </ResponsiveContainer>
@@ -326,8 +342,16 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
             {lineMetrics.length > 0 && <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />}
             <Tooltip contentStyle={{ fontSize: 12, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            {barMetrics.map((m, i) => <Bar key={m} yAxisId="left" dataKey={m} name={metricOptions.find(o => o.value === m)?.label || m} fill={PIE_COLORS[i % PIE_COLORS.length]} radius={[2, 2, 0, 0]} />)}
-            {lineMetrics.map((m, i) => <Line key={m} yAxisId="right" type="monotone" dataKey={m} name={metricOptions.find(o => o.value === m)?.label || m} stroke={PIE_COLORS[(barMetrics.length + i) % PIE_COLORS.length]} strokeWidth={2} dot={{ r: 3 }} />)}
+            {barMetrics.map((m, i) => (
+              <Bar key={m} yAxisId="left" dataKey={m} name={metricOptions.find(o => o.value === m)?.label || m} fill={PIE_COLORS[i % PIE_COLORS.length]} radius={[2, 2, 0, 0]}>
+                {showDataLabels && <LabelList dataKey={m} position="top" fontSize={10} />}
+              </Bar>
+            ))}
+            {lineMetrics.map((m, i) => (
+              <Line key={m} yAxisId="right" type="monotone" dataKey={m} name={metricOptions.find(o => o.value === m)?.label || m} stroke={PIE_COLORS[(barMetrics.length + i) % PIE_COLORS.length]} strokeWidth={2} dot={{ r: 3 }}>
+                {showDataLabels && <LabelList dataKey={m} position="top" fontSize={10} />}
+              </Line>
+            ))}
           </ComposedChart>
         </ResponsiveContainer>
       );
@@ -344,7 +368,9 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
             <Tooltip contentStyle={{ fontSize: 12, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
             {chartMetrics.map((m, i) => (
-              <Line key={m} type="monotone" dataKey={m} name={metricOptions.find(o => o.value === m)?.label || m} stroke={PIE_COLORS[i % PIE_COLORS.length]} strokeWidth={2} dot={{ r: 3 }} />
+              <Line key={m} type="monotone" dataKey={m} name={metricOptions.find(o => o.value === m)?.label || m} stroke={PIE_COLORS[i % PIE_COLORS.length]} strokeWidth={2} dot={{ r: 3 }}>
+                {showDataLabels && <LabelList dataKey={m} position="top" fontSize={10} />}
+              </Line>
             ))}
           </LineChart>
         </ResponsiveContainer>
@@ -361,7 +387,9 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
             <Tooltip contentStyle={{ fontSize: 12, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
             {chartMetrics.map((m, i) => (
-              <Bar key={m} dataKey={m} name={metricOptions.find(o => o.value === m)?.label || m} fill={PIE_COLORS[i % PIE_COLORS.length]} radius={[2, 2, 0, 0]} />
+              <Bar key={m} dataKey={m} name={metricOptions.find(o => o.value === m)?.label || m} fill={PIE_COLORS[i % PIE_COLORS.length]} radius={[2, 2, 0, 0]}>
+                {showDataLabels && <LabelList dataKey={m} position="top" fontSize={10} />}
+              </Bar>
             ))}
           </BarChart>
         </ResponsiveContainer>
@@ -378,7 +406,9 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
             <Tooltip contentStyle={{ fontSize: 12, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
             {chartMetrics.map((m, i) => (
-              <Area key={m} type="monotone" dataKey={m} name={metricOptions.find(o => o.value === m)?.label || m} stroke={PIE_COLORS[i % PIE_COLORS.length]} fill={PIE_COLORS[i % PIE_COLORS.length]} fillOpacity={0.2} strokeWidth={2} />
+              <Area key={m} type="monotone" dataKey={m} name={metricOptions.find(o => o.value === m)?.label || m} fill={PIE_COLORS[i % PIE_COLORS.length]} fillOpacity={0.2} strokeWidth={2}>
+                {showDataLabels && <LabelList dataKey={m} position="top" fontSize={10} />}
+              </Area>
             ))}
           </AreaChart>
         </ResponsiveContainer>
@@ -757,14 +787,32 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                     </div>
                   </div>
                 </div>
+                <div className="mt-3 grid grid-cols-4 gap-3">
+                  <div className="col-span-3">
+                    <label className="mb-1 block text-xs text-muted-foreground">T\u00edtulo de la gr\u00e1fica</label>
+                    <input type="text" value={chartTitle} onChange={e => setChartTitle(e.target.value)}
+                      placeholder="Ej: DHU % por Semana"
+                      className="w-full rounded-lg border border-border bg-input px-2 py-2 text-xs text-foreground" />
+                  </div>
+                  <div className="flex items-end pb-1">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={showDataLabels} onChange={e => setShowDataLabels(e.target.checked)}
+                        className="h-4 w-4 rounded border-border accent-primary" />
+                      <span className="text-xs text-muted-foreground">Etiquetas</span>
+                    </label>
+                  </div>
+                </div>
               </div>
 
               {/* Dynamic Chart */}
               {chartData.length > 0 && (
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
-                    <TrendingUp className="h-4 w-4 text-primary" /> Gr\u00e1fica: {CHART_TYPES.find(ct => ct.value === chartType)?.label} por {X_AXIS_OPTIONS.find(o => o.value === chartXAxis)?.label}
+                    <TrendingUp className="h-4 w-4 text-primary" /> {CHART_TYPES.find(ct => ct.value === chartType)?.label} por {X_AXIS_OPTIONS.find(o => o.value === chartXAxis)?.label}
                   </div>
+                  {chartTitle && (
+                    <h4 className="mb-3 text-center text-base font-bold text-foreground">{chartTitle}</h4>
+                  )}
                   {renderChart()}
                 </div>
               )}
@@ -892,14 +940,32 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                     </div>
                   </div>
                 </div>
+                <div className="mt-3 grid grid-cols-4 gap-3">
+                  <div className="col-span-3">
+                    <label className="mb-1 block text-xs text-muted-foreground">T\u00edtulo de la gr\u00e1fica</label>
+                    <input type="text" value={chartTitle} onChange={e => setChartTitle(e.target.value)}
+                      placeholder="Ej: DHU % por Semana"
+                      className="w-full rounded-lg border border-border bg-input px-2 py-2 text-xs text-foreground" />
+                  </div>
+                  <div className="flex items-end pb-1">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={showDataLabels} onChange={e => setShowDataLabels(e.target.checked)}
+                        className="h-4 w-4 rounded border-border accent-primary" />
+                      <span className="text-xs text-muted-foreground">Etiquetas</span>
+                    </label>
+                  </div>
+                </div>
               </div>
 
               {/* Dynamic Chart */}
               {chartData.length > 0 && (
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
-                    <TrendingUp className="h-4 w-4 text-primary" /> Gr\u00e1fica: {CHART_TYPES.find(ct => ct.value === chartType)?.label} por {X_AXIS_OPTIONS.find(o => o.value === chartXAxis)?.label}
+                    <TrendingUp className="h-4 w-4 text-primary" /> {CHART_TYPES.find(ct => ct.value === chartType)?.label} por {X_AXIS_OPTIONS.find(o => o.value === chartXAxis)?.label}
                   </div>
+                  {chartTitle && (
+                    <h4 className="mb-3 text-center text-base font-bold text-foreground">{chartTitle}</h4>
+                  )}
                   {renderChart()}
                 </div>
               )}
