@@ -1,9 +1,9 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ScanLine, CalendarDays, CalendarRange, BarChart3, Database, LineChart, ClipboardList, BookOpen, Trash2, Pencil, Bug } from 'lucide-react';
+import { ArrowLeft, ScanLine, CalendarDays, CalendarRange, BarChart3, Database, LineChart, ClipboardList, BookOpen, Trash2, Pencil, Bug, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getStoredUser } from '@/lib/auth-store';
@@ -56,6 +56,9 @@ export default function QAReportsPage() {
   const [defectCatalogItems, setDefectCatalogItems] = useState<any[]>([]);
   const [newDefectCat, setNewDefectCat] = useState({ defectCode: '', defectDescription: '', catEnglish: '', acr: '', defectCatEnglish: '', descripcionDefecto: '', catEspanol: '', acrSpanish: '', defectCatSpanish: '' });
   const [savingDefectCat, setSavingDefectCat] = useState(false);
+  const [importingExcel, setImportingExcel] = useState(false);
+  const [importProgress, setImportProgress] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (view !== 'dhu') return;
@@ -111,6 +114,51 @@ export default function QAReportsPage() {
   const handleEditDefect = (r: any) => {
     setEditingDefectRecord(r);
     setInLineDefectOpen(true);
+  };
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportingExcel(true);
+    setImportProgress('Leyendo archivo...');
+    try {
+      const XLSX = await import('xlsx');
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const user = getStoredUser();
+      const { saveQADHUDefectCatalogItem } = await import('@/lib/firebase');
+      let imported = 0;
+      let skipped = 0;
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || !row[0]) { skipped++; continue; }
+        const defectCode = String(row[0]).trim();
+        if (!defectCode) { skipped++; continue; }
+        setImportProgress(`Importando ${i + 1}/${rows.length}: ${defectCode}`);
+        await saveQADHUDefectCatalogItem({
+          defectCode,
+          defectDescription: String(row[1] || '').trim(),
+          catEnglish: String(row[2] || '').trim(),
+          acr: String(row[3] || '').trim(),
+          defectCatEnglish: String(row[4] || '').trim(),
+          descripcionDefecto: String(row[5] || '').trim(),
+          catEspanol: String(row[6] || '').trim(),
+          acrSpanish: String(row[7] || '').trim(),
+          defectCatSpanish: String(row[8] || '').trim(),
+          createdAt: Date.now(),
+          createdBy: user?.codigo || '',
+        });
+        imported++;
+      }
+      setImportProgress(`✅ Importación completada: ${imported} registros agregados${skipped > 0 ? `, ${skipped} omitidos` : ''}`);
+    } catch (err) {
+      setImportProgress(`❌ Error al importar: ${err instanceof Error ? err.message : 'Error desconocido'}`);
+    }
+    setImportingExcel(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setTimeout(() => setImportProgress(''), 5000);
   };
 
   const handleDeleteInLineDefect = async (id: string) => {
@@ -378,6 +426,17 @@ export default function QAReportsPage() {
                         {savingDefectCat ? 'Guardando...' : 'Agregar'}
                       </Button>
                     </div>
+                  </div>
+                  <div className="mt-3 flex items-center gap-3 border-t border-border pt-3">
+                    <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImportExcel} className="hidden" id="excel-upload" />
+                    <Button size="sm" variant="outline" disabled={importingExcel} onClick={() => document.getElementById('excel-upload')?.click()}>
+                      <Upload className="mr-2 h-4 w-4" />Importar Excel (A-I)
+                    </Button>
+                    {importProgress && (
+                      <span className={`text-xs ${importProgress.includes('✅') ? 'text-green-500' : importProgress.includes('❌') ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        {importProgress}
+                      </span>
+                    )}
                   </div>
                 </div>
 
