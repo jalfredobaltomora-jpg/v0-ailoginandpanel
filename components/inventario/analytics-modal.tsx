@@ -51,8 +51,26 @@ const DEFECT_METRIC_OPTIONS = [
   { value: 'total', label: 'Total Defectos' }, { value: 'count', label: 'Count' },
 ];
 
+function getISOWeekNumber(d: Date): number {
+  if (isNaN(d.getTime())) return 0;
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+function computeWeek(dateStr: string): number {
+  if (!dateStr) return 0;
+  const iso = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return getISOWeekNumber(new Date(+iso[1], +iso[2]-1, +iso[3]));
+  const dmy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (dmy) return getISOWeekNumber(new Date(+dmy[3], +dmy[2]-1, +dmy[1]));
+  return 0;
+}
+
 function getFieldValue(r: any, field: string): string {
-  if (field === 'week') return `#${r.week || 0}`;
+  if (field === 'week') return `#${computeWeek(r.inspectionDate)}`;
   if (field === 'month') return r.month || 'N/A';
   if (field === 'factory') return r.factory || 'N/A';
   if (field === 'line') return r.line || 'N/A';
@@ -232,7 +250,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     filteredDefect.forEach(r => {
       let groupKey: string;
       if (top3GroupBy === 'month') groupKey = r.month || 'N/A';
-      else if (top3GroupBy === 'week') groupKey = `#${r.week || 0}`;
+      else if (top3GroupBy === 'week') groupKey = `#${computeWeek(r.inspectionDate) || 0}`;
       else groupKey = String((r as any)[groupField] || 'N/A').trim();
       if (!groupKey) groupKey = 'N/A';
       if (!groups[groupKey]) groups[groupKey] = {};
@@ -518,7 +536,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
       const dhuPct = (r.dhuScorePercent * 100).toFixed(2);
       const dhuClass = r.performanceDHU === 'Very Bad' ? 'perf-vbad' : r.performanceDHU === 'Excellent' ? 'perf-excellent' : '';
       const row = [
-        r.item, r.inspectionDate, `#${r.week}`, r.month || '',
+        r.item, r.inspectionDate, `#${computeWeek(r.inspectionDate)}`, r.month || '',
         r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
         getAuditorName(r.auditor, empleados), r.style || '',
         r.visualSample, r.visualReject, r.visualApproved,
@@ -535,7 +553,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
   const generateDefectHTML = () => {
     const header = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Defecto', 'Total', 'C\u00f3digo Defecto', 'Descripci\u00f3n', 'CAT EN', 'ACR', 'Defect CAT EN', 'Descripci\u00f3n Defecto', 'CAT ES', 'ACR S', 'Defect CAT ES'];
     const rows = filteredDefect.map(r => [
-      r.item, r.inspectionDate, `#${r.week}`, r.month || '',
+      r.item, r.inspectionDate, `#${computeWeek(r.inspectionDate)}`, r.month || '',
       r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
       getAuditorName(r.auditor, empleados), r.style || '',
       r.defect || '', r.total, r.defectCode,
@@ -591,7 +609,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     filteredInline.forEach((r, idx) => {
       const rowNum = headerRow + 1 + idx;
       const values = [
-        r.item, r.inspectionDate, `#${r.week}`, r.month || '',
+        r.item, r.inspectionDate, `#${computeWeek(r.inspectionDate)}`, r.month || '',
         r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
         getAuditorName(r.auditor, empleados), r.style || '',
         r.visualSample, r.visualReject, r.visualApproved,
@@ -637,7 +655,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     filteredDefect.forEach((r, idx) => {
       const rowNum = headerRow + 1 + idx;
       const values = [
-        r.item, r.inspectionDate, `#${r.week}`, r.month || '',
+        r.item, r.inspectionDate, `#${computeWeek(r.inspectionDate)}`, r.month || '',
         r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
         getAuditorName(r.auditor, empleados), r.style || '',
         r.defect || '', r.total, r.defectCode,
@@ -946,7 +964,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                         <tr key={r.id} className="border-b border-border hover:bg-muted/20">
                           <td className="p-2 font-medium">{r.item}</td>
                           <td className="p-2 text-xs">{r.inspectionDate}</td>
-                          <td className="p-2 text-xs">#{r.week}</td>
+                          <td className="p-2 text-xs">#{computeWeek(r.inspectionDate)}</td>
                           <td className="p-2 text-xs">{r.month || '-'}</td>
                           <td className="p-2 text-xs">{r.factory}</td>
                           <td className="p-2 text-xs">{r.line || '-'}</td>
@@ -1169,7 +1187,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                         <tr key={r.id} className="border-b border-border hover:bg-muted/20">
                           <td className="p-2 font-medium">{r.item}</td>
                           <td className="p-2 text-xs">{r.inspectionDate}</td>
-                          <td className="p-2 text-xs">#{r.week}</td>
+                          <td className="p-2 text-xs">#{computeWeek(r.inspectionDate)}</td>
                           <td className="p-2 text-xs">{r.month || '-'}</td>
                           <td className="p-2 text-xs">{r.factory}</td>
                           <td className="p-2 text-xs">{r.line || '-'}</td>
@@ -1201,7 +1219,12 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                 <div className="grid grid-cols-5 gap-3">
                   <div>
                     <label className="mb-1 block text-xs text-muted-foreground">Datos</label>
-                    <select value={pivotDataset} onChange={e => setPivotDataset(e.target.value as 'inline' | 'defect')}
+                    <select value={pivotDataset} onChange={e => {
+                      const ds = e.target.value as 'inline' | 'defect';
+                      setPivotDataset(ds);
+                      if (ds === 'defect') setPivotValue('total');
+                      if (ds === 'inline') setPivotValue('sample');
+                    }}
                       className="w-full rounded-lg border border-border bg-input px-2 py-2 text-xs text-foreground">
                       <option value="inline">IN LINE</option>
                       <option value="defect">In Line Defect</option>

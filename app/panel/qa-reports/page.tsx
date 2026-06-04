@@ -213,6 +213,15 @@ export default function QAReportsPage() {
     return { dateStr: str, dateObj: d };
   }
 
+  function computeWeek(dateStr: string): number {
+    if (!dateStr) return 0;
+    const iso = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) return getISOWeekNumber(new Date(+iso[1], +iso[2]-1, +iso[3]));
+    const dmy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (dmy) return getISOWeekNumber(new Date(+dmy[3], +dmy[2]-1, +dmy[1]));
+    return 0;
+  }
+
   function getISOWeekNumber(d: Date): number {
     if (isNaN(d.getTime())) return 0;
     const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -548,7 +557,7 @@ export default function QAReportsPage() {
                           <tr key={r.id} className="border-b border-border hover:bg-muted/20">
                             <td className="p-2 font-medium">{r.item}</td>
                             <td className="p-2 text-xs">{r.inspectionDate}</td>
-                            <td className="p-2 text-xs">#{r.week}</td>
+                            <td className="p-2 text-xs">#{computeWeek(r.inspectionDate)}</td>
                             <td className="p-2 text-xs">{r.month || '-'}</td>
                             <td className="p-2 text-xs">{r.factory}</td>
                             <td className="p-2 text-xs">{r.line || '-'}</td>
@@ -635,7 +644,7 @@ export default function QAReportsPage() {
                           <tr key={r.id} className="border-b border-border hover:bg-muted/20">
                             <td className="p-2 font-medium">{r.item}</td>
                             <td className="p-2 text-xs">{r.inspectionDate}</td>
-                            <td className="p-2 text-xs">#{r.week}</td>
+                            <td className="p-2 text-xs">#{computeWeek(r.inspectionDate)}</td>
                             <td className="p-2 text-xs">{r.month || '-'}</td>
                             <td className="p-2 text-xs">{r.factory}</td>
                             <td className="p-2 text-xs">{r.line || '-'}</td>
