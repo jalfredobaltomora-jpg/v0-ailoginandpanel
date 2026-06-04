@@ -23,7 +23,7 @@ function getISOWeekNumber(date: Date): number {
 }
 
 const factories = ['TECHNOTEX #2', 'EINS', 'DASOLTEX SA'];
-const buyers = ['Target', "Kohl's", 'Walmart'];
+const buyers = ['Target', "Kohl's", 'Walmart', 'Carhartt'];
 
 export function InLineDefectModal({ onClose, onSaved, record }: InLineDefectModalProps) {
   const isEditing = !!record;

@@ -27,7 +27,7 @@ function getAuditorName(code: string, empleados: Empleado[]): string {
 }
 
 const factories = ['TECHNOTEX #2', 'EINS', 'DASOLTEX SA'];
-const buyers = ['Target', "Kohl's", 'Walmart'];
+const buyers = ['Target', "Kohl's", 'Walmart', 'Carhartt'];
 
 export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defectCatalogItems, onClose }: AnalyticsModalProps) {
   const [tab, setTab] = useState<'inline' | 'defect'>('inline');
@@ -41,55 +41,80 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
   const [filterBuyer, setFilterBuyer] = useState('');
 
   // Get unique values for dropdowns
+  const normalize = (v: string) => v.trim();
+
   const months = useMemo(() => {
-    const set = new Set<string>();
-    inlineRecords.forEach(r => r.month && set.add(r.month));
-    defectRecords.forEach(r => r.month && set.add(r.month));
-    return Array.from(set).sort();
+    const map = new Map<string, string>();
+    const add = (v: string) => {
+      if (!v) return;
+      const trimmed = v.trim();
+      if (!trimmed) return;
+      const key = trimmed.toLowerCase();
+      if (!map.has(key)) {
+        const display = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+        map.set(key, display);
+      }
+    };
+    inlineRecords.forEach(r => add(r.month));
+    defectRecords.forEach(r => add(r.month));
+    return Array.from(map.values()).sort();
   }, [inlineRecords, defectRecords]);
 
   const lines = useMemo(() => {
     const set = new Set<string>();
-    inlineRecords.forEach(r => r.line && set.add(r.line));
-    defectRecords.forEach(r => r.line && set.add(r.line));
+    inlineRecords.forEach(r => r.line && set.add(r.line.trim()));
+    defectRecords.forEach(r => r.line && set.add(r.line.trim()));
     return Array.from(set).sort();
   }, [inlineRecords, defectRecords]);
 
   const pos = useMemo(() => {
     const set = new Set<string>();
-    inlineRecords.forEach(r => r.po && set.add(r.po));
-    defectRecords.forEach(r => r.po && set.add(r.po));
+    inlineRecords.forEach(r => r.po && set.add(r.po.trim()));
+    defectRecords.forEach(r => r.po && set.add(r.po.trim()));
     return Array.from(set).sort();
   }, [inlineRecords, defectRecords]);
 
   const colors = useMemo(() => {
     const set = new Set<string>();
-    inlineRecords.forEach(r => r.color && set.add(r.color));
-    defectRecords.forEach(r => r.color && set.add(r.color));
+    inlineRecords.forEach(r => r.color && set.add(r.color.trim()));
+    defectRecords.forEach(r => r.color && set.add(r.color.trim()));
+    return Array.from(set).sort();
+  }, [inlineRecords, defectRecords]);
+
+  const buyerList = useMemo(() => {
+    const set = new Set<string>();
+    buyers.forEach(b => set.add(b));
+    inlineRecords.forEach(r => r.buyer && set.add(r.buyer.trim()));
+    defectRecords.forEach(r => r.buyer && set.add(r.buyer.trim()));
     return Array.from(set).sort();
   }, [inlineRecords, defectRecords]);
 
   // Filtered data
+  const matchField = (val: string | undefined, filter: string) => {
+    if (!filter) return true;
+    return (val || '').trim().toLowerCase() === filter.toLowerCase();
+  };
+
   const filteredInline = useMemo(() => {
     return inlineRecords.filter(r => {
-      if (filterMonth && r.month !== filterMonth) return false;
-      if (filterFactory && r.factory !== filterFactory) return false;
-      if (filterLine && r.line !== filterLine) return false;
-      if (filterPo && r.po !== filterPo) return false;
-      if (filterColor && r.color !== filterColor) return false;
-      if (filterBuyer && r.buyer !== filterBuyer) return false;
+      if (!matchField(r.month, filterMonth)) return false;
+      if (!matchField(r.factory, filterFactory)) return false;
+      if (!matchField(r.line, filterLine)) return false;
+      if (!matchField(r.po, filterPo)) return false;
+      if (!matchField(r.color, filterColor)) return false;
+      if (!matchField(r.buyer, filterBuyer)) return false;
       return true;
     });
   }, [inlineRecords, filterMonth, filterFactory, filterLine, filterPo, filterColor, filterBuyer]);
 
   const filteredDefect = useMemo(() => {
     return defectRecords.filter(r => {
-      if (filterMonth && r.month !== filterMonth) return false;
-      if (filterFactory && r.factory !== filterFactory) return false;
-      if (filterLine && r.line !== filterLine) return false;
-      if (filterPo && r.po !== filterPo) return false;
-      if (filterColor && r.color !== filterColor) return false;
-      if (filterBuyer && r.buyer !== filterBuyer) return false;
+      if (!matchField(r.month, filterMonth)) return false;
+      if (!matchField(r.factory, filterFactory)) return false;
+      if (!matchField(r.line, filterLine)) return false;
+      if (!matchField(r.po, filterPo)) return false;
+      if (!matchField(r.color, filterColor)) return false;
+      if (!matchField(r.buyer, filterBuyer)) return false;
       return true;
     });
   }, [defectRecords, filterMonth, filterFactory, filterLine, filterPo, filterColor, filterBuyer]);
@@ -199,14 +224,6 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     'Excellent': { fill: 'FFBBF7D0', font: 'FF16A34A' },
   };
 
-  const applyRowStyle = (row: any, fillColor: string, fontColor: string, bold: boolean) => {
-    row.eachCell({ includeEmpty: true }, (cell: any) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
-      cell.font = { ...cell.font, color: { argb: fontColor }, bold };
-      cell.border = cellBorder;
-    });
-  };
-
   const buildInlineSheet = (ws: any, headerRow: number) => {
     // Header
     const hRow = ws.getRow(headerRow);
@@ -237,13 +254,16 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
       const row = ws.getRow(rowNum);
       values.forEach((v, ci) => { ws.getCell(rowNum, ci + 1).value = v; });
 
-      // Apply performance-based row coloring
+      // Apply border to all cells
+      row.eachCell({ includeEmpty: true }, (cell: any) => { cell.border = cellBorder; });
+
+      // Color only the Performance cell (col 16) and DHU % (col 15)
       const perf = r.performanceDHU || '';
       if (performanceStyles[perf]) {
-        applyRowStyle(row, performanceStyles[perf].fill, performanceStyles[perf].font, true);
-      } else {
-        row.eachCell({ includeEmpty: true }, (cell: any) => {
-          cell.border = cellBorder;
+        [15, 16].forEach(col => {
+          const cell = ws.getCell(rowNum, col);
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: performanceStyles[perf].fill } };
+          cell.font = { ...cell.font, color: { argb: performanceStyles[perf].font }, bold: true };
         });
       }
       row.height = 18;
@@ -422,7 +442,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                 <select value={filterBuyer} onChange={e => setFilterBuyer(e.target.value)}
                   className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground">
                   <option value="">Todos</option>
-                  {buyers.map(b => <option key={b} value={b}>{b}</option>)}
+                  {buyerList.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
               </div>
             </div>
