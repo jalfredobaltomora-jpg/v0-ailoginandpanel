@@ -94,7 +94,7 @@ function sortForExport(a: any, b: any) {
 }
 
 export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defectCatalogItems, onClose, isAdmin }: AnalyticsModalProps) {
-  const [tab, setTab] = useState<'inline' | 'defect'>('inline');
+  const [tab, setTab] = useState<'inline' | 'defect' | 'pivot'>('inline');
   const [chartType, setChartType] = useState('line');
   const [chartXAxis, setChartXAxis] = useState('week');
   const [chartMetrics, setChartMetrics] = useState<string[]>(['dhuPct']);
@@ -102,6 +102,11 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
   const [chartTitle, setChartTitle] = useState('');
   const [showDataLabels, setShowDataLabels] = useState(false);
   const [top3GroupBy, setTop3GroupBy] = useState('factory');
+  const [pivotDataset, setPivotDataset] = useState<'inline' | 'defect'>('inline');
+  const [pivotRows, setPivotRows] = useState('factory');
+  const [pivotCols, setPivotCols] = useState('month');
+  const [pivotValue, setPivotValue] = useState('sample');
+  const [pivotAgg, setPivotAgg] = useState<'sum' | 'avg'>('sum');
 
   const toggleMetric = (m: string) => {
     setChartMetrics(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
@@ -287,6 +292,62 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
       return String(a.name).localeCompare(String(b.name));
     });
   }, [sourceData, chartXAxis, chartMetrics, chartAgg]);
+
+  // Pivot Table data
+  const pivotTableData = useMemo(() => {
+    const source = pivotDataset === 'inline' ? filteredInline : filteredDefect;
+    const valKey = pivotValue;
+    const rowSet = new Set<string>();
+    const colSet = new Set<string>();
+    source.forEach(r => {
+      const rv = getFieldValue(r, pivotRows);
+      const cv = getFieldValue(r, pivotCols);
+      if (rv) rowSet.add(rv);
+      if (cv) colSet.add(cv);
+    });
+    const rowValues = Array.from(rowSet).sort((a, b) => {
+      const na = parseFloat(a.replace('#', '')); const nb = parseFloat(b.replace('#', ''));
+      return !isNaN(na) && !isNaN(nb) ? na - nb : a.localeCompare(b);
+    });
+    const colValues = Array.from(colSet).sort((a, b) => {
+      const na = parseFloat(a.replace('#', '')); const nb = parseFloat(b.replace('#', ''));
+      return !isNaN(na) && !isNaN(nb) ? na - nb : a.localeCompare(b);
+    });
+
+    const cells: Record<string, Record<string, { sum: number; count: number }>> = {};
+    source.forEach(r => {
+      const rv = getFieldValue(r, pivotRows);
+      const cv = getFieldValue(r, pivotCols);
+      if (!rv || !cv) return;
+      if (!cells[rv]) cells[rv] = {};
+      if (!cells[rv][cv]) cells[rv][cv] = { sum: 0, count: 0 };
+      let val = 0;
+      const rec = r as any;
+      if (valKey === 'count') val = 1;
+      else if (valKey === 'sample') val = rec.visualSample || 0;
+      else if (valKey === 'reject') val = rec.visualReject || 0;
+      else if (valKey === 'approved') val = rec.visualApproved || 0;
+      else if (valKey === 'dhuPct') val = rec.dhuScorePercent != null ? rec.dhuScorePercent * 100 : 0;
+      else if (valKey === 'passRate') val = rec.passRateScorePercent != null ? rec.passRateScorePercent * 100 : 0;
+      else if (valKey === 'total') val = rec.total || 0;
+      cells[rv][cv].sum += val;
+      cells[rv][cv].count++;
+    });
+
+    const getCell = (rv: string, cv: string) => {
+      const cell = cells[rv]?.[cv];
+      if (!cell) return 0;
+      return pivotAgg === 'avg' ? +(cell.sum / cell.count).toFixed(2) : cell.sum;
+    };
+
+    const rowTotals: Record<string, number> = {};
+    rowValues.forEach(rv => { rowTotals[rv] = +colValues.reduce((s, cv) => s + getCell(rv, cv), 0).toFixed(2); });
+    const colTotals: Record<string, number> = {};
+    colValues.forEach(cv => { colTotals[cv] = +rowValues.reduce((s, rv) => s + getCell(rv, cv), 0).toFixed(2); });
+    const grandTotal = +rowValues.reduce((s, rv) => s + (rowTotals[rv] || 0), 0).toFixed(2);
+
+    return { rowValues, colValues, getCell, rowTotals, colTotals, grandTotal, sourceLen: source.length };
+  }, [pivotDataset, pivotRows, pivotCols, pivotValue, pivotAgg, filteredInline, filteredDefect]);
 
   // Render dynamic chart
   const renderChart = () => {
@@ -736,7 +797,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
             </div>
           </div>
 
-          {/* Sub-tabs for inline / defect */}
+          {/* Sub-tabs */}
           <div className="flex gap-4 border-b border-border">
             <button onClick={() => setTab('inline')}
               className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${tab === 'inline' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
@@ -745,6 +806,10 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
             <button onClick={() => setTab('defect')}
               className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${tab === 'defect' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
               In Line Defect ({filteredDefect.length})
+            </button>
+            <button onClick={() => setTab('pivot')}
+              className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${tab === 'pivot' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+              <Table2 className="h-4 w-4" /> Tabla Din\u00e1mica
             </button>
           </div>
 
@@ -1121,6 +1186,133 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Pivot Table Tab */}
+          {tab === 'pivot' && (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-border bg-muted/10 p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Table2 className="h-4 w-4 text-primary" /> Tabla Din\u00e1mica
+                </div>
+                <div className="grid grid-cols-5 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">Datos</label>
+                    <select value={pivotDataset} onChange={e => setPivotDataset(e.target.value as 'inline' | 'defect')}
+                      className="w-full rounded-lg border border-border bg-input px-2 py-2 text-xs text-foreground">
+                      <option value="inline">IN LINE</option>
+                      <option value="defect">In Line Defect</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">Filas</label>
+                    <select value={pivotRows} onChange={e => setPivotRows(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-input px-2 py-2 text-xs text-foreground">
+                      <option value="factory">F\u00e1brica</option>
+                      <option value="line">L\u00ednea</option>
+                      <option value="month">Mes</option>
+                      <option value="week">Semana</option>
+                      <option value="buyer">Buyer</option>
+                      <option value="color">Color</option>
+                      <option value="auditor">Auditor</option>
+                      <option value="po">PO</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">Columnas</label>
+                    <select value={pivotCols} onChange={e => setPivotCols(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-input px-2 py-2 text-xs text-foreground">
+                      <option value="factory">F\u00e1brica</option>
+                      <option value="line">L\u00ednea</option>
+                      <option value="month">Mes</option>
+                      <option value="week">Semana</option>
+                      <option value="buyer">Buyer</option>
+                      <option value="color">Color</option>
+                      <option value="auditor">Auditor</option>
+                      <option value="po">PO</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">Valor</label>
+                    <select value={pivotValue} onChange={e => setPivotValue(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-input px-2 py-2 text-xs text-foreground">
+                      {pivotDataset === 'inline' ? (
+                        <>
+                          <option value="sample">Sample</option>
+                          <option value="reject">Reject</option>
+                          <option value="approved">Approved</option>
+                          <option value="dhuPct">DHU %</option>
+                          <option value="passRate">Pass Rate %</option>
+                          <option value="count">Count</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="total">Total Defectos</option>
+                          <option value="count">Count</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">Agregaci\u00f3n</label>
+                    <select value={pivotAgg} onChange={e => setPivotAgg(e.target.value as 'sum' | 'avg')}
+                      className="w-full rounded-lg border border-border bg-input px-2 py-2 text-xs text-foreground">
+                      <option value="sum">Suma</option>
+                      <option value="avg">Promedio</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {pivotTableData.rowValues.length > 0 && pivotTableData.colValues.length > 0 ? (
+                <div className="overflow-x-auto rounded-lg border border-border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-primary/10 border-b border-border">
+                        <th className="sticky left-0 z-10 bg-primary/10 p-2 text-left font-medium text-primary min-w-[120px]">
+                          {pivotRows.charAt(0).toUpperCase() + pivotRows.slice(1)} / {pivotCols.charAt(0).toUpperCase() + pivotCols.slice(1)}
+                        </th>
+                        {pivotTableData.colValues.map(cv => (
+                          <th key={cv} className="p-2 text-right font-medium text-primary min-w-[90px]">{cv}</th>
+                        ))}
+                        <th className="p-2 text-right font-medium text-primary bg-primary/20 min-w-[80px]">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pivotTableData.rowValues.map(rv => (
+                        <tr key={rv} className="border-b border-border hover:bg-muted/20">
+                          <td className="sticky left-0 z-10 bg-card p-2 text-xs font-medium">{rv}</td>
+                          {pivotTableData.colValues.map(cv => {
+                            const val = pivotTableData.getCell(rv, cv);
+                            const isDHU = pivotValue === 'dhuPct';
+                            const cls = isDHU ? (
+                              val <= 3 ? 'text-green-500' : val <= 5 ? 'text-yellow-500' : 'text-red-500'
+                            ) : '';
+                            return (
+                              <td key={cv} className={`p-2 text-right text-xs ${cls}`}>{val}</td>
+                            );
+                          })}
+                          <td className="p-2 text-right text-xs font-bold bg-muted/30">{pivotTableData.rowTotals[rv]}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-primary/5 border-t-2 border-primary/20">
+                        <td className="sticky left-0 z-10 bg-primary/5 p-2 text-xs font-bold">Total</td>
+                        {pivotTableData.colValues.map(cv => (
+                          <td key={cv} className="p-2 text-right text-xs font-bold">{pivotTableData.colTotals[cv]}</td>
+                        ))}
+                        <td className="p-2 text-right text-xs font-bold bg-primary/10">{pivotTableData.grandTotal}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              ) : (
+                <div className="py-8 text-center text-muted-foreground border rounded-lg border-border">
+                  No hay datos para la tabla din\u00e1mica con los filtros actuales.
                 </div>
               )}
             </div>
