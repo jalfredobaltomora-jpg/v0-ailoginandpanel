@@ -1,9 +1,14 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { X, BarChart3, Download, Table2, FileDown } from 'lucide-react';
+import { X, BarChart3, Download, Table2, FileDown, TrendingUp, PieChart as PieIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  BarChart, Bar, AreaChart, Area, ComposedChart, PieChart as RePieChart, Pie, Cell,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+} from 'recharts';
 import type { QADHURecord, InLineDefectRecord, QADHUDefectCatalogItem } from '@/lib/firebase';
 
 interface Empleado {
@@ -29,6 +34,7 @@ function getAuditorName(code: string, empleados: Empleado[]): string {
 
 const factories = ['TECHNOTEX #2', 'EINS', 'DASOLTEX SA'];
 const buyers = ['Target', "Kohl's", 'Walmart', 'Carhartt'];
+const PIE_COLORS = ['#22c55e', '#eab308', '#ef4444', '#3b82f6', '#f97316', '#8b5cf6', '#06b6d4', '#ec4899'];
 
 export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defectCatalogItems, onClose, isAdmin }: AnalyticsModalProps) {
   const [tab, setTab] = useState<'inline' | 'defect'>('inline');
@@ -135,6 +141,86 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     });
     return { totalSample, totalReject, totalApproved, avgDHU, avgPassRate, perfCount, count: filteredInline.length };
   }, [filteredInline]);
+
+  // Time-series data grouped by ISO week
+  const inlineTrend = useMemo(() => {
+    const groups: Record<number, { week: number; sample: number; reject: number; approved: number; dhuPct: number; passRate: number; count: number }> = {};
+    filteredInline.forEach(r => {
+      const w = r.week || 0;
+      if (!groups[w]) groups[w] = { week: w, sample: 0, reject: 0, approved: 0, dhuPct: 0, passRate: 0, count: 0 };
+      groups[w].sample += r.visualSample || 0;
+      groups[w].reject += r.visualReject || 0;
+      groups[w].approved += r.visualApproved || 0;
+      groups[w].dhuPct += (r.dhuScorePercent * 100);
+      groups[w].passRate += (r.passRateScorePercent * 100);
+      groups[w].count++;
+    });
+    return Object.values(groups)
+      .map(g => ({ ...g, dhuPct: +(g.dhuPct / g.count).toFixed(2), passRate: +(g.passRate / g.count).toFixed(2) }))
+      .sort((a, b) => a.week - b.week);
+  }, [filteredInline]);
+
+  // Cumulative DHU trend (running average)
+  const cumulativeTrend = useMemo(() => {
+    let cumReject = 0, cumSample = 0;
+    return inlineTrend.map(g => {
+      cumReject += g.reject;
+      cumSample += g.sample;
+      return { week: g.week, cumDHU: +((cumReject / cumSample) * 100).toFixed(2) };
+    });
+  }, [inlineTrend]);
+
+  // Factory comparison radar data
+  const factoryRadar = useMemo(() => {
+    const byFactory: Record<string, { sample: number; reject: number; approved: number; count: number }> = {};
+    filteredInline.forEach(r => {
+      const f = r.factory || 'Unknown';
+      if (!byFactory[f]) byFactory[f] = { sample: 0, reject: 0, approved: 0, count: 0 };
+      byFactory[f].sample += r.visualSample || 0;
+      byFactory[f].reject += r.visualReject || 0;
+      byFactory[f].approved += r.visualApproved || 0;
+      byFactory[f].count++;
+    });
+    return Object.entries(byFactory).map(([name, d]) => ({
+      name: name.length > 10 ? name.slice(0, 10) + '...' : name,
+      'DHU %': +((d.reject / (d.sample || 1)) * 100).toFixed(1),
+      'Pass Rate %': +((d.approved / (d.sample || 1)) * 100).toFixed(1),
+      Sample: d.sample,
+    }));
+  }, [filteredInline]);
+
+  // Buyer distribution for pie chart
+  const buyerDistribution = useMemo(() => {
+    const byBuyer: Record<string, number> = {};
+    filteredInline.forEach(r => {
+      const b = r.buyer || 'Unknown';
+      byBuyer[b] = (byBuyer[b] || 0) + 1;
+    });
+    return Object.entries(byBuyer)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [filteredInline]);
+
+  // Audit performance data for composed chart
+  const composedData = useMemo(() => {
+    return inlineTrend.map(g => ({
+      week: g.week,
+      'DHU %': g.dhuPct,
+      'Pass Rate %': g.passRate,
+      Records: g.count,
+    }));
+  }, [inlineTrend]);
+
+  const defectTrend = useMemo(() => {
+    const groups: Record<number, { week: number; total: number; count: number }> = {};
+    filteredDefect.forEach(r => {
+      const w = r.week || 0;
+      if (!groups[w]) groups[w] = { week: w, total: 0, count: 0 };
+      groups[w].total += r.total || 0;
+      groups[w].count++;
+    });
+    return Object.values(groups).sort((a, b) => a.week - b.week);
+  }, [filteredDefect]);
 
   // Metrics for In Line Defect
   const defectMetrics = useMemo(() => {
@@ -493,21 +579,181 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                 </div>
               </div>
 
-              {/* Performance Distribution */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-3 text-center">
-                  <div className="text-lg font-bold text-green-500">{inlineMetrics.perfCount.Excellent}</div>
-                  <div className="text-xs text-muted-foreground">Excellent</div>
+              {/* ═══════════ POWER BI-STYLE CHARTS ═══════════ */}
+              {/* Performance Donut Chart */}
+              <div className="rounded-lg border border-border bg-card p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
+                  <PieIcon className="h-4 w-4 text-primary" /> Distribución de Performance
                 </div>
-                <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3 text-center">
-                  <div className="text-lg font-bold text-yellow-500">{inlineMetrics.perfCount.Good}</div>
-                  <div className="text-xs text-muted-foreground">Good</div>
-                </div>
-                <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3 text-center">
-                  <div className="text-lg font-bold text-red-500">{inlineMetrics.perfCount['Very Bad']}</div>
-                  <div className="text-xs text-muted-foreground">Very Bad</div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <RePieChart>
+                        <Pie data={[
+                          { name: 'Excellent', value: inlineMetrics.perfCount.Excellent },
+                          { name: 'Good', value: inlineMetrics.perfCount.Good },
+                          { name: 'Very Bad', value: inlineMetrics.perfCount['Very Bad'] },
+                        ]} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                          {[0, 1, 2].map((_, i) => <Cell key={i} fill={['#22c55e', '#eab308', '#ef4444'][i]} />)}
+                        </Pie>
+                        <Tooltip />
+                      </RePieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex flex-col justify-center gap-2">
+                    <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-green-500" /> <span className="text-xs text-muted-foreground">Excellent: <strong>{inlineMetrics.perfCount.Excellent}</strong></span></div>
+                    <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-yellow-500" /> <span className="text-xs text-muted-foreground">Good: <strong>{inlineMetrics.perfCount.Good}</strong></span></div>
+                    <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-red-500" /> <span className="text-xs text-muted-foreground">Very Bad: <strong>{inlineMetrics.perfCount['Very Bad']}</strong></span></div>
+                  </div>
                 </div>
               </div>
+
+              {/* Trend Charts - Line + Area + Composed */}
+              {inlineTrend.length > 1 && (
+                <>
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
+                      <TrendingUp className="h-4 w-4 text-primary" /> Tendencias Semanales (Líneas)
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="mb-2 text-xs text-muted-foreground">DHU % por Semana</p>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <LineChart data={inlineTrend}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                            <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                            <YAxis domain={[0, 'auto']} tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                            <Tooltip contentStyle={{ fontSize: 12, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                            <Line type="monotone" dataKey="dhuPct" name="DHU %" stroke="#dc2626" strokeWidth={2} dot={{ r: 3 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div>
+                        <p className="mb-2 text-xs text-muted-foreground">Pass Rate % por Semana</p>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <LineChart data={inlineTrend}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                            <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                            <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                            <Tooltip contentStyle={{ fontSize: 12, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                            <Line type="monotone" dataKey="passRate" name="Pass Rate %" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Area Chart - Cumulative DHU */}
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
+                      <TrendingUp className="h-4 w-4 text-primary" /> DHU % Acumulado (Área)
+                    </div>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <AreaChart data={cumulativeTrend}>
+                        <defs>
+                          <linearGradient id="cumDHUGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#dc2626" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#dc2626" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                        <Tooltip contentStyle={{ fontSize: 12, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                        <Area type="monotone" dataKey="cumDHU" name="DHU % Acumulado" stroke="#dc2626" strokeWidth={2} fill="url(#cumDHUGrad)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Composed Chart - DHU % + Pass Rate + Record Count */}
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
+                      <BarChart3 className="h-4 w-4 text-primary" /> Comparativa Semanal (Combinado)
+                    </div>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <ComposedChart data={composedData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis yAxisId="left" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                        <Tooltip contentStyle={{ fontSize: 12, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                        <Bar yAxisId="right" dataKey="Records" name="Registros" fill="#e2e8f0" radius={[2, 2, 0, 0]} />
+                        <Line yAxisId="left" type="monotone" dataKey="DHU %" name="DHU %" stroke="#dc2626" strokeWidth={2} dot={{ r: 3 }} />
+                        <Line yAxisId="left" type="monotone" dataKey="Pass Rate %" name="Pass Rate %" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Bar Chart - Sample / Reject / Approved */}
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
+                      <BarChart3 className="h-4 w-4 text-primary" /> Sample / Reject / Approved por Semana
+                    </div>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={inlineTrend}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                        <Tooltip contentStyle={{ fontSize: 12, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                        <Bar dataKey="sample" name="Sample" fill="#3b82f6" radius={[2, 2, 0, 0]} />
+                        <Bar dataKey="reject" name="Reject" fill="#ef4444" radius={[2, 2, 0, 0]} />
+                        <Bar dataKey="approved" name="Approved" fill="#22c55e" radius={[2, 2, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </>
+              )}
+
+              {/* Radar Chart - Factory Comparison */}
+              {factoryRadar.length > 1 && (
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
+                    <PieIcon className="h-4 w-4 text-primary" /> Comparativa por Fábrica (Radar)
+                  </div>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <RadarChart data={factoryRadar}>
+                      <PolarGrid stroke="hsl(var(--border))" />
+                      <PolarAngleAxis dataKey="name" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                      <Radar name="DHU %" dataKey="DHU %" stroke="#ef4444" fill="#ef4444" fillOpacity={0.2} />
+                      <Radar name="Pass Rate %" dataKey="Pass Rate %" stroke="#2563eb" fill="#2563eb" fillOpacity={0.2} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Tooltip contentStyle={{ fontSize: 12, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* Pie Chart - Buyer Distribution */}
+              {buyerDistribution.length > 1 && (
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
+                    <PieIcon className="h-4 w-4 text-primary" /> Distribución por Buyer
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <RePieChart>
+                          <Pie data={buyerDistribution} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                            {buyerDistribution.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                          </Pie>
+                          <Tooltip />
+                        </RePieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex flex-col justify-center gap-1">
+                      {buyerDistribution.map((b, i) => (
+                        <div key={b.name} className="flex items-center gap-2">
+                          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                          <span className="text-xs text-muted-foreground">{b.name}: <strong>{b.value}</strong></span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Data Table */}
               {filteredInline.length === 0 ? (
@@ -588,27 +834,80 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                 </div>
               </div>
 
-              {/* Defect by Code Summary */}
+              {/* Defect by Code - Pie + Bar + Table */}
               {defectMetrics.defectByCode.length > 0 && (
-                <div className="overflow-x-auto rounded-lg border border-border">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-primary/10 border-b border-border">
-                        <th className="p-2 text-left font-medium text-primary">Código Defecto</th>
-                        <th className="p-2 text-left font-medium text-primary">Descripción</th>
-                        <th className="p-2 text-right font-medium text-primary">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {defectMetrics.defectByCode.map(d => (
-                        <tr key={d.code} className="border-b border-border hover:bg-muted/20">
-                          <td className="p-2 font-medium">{d.code}</td>
-                          <td className="p-2 text-xs">{d.desc}</td>
-                          <td className="p-2 text-right font-bold">{d.total}</td>
+                <>
+                  {/* Defect Code Pie Chart */}
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
+                      <PieIcon className="h-4 w-4 text-primary" /> Distribución de Defectos por Código
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <ResponsiveContainer width="100%" height={260}>
+                          <RePieChart>
+                            <Pie data={defectMetrics.defectByCode.slice(0, 8)} cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="total" nameKey="code" label={({ code, percent }) => `${code} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                              {defectMetrics.defectByCode.slice(0, 8).map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                            </Pie>
+                            <Tooltip />
+                          </RePieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div>
+                        {/* Horizontal Bar - Top Defects */}
+                        <p className="mb-2 text-xs text-muted-foreground">Top Defectos</p>
+                        <ResponsiveContainer width="100%" height={260}>
+                          <BarChart data={[...defectMetrics.defectByCode].sort((a, b) => b.total - a.total).slice(0, 10)} layout="vertical" margin={{ left: 50 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                            <XAxis type="number" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                            <YAxis type="category" dataKey="desc" tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" width={80} />
+                            <Tooltip contentStyle={{ fontSize: 12, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                            <Bar dataKey="total" name="Total" fill="#f97316" radius={[0, 2, 2, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Defect Code Table */}
+                  <div className="overflow-x-auto rounded-lg border border-border">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-primary/10 border-b border-border">
+                          <th className="p-2 text-left font-medium text-primary">Código Defecto</th>
+                          <th className="p-2 text-left font-medium text-primary">Descripción</th>
+                          <th className="p-2 text-right font-medium text-primary">Total</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {defectMetrics.defectByCode.map(d => (
+                          <tr key={d.code} className="border-b border-border hover:bg-muted/20">
+                            <td className="p-2 font-medium">{d.code}</td>
+                            <td className="p-2 text-xs">{d.desc}</td>
+                            <td className="p-2 text-right font-bold">{d.total}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+
+              {/* Defect Trend Chart */}
+              {defectTrend.length > 1 && (
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
+                    <TrendingUp className="h-4 w-4 text-primary" /> Tendencia Semanal de Defectos
+                  </div>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <LineChart data={defectTrend}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="week" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" label={{ value: 'Semana', position: 'insideBottom', offset: -5, fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip contentStyle={{ fontSize: 12, background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                      <Line type="monotone" dataKey="total" name="Total Defectos" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
               )}
 
