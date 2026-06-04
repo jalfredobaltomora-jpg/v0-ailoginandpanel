@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ScanLine, CalendarDays, CalendarRange, BarChart3, Database, LineChart, ClipboardList, BookOpen, Trash2, Pencil, Bug, Upload } from 'lucide-react';
+import { ArrowLeft, ScanLine, CalendarDays, CalendarRange, BarChart3, Database, LineChart, ClipboardList, BookOpen, Trash2, Pencil, Bug, Upload, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getStoredUser } from '@/lib/auth-store';
@@ -58,6 +58,7 @@ export default function QAReportsPage() {
   const [savingDefectCat, setSavingDefectCat] = useState(false);
   const [importingExcel, setImportingExcel] = useState(false);
   const [importProgress, setImportProgress] = useState('');
+  const [defectCatalogSearch, setDefectCatalogSearch] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -428,6 +429,16 @@ export default function QAReportsPage() {
                     </div>
                   </div>
                   <div className="mt-3 flex items-center gap-3 border-t border-border pt-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        value={defectCatalogSearch}
+                        onChange={e => setDefectCatalogSearch(e.target.value)}
+                        placeholder="Buscar por código, descripción EN o ES..."
+                        className="border-border bg-input pl-10"
+                      />
+                    </div>
                     <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImportExcel} className="hidden" id="excel-upload" />
                     <Button size="sm" variant="outline" disabled={importingExcel} onClick={() => document.getElementById('excel-upload')?.click()}>
                       <Upload className="mr-2 h-4 w-4" />Importar Excel (A-I)
@@ -443,6 +454,16 @@ export default function QAReportsPage() {
                 {defectCatalogItems.length === 0 ? (
                   <div className="py-8 text-center text-muted-foreground border rounded-lg border-border">
                     No hay items en el catálogo de defectos.
+                  </div>
+                ) : defectCatalogItems.filter(c => {
+                  if (!defectCatalogSearch) return true;
+                  const q = defectCatalogSearch.toLowerCase();
+                  return (c.defectCode || '').toLowerCase().includes(q)
+                    || (c.defectDescription || '').toLowerCase().includes(q)
+                    || (c.descripcionDefecto || '').toLowerCase().includes(q);
+                }).length === 0 ? (
+                  <div className="py-8 text-center text-muted-foreground border rounded-lg border-border">
+                    No se encontraron resultados para "{defectCatalogSearch}".
                   </div>
                 ) : (
                   <div className="overflow-x-auto rounded-lg border border-border">
@@ -462,7 +483,13 @@ export default function QAReportsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {defectCatalogItems.map(c => (
+                        {defectCatalogItems.filter(c => {
+                          if (!defectCatalogSearch) return true;
+                          const q = defectCatalogSearch.toLowerCase();
+                          return (c.defectCode || '').toLowerCase().includes(q)
+                            || (c.defectDescription || '').toLowerCase().includes(q)
+                            || (c.descripcionDefecto || '').toLowerCase().includes(q);
+                        }).map(c => (
                           <tr key={c.id} className="border-b border-border hover:bg-muted/20">
                             <td className="p-2 font-medium">{c.defectCode}</td>
                             <td className="p-2 text-xs">{c.defectDescription || '-'}</td>

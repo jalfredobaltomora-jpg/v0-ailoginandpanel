@@ -918,7 +918,7 @@ export async function getQADHUDefectCatalogItems(): Promise<QADHUDefectCatalogIt
     await _init();
     const snapshot = await get(ref(db, 'qa-dhu-defect-catalog'));
     const raw: Record<string, QADHUDefectCatalogItem> = snapshot.val() || {};
-    return Object.values(raw).sort((a, b) => a.defectCode.localeCompare(b.defectCode));
+    return Object.values(raw).sort((a, b) => a.defectCode.localeCompare(b.defectCode, undefined, { numeric: true }));
   } catch {
     return [];
   }
@@ -928,7 +928,7 @@ export function listenToQADHUDefectCatalog(callback: (items: QADHUDefectCatalogI
   const r = ref(db, 'qa-dhu-defect-catalog');
   return onValue(r, (snap) => {
     const raw: Record<string, QADHUDefectCatalogItem> = snap.val() || {};
-    callback(Object.values(raw).sort((a, b) => a.defectCode.localeCompare(b.defectCode)));
+    callback(Object.values(raw).sort((a, b) => a.defectCode.localeCompare(b.defectCode, undefined, { numeric: true })));
   });
 }
 
