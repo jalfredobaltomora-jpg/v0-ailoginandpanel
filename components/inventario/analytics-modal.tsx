@@ -170,59 +170,8 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     <table style="border-collapse:collapse;font-size:11px;font-family:Calibri,sans-serif;width:100%;">${hdr ? `<thead><tr>${hdr}</tr></thead>` : ''}<tbody>${body}</tbody></table><br/>`;
   };
 
-  const exportStyledExcel = async (type: 'inline' | 'defect' | 'both') => {
-    // Use xlsx for multi-sheet ('both') since HTML can't do multiple sheets reliably
-    if (type === 'both') {
-      const XLSX = await import('xlsx');
-      const wb = XLSX.utils.book_new();
-      // IN LINE sheet
-      const inlineHeader = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Sample', 'Reject', 'Approved', 'DHU %', 'Performance', 'Pass Rate %', 'Created By'];
-      const inlineData = filteredInline.map(r => [
-        r.item, r.inspectionDate, `#${r.week}`, r.month || '',
-        r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
-        getAuditorName(r.auditor, empleados), r.style || '',
-        r.visualSample, r.visualReject, r.visualApproved,
-        (r.dhuScorePercent * 100).toFixed(2) + '%',
-        r.performanceDHU,
-        (r.passRateScorePercent * 100).toFixed(2) + '%',
-        r.createdBy || ''
-      ]);
-      const ws1 = XLSX.utils.aoa_to_sheet([inlineHeader, ...inlineData]);
-      ws1['!cols'] = inlineHeader.map(() => ({ wch: 14 }));
-      XLSX.utils.book_append_sheet(wb, ws1, 'IN LINE');
-
-      // In Line Defect sheet
-      const defectHeader = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Defecto', 'Total', 'Código Defecto', 'Descripción', 'CAT EN', 'ACR', 'Defect CAT EN', 'Descripción Defecto', 'CAT ES', 'ACR S', 'Defect CAT ES'];
-      const defectData = filteredDefect.map(r => [
-        r.item, r.inspectionDate, `#${r.week}`, r.month || '',
-        r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
-        getAuditorName(r.auditor, empleados), r.style || '',
-        r.defect || '', r.total, r.defectCode,
-        r.defectDescription || '', r.catEnglish || '', r.acr || '',
-        r.defectCatEnglish || '', r.descripcionDefecto || '',
-        r.catEspanol || '', r.acrSpanish || '', r.defectCatSpanish || ''
-      ]);
-      const ws2 = XLSX.utils.aoa_to_sheet([defectHeader, ...defectData]);
-      ws2['!cols'] = defectHeader.map(() => ({ wch: 14 }));
-      XLSX.utils.book_append_sheet(wb, ws2, 'In Line Defect');
-
-      const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
-      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `QA_Analytics_${new Date().toISOString().split('T')[0]}.xlsx`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      return;
-    }
-
-    // Single-sheet: use full styled HTML
-    const isInline = type === 'inline';
-    const { header, rows } = isInline ? generateInlineHTML() : generateDefectHTML();
-    const title = isInline ? 'IN LINE - QA DHU' : 'In Line Defect';
-
-    let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+  const downloadStyledHTML = (title: string, header: string[], rows: any[][], filename: string) => {
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
     <head><meta charset="UTF-8">
     <style>
       th { background: #1a56db !important; color: #fff !important; font-weight: 700; }
@@ -231,17 +180,35 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
       .perf-good { background: #fef08a !important; color: #ca8a04 !important; font-weight: 700; }
       td, th { border: 1px solid #d1d5db; padding: 4px 8px; white-space: nowrap; font-size: 11px; font-family: Calibri, sans-serif; }
       table { border-collapse: collapse; width: 100%; }
-    </style></head><body>`;
-    html += tableToHTML(title, header, rows);
-    html += '</body></html>';
-
+    </style></head><body>
+    ${tableToHTML(title, header, rows)}
+    </body></html>`;
     const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `QA_Analytics_${isInline ? 'INLINE' : 'Defect'}_${new Date().toISOString().split('T')[0]}.xls`;
+    a.href = url; a.download = filename;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const exportStyledExcel = async (type: 'inline' | 'defect' | 'both') => {
+    const dateStr = new Date().toISOString().split('T')[0];
+
+    if (type === 'both') {
+      const { header: h1, rows: r1 } = generateInlineHTML();
+      const { header: h2, rows: r2 } = generateDefectHTML();
+      downloadStyledHTML('IN LINE - QA DHU', h1, r1, `QA_INLINE_${dateStr}.xls`);
+      // Small delay to let browser handle first download
+      await new Promise(r => setTimeout(r, 300));
+      downloadStyledHTML('In Line Defect', h2, r2, `QA_Defect_${dateStr}.xls`);
+      return;
+    }
+
+    const isInline = type === 'inline';
+    const { header, rows } = isInline ? generateInlineHTML() : generateDefectHTML();
+    const title = isInline ? 'IN LINE - QA DHU' : 'In Line Defect';
+    const filename = `QA_Analytics_${isInline ? 'INLINE' : 'Defect'}_${dateStr}.xls`;
+    downloadStyledHTML(title, header, rows, filename);
   };
 
   const [exportOpen, setExportOpen] = useState(false);
