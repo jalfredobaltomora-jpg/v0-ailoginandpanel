@@ -101,6 +101,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
   const [chartAgg, setChartAgg] = useState<'sum' | 'avg'>('avg');
   const [chartTitle, setChartTitle] = useState('');
   const [showDataLabels, setShowDataLabels] = useState(false);
+  const [top3GroupBy, setTop3GroupBy] = useState('factory');
 
   const toggleMetric = (m: string) => {
     setChartMetrics(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
@@ -218,6 +219,35 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     });
     return { totalDefect, defectByCode: Object.values(defectByCode).sort((a, b) => b.total - a.total), count: filteredDefect.length };
   }, [filteredDefect]);
+
+  // Top 3 Defect analysis by group
+  const top3Defects = useMemo(() => {
+    const groupField = top3GroupBy === 'week' ? 'week' : top3GroupBy;
+    const groups: Record<string, Record<string, { code: string; desc: string; total: number }>> = {};
+    filteredDefect.forEach(r => {
+      let groupKey: string;
+      if (top3GroupBy === 'month') groupKey = r.month || 'N/A';
+      else if (top3GroupBy === 'week') groupKey = `#${r.week || 0}`;
+      else groupKey = String((r as any)[groupField] || 'N/A').trim();
+      if (!groupKey) groupKey = 'N/A';
+      if (!groups[groupKey]) groups[groupKey] = {};
+      const code = r.defectCode || 'N/A';
+      if (!groups[groupKey][code]) groups[groupKey][code] = { code, desc: r.defectDescription || code, total: 0 };
+      groups[groupKey][code].total += (r.total || 0);
+    });
+    const result: Array<{ group: string; top3: Array<{ code: string; desc: string; total: number }> }> = [];
+    for (const [group, defects] of Object.entries(groups)) {
+      const sorted = Object.values(defects).sort((a, b) => b.total - a.total).slice(0, 3);
+      result.push({ group, top3: sorted });
+    }
+    const groupOrder = top3GroupBy === 'month'
+      ? result.sort((a, b) => {
+          const ma = parseInt(a.group); const mb = parseInt(b.group);
+          return (isNaN(ma) ? a.group.localeCompare(b.group) : ma - mb);
+        })
+      : result.sort((a, b) => a.group.localeCompare(b.group));
+    return groupOrder;
+  }, [filteredDefect, top3GroupBy]);
 
   // Dynamic chart data transformation
   const sourceData = tab === 'inline' ? filteredInline : filteredDefect;
@@ -991,6 +1021,54 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {/* Top 3 Defects */}
+              {top3Defects.length > 0 && (
+                <div className="rounded-lg border border-border bg-muted/10 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      Top 3 Defectos
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-muted-foreground">Agrupar por:</label>
+                      <select value={top3GroupBy} onChange={e => setTop3GroupBy(e.target.value)}
+                        className="rounded-lg border border-border bg-input px-2 py-1 text-xs text-foreground">
+                        <option value="factory">F\u00e1brica</option>
+                        <option value="line">L\u00ednea</option>
+                        <option value="color">Color</option>
+                        <option value="month">Mes</option>
+                        <option value="week">Semana</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-primary/10 border-b border-border">
+                          <th className="p-2 text-left font-medium text-primary">{top3GroupBy === 'month' ? 'Mes' : top3GroupBy === 'week' ? 'Semana' : top3GroupBy === 'factory' ? 'F\u00e1brica' : top3GroupBy === 'line' ? 'L\u00ednea' : 'Color'}</th>
+                          <th className="p-2 text-left font-medium text-primary">#1</th>
+                          <th className="p-2 text-left font-medium text-primary">#2</th>
+                          <th className="p-2 text-left font-medium text-primary">#3</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {top3Defects.map(d => (
+                          <tr key={d.group} className="border-b border-border hover:bg-muted/20">
+                            <td className="p-2 font-medium text-xs">{d.group}</td>
+                            {[0, 1, 2].map(i => (
+                              <td key={i} className="p-2 text-xs">
+                                {d.top3[i] ? (
+                                  <span>{d.top3[i].code} <span className="text-muted-foreground">({d.top3[i].total})</span></span>
+                                ) : '-'}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 
