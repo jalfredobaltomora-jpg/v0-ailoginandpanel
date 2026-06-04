@@ -234,7 +234,7 @@ export default function QAReportsPage() {
                 {dhuTab === 'inline' ? 'QA - DHU % SAE - Indicator IN LINE' : dhuTab === 'defect' ? 'In Line Defect' : 'Catálogo de defectos'}
               </h3>
               <div className="flex gap-2">
-                {(dhuTab === 'inline' || dhuTab === 'defect') && (
+                {(dhuTab === 'inline' || dhuTab === 'defect') && puedeVer(currentUser, 'qa_analytics') && (
                   <Button size="sm" variant="outline" onClick={() => setAnalyticsOpen(true)}
                     className="border-primary/50 text-primary hover:bg-primary/10">
                     <Activity className="mr-2 h-4 w-4" /> Analytics

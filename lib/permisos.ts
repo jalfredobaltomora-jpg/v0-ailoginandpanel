@@ -162,6 +162,28 @@ export const ARBOL_PERMISOS: PermisoItem[] = [
           { key: 'qa_kpi_nuevo', label: 'Nuevo' },
         ],
       },
+      {
+        key: 'qa_dhu',
+        label: 'DHU (IN LINE / In Line Defect / Catálogo de defectos)',
+        children: [
+          { key: 'qa_dhu_ver', label: 'Ver' },
+          { key: 'qa_dhu_editar', label: 'Editar' },
+          { key: 'qa_dhu_copiar', label: 'Copiar' },
+          { key: 'qa_dhu_eliminar', label: 'Eliminar' },
+          { key: 'qa_dhu_nuevo', label: 'Nuevo' },
+        ],
+      },
+      {
+        key: 'qa_analytics',
+        label: 'Analytics Dashboard',
+        children: [
+          { key: 'qa_analytics_ver', label: 'Ver' },
+          { key: 'qa_analytics_editar', label: 'Editar' },
+          { key: 'qa_analytics_copiar', label: 'Copiar' },
+          { key: 'qa_analytics_eliminar', label: 'Eliminar' },
+          { key: 'qa_analytics_nuevo', label: 'Nuevo' },
+        ],
+      },
     ],
   },
 ];
