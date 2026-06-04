@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ScanLine, CalendarDays, CalendarRange, BarChart3, Database, LineChart, ClipboardList, BookOpen, Trash2, Pencil, Bug, Upload, Search } from 'lucide-react';
+import { ArrowLeft, ScanLine, CalendarDays, CalendarRange, BarChart3, Database, LineChart, ClipboardList, BookOpen, Trash2, Pencil, Bug, Upload, Search, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getStoredUser } from '@/lib/auth-store';
@@ -17,6 +17,7 @@ const KpiReports = dynamic(() => import('@/components/qa-reports/kpi-reports').t
 const WeeklyRegistry = dynamic(() => import('@/components/qa-reports/weekly-registry').then(m => m.WeeklyRegistry), { ssr: false });
 const QADHUModal = dynamic(() => import('@/components/inventario/qa-dhu-modal').then(m => m.QADHUModal), { ssr: false });
 const InLineDefectModal = dynamic(() => import('@/components/inventario/in-line-defect-modal').then(m => m.InLineDefectModal), { ssr: false });
+const AnalyticsModal = dynamic(() => import('@/components/inventario/analytics-modal').then(m => m.AnalyticsModal), { ssr: false });
 
 interface TileProps {
   title: string;
@@ -59,6 +60,8 @@ export default function QAReportsPage() {
   const [importingExcel, setImportingExcel] = useState(false);
   const [importProgress, setImportProgress] = useState('');
   const [defectCatalogSearch, setDefectCatalogSearch] = useState('');
+  const [empleados, setEmpleados] = useState<any[]>([]);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -67,11 +70,12 @@ export default function QAReportsPage() {
     let unsub2: () => void;
     let unsub3: () => void;
     let unsub4: () => void;
-    import('@/lib/firebase').then(({ listenToQADHURecords, listenToQADHUCatalog, listenToInLineDefectRecords, listenToQADHUDefectCatalog }) => {
+    import('@/lib/firebase').then(({ listenToQADHURecords, listenToQADHUCatalog, listenToInLineDefectRecords, listenToQADHUDefectCatalog, getEmpleadosActivos }) => {
       unsub1 = listenToQADHURecords((data: any) => setQaDhuRecords(data));
       unsub2 = listenToQADHUCatalog((data: any) => setCatalogItems(data));
       unsub3 = listenToInLineDefectRecords((data: any) => setInLineDefectRecords(data));
       unsub4 = listenToQADHUDefectCatalog((data: any) => setDefectCatalogItems(data));
+      getEmpleadosActivos().then(setEmpleados);
     });
     return () => { if (unsub1) unsub1(); if (unsub2) unsub2(); if (unsub3) unsub3(); if (unsub4) unsub4(); };
   }, [view]);
@@ -229,6 +233,12 @@ export default function QAReportsPage() {
                 {dhuTab === 'inline' ? 'QA - DHU % SAE - Indicator IN LINE' : dhuTab === 'defect' ? 'In Line Defect' : 'Catálogo de defectos'}
               </h3>
               <div className="flex gap-2">
+                {(dhuTab === 'inline' || dhuTab === 'defect') && (
+                  <Button size="sm" variant="outline" onClick={() => setAnalyticsOpen(true)}
+                    className="border-primary/50 text-primary hover:bg-primary/10">
+                    <Activity className="mr-2 h-4 w-4" /> Analytics
+                  </Button>
+                )}
                 {dhuTab === 'inline' && (
                   <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => { setEditingRecord(null); setQaDhuOpen(true); }}>
                     + Nuevo Registro
@@ -303,7 +313,7 @@ export default function QAReportsPage() {
                             <td className="p-2 text-xs">{r.po || '-'}</td>
                             <td className="p-2 text-xs">{r.color || '-'}</td>
                             <td className="p-2 text-xs">{r.buyer}</td>
-                            <td className="p-2 text-xs">{r.auditor}</td>
+                            <td className="p-2 text-xs">{(empleados.find(e => e.code === r.auditor) ? `${empleados.find(e => e.code === r.auditor)!.nombres} ${empleados.find(e => e.code === r.auditor)!.apellidos}` : r.auditor)}</td>
                             <td className="p-2 text-xs">{r.style || '-'}</td>
                             <td className="p-2 text-xs">{r.visualSample}</td>
                             <td className="p-2 text-xs">{r.visualReject}</td>
@@ -377,7 +387,7 @@ export default function QAReportsPage() {
                             <td className="p-2 text-xs">{r.po || '-'}</td>
                             <td className="p-2 text-xs">{r.color || '-'}</td>
                             <td className="p-2 text-xs">{r.buyer}</td>
-                            <td className="p-2 text-xs">{r.auditor}</td>
+                            <td className="p-2 text-xs">{(empleados.find(e => e.code === r.auditor) ? `${empleados.find(e => e.code === r.auditor)!.nombres} ${empleados.find(e => e.code === r.auditor)!.apellidos}` : r.auditor)}</td>
                             <td className="p-2 text-xs">{r.style || '-'}</td>
                             <td className="p-2 text-xs">{r.defect || '-'}</td>
                             <td className="p-2 text-xs">{r.total}</td>
@@ -519,6 +529,15 @@ export default function QAReportsPage() {
             )}
             {inLineDefectOpen && (
               <InLineDefectModal onClose={() => { setInLineDefectOpen(false); setEditingDefectRecord(null); }} onSaved={() => {}} record={editingDefectRecord} />
+            )}
+            {analyticsOpen && (
+              <AnalyticsModal
+                inlineRecords={qaDhuRecords}
+                defectRecords={inLineDefectRecords}
+                empleados={empleados}
+                defectCatalogItems={defectCatalogItems}
+                onClose={() => setAnalyticsOpen(false)}
+              />
             )}
           </div>
         )}
