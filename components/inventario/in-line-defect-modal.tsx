@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getStoredUser } from '@/lib/auth-store';
-import { getEmpleadosActivos, getQADHURecords, getQADHUDefectCatalogItems, saveInLineDefectRecord, updateInLineDefectRecord, type Empleado, type QADHUDefectCatalogItem } from '@/lib/firebase';
+import { getEmpleadosActivos, getQAOQLRecords, getQAOQLDefectCatalogItems, saveInLineDefectRecord, updateInLineDefectRecord, type Empleado, type QAOQLDefectCatalogItem } from '@/lib/firebase';
 
 interface InLineDefectModalProps {
   onClose: () => void;
@@ -28,10 +28,10 @@ const buyers = ['Target', "Kohl's", 'Walmart', 'Carhartt'];
 export function InLineDefectModal({ onClose, onSaved, record }: InLineDefectModalProps) {
   const isEditing = !!record;
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
-  const [defectCatalog, setDefectCatalog] = useState<QADHUDefectCatalogItem[]>([]);
+  const [defectCatalog, setDefectCatalog] = useState<QAOQLDefectCatalogItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [searchResults, setSearchResults] = useState<QADHUDefectCatalogItem[]>([]);
+  const [searchResults, setSearchResults] = useState<QAOQLDefectCatalogItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -61,12 +61,12 @@ export function InLineDefectModal({ onClose, onSaved, record }: InLineDefectModa
 
   useEffect(() => {
     getEmpleadosActivos().then(setEmpleados);
-    getQADHUDefectCatalogItems().then(items => setDefectCatalog(items));
+    getQAOQLDefectCatalogItems().then(items => setDefectCatalog(items));
   }, []);
 
   useEffect(() => {
     if (isEditing) return;
-    getQADHURecords().then(records => {
+    getQAOQLRecords().then(records => {
       let maxNum = 0;
       for (const r of records) {
         const match = r.item?.match(/^#(\d+)$/);
@@ -104,7 +104,7 @@ export function InLineDefectModal({ onClose, onSaved, record }: InLineDefectModa
     setShowSearch(true);
   };
 
-  const selectDefectCode = (c: QADHUDefectCatalogItem) => {
+  const selectDefectCode = (c: QAOQLDefectCatalogItem) => {
     setDefectCode(c.defectCode);
     setDefectDescription(c.defectDescription || '');
     setCatEnglish(c.catEnglish || '');

@@ -776,9 +776,9 @@ export function listenToEquiposInventario(callback: (equipos: EquipoInventario[]
   });
 }
 
-// ─── QA DHU Records ──────────────────────────────────────────────
+// ─── QA OQL Records ──────────────────────────────────────────────
 
-export interface QADHURecord {
+export interface QAOQLRecord {
   id: string;
   item: string;
   inspectionDate: string;
@@ -794,14 +794,14 @@ export interface QADHURecord {
   visualSample: number;
   visualReject: number;
   visualApproved: number;
-  dhuScorePercent: number;
-  performanceDHU: string;
+  oqlScorePercent: number;
+  performanceOQL: string;
   passRateScorePercent: number;
   createdAt: number;
   createdBy: string;
 }
 
-export async function saveQADHURecord(record: Omit<QADHURecord, 'id'>): Promise<string> {
+export async function saveQAOQLRecord(record: Omit<QAOQLRecord, 'id'>): Promise<string> {
   await _init();
   const newRef = push(ref(db, 'qa-dhu-records'));
   const id = newRef.key!;
@@ -809,7 +809,7 @@ export async function saveQADHURecord(record: Omit<QADHURecord, 'id'>): Promise<
   return id;
 }
 
-export async function deleteQADHURecord(id: string): Promise<boolean> {
+export async function deleteQAOQLRecord(id: string): Promise<boolean> {
   try {
     await _init();
     await remove(ref(db, `qa-dhu-records/${id}`));
@@ -819,7 +819,7 @@ export async function deleteQADHURecord(id: string): Promise<boolean> {
   }
 }
 
-export async function updateQADHURecord(id: string, data: Partial<QADHURecord>): Promise<boolean> {
+export async function updateQAOQLRecord(id: string, data: Partial<QAOQLRecord>): Promise<boolean> {
   try {
     await _init();
     await update(ref(db, `qa-dhu-records/${id}`), data);
@@ -829,26 +829,26 @@ export async function updateQADHURecord(id: string, data: Partial<QADHURecord>):
   }
 }
 
-export async function getQADHURecords(): Promise<QADHURecord[]> {
+export async function getQAOQLRecords(): Promise<QAOQLRecord[]> {
   try {
     await _init();
     const snapshot = await get(ref(db, 'qa-dhu-records'));
-    const raw: Record<string, QADHURecord> = snapshot.val() || {};
+    const raw: Record<string, QAOQLRecord> = snapshot.val() || {};
     return Object.values(raw).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   } catch {
     return [];
   }
 }
 
-export function listenToQADHURecords(callback: (records: QADHURecord[]) => void): () => void {
+export function listenToQAOQLRecords(callback: (records: QAOQLRecord[]) => void): () => void {
   const r = ref(db, 'qa-dhu-records');
   return onValue(r, (snap) => {
-    const raw: Record<string, QADHURecord> = snap.val() || {};
+    const raw: Record<string, QAOQLRecord> = snap.val() || {};
     callback(Object.values(raw).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
   });
 }
 
-export interface QADHUCatalogItem {
+export interface QAOQLCatalogItem {
   id: string;
   item: string;
   style: string;
@@ -861,7 +861,7 @@ export interface QADHUCatalogItem {
   createdBy: string;
 }
 
-export async function saveQADHUCatalogItem(data: Omit<QADHUCatalogItem, 'id'>): Promise<string> {
+export async function saveQAOQLCatalogItem(data: Omit<QAOQLCatalogItem, 'id'>): Promise<string> {
   await _init();
   const newRef = push(ref(db, 'qa-dhu-catalog'));
   const id = newRef.key!;
@@ -869,26 +869,26 @@ export async function saveQADHUCatalogItem(data: Omit<QADHUCatalogItem, 'id'>): 
   return id;
 }
 
-export async function getQADHUCatalogItems(): Promise<QADHUCatalogItem[]> {
+export async function getQAOQLCatalogItems(): Promise<QAOQLCatalogItem[]> {
   try {
     await _init();
     const snapshot = await get(ref(db, 'qa-dhu-catalog'));
-    const raw: Record<string, QADHUCatalogItem> = snapshot.val() || {};
+    const raw: Record<string, QAOQLCatalogItem> = snapshot.val() || {};
     return Object.values(raw).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   } catch {
     return [];
   }
 }
 
-export function listenToQADHUCatalog(callback: (items: QADHUCatalogItem[]) => void): () => void {
+export function listenToQAOQLCatalog(callback: (items: QAOQLCatalogItem[]) => void): () => void {
   const r = ref(db, 'qa-dhu-catalog');
   return onValue(r, (snap) => {
-    const raw: Record<string, QADHUCatalogItem> = snap.val() || {};
+    const raw: Record<string, QAOQLCatalogItem> = snap.val() || {};
     callback(Object.values(raw).sort((a, b) => a.item.localeCompare(b.item)));
   });
 }
 
-export async function deleteQADHUCatalogItem(id: string): Promise<boolean> {
+export async function deleteQAOQLCatalogItem(id: string): Promise<boolean> {
   try {
     await _init();
     await remove(ref(db, `qa-dhu-catalog/${id}`));
@@ -898,9 +898,9 @@ export async function deleteQADHUCatalogItem(id: string): Promise<boolean> {
   }
 }
 
-// ─── QA DHU Defect Catalog ──────────────────────────────────────
+// ─── QA OQL Defect Catalog ──────────────────────────────────────
 
-export interface QADHUDefectCatalogItem {
+export interface QAOQLDefectCatalogItem {
   id: string;
   defectCode: string;
   defectDescription: string;
@@ -915,7 +915,7 @@ export interface QADHUDefectCatalogItem {
   createdBy: string;
 }
 
-export async function saveQADHUDefectCatalogItem(data: Omit<QADHUDefectCatalogItem, 'id'>): Promise<string> {
+export async function saveQAOQLDefectCatalogItem(data: Omit<QAOQLDefectCatalogItem, 'id'>): Promise<string> {
   await _init();
   const newRef = push(ref(db, 'qa-dhu-defect-catalog'));
   const id = newRef.key!;
@@ -923,26 +923,26 @@ export async function saveQADHUDefectCatalogItem(data: Omit<QADHUDefectCatalogIt
   return id;
 }
 
-export async function getQADHUDefectCatalogItems(): Promise<QADHUDefectCatalogItem[]> {
+export async function getQAOQLDefectCatalogItems(): Promise<QAOQLDefectCatalogItem[]> {
   try {
     await _init();
     const snapshot = await get(ref(db, 'qa-dhu-defect-catalog'));
-    const raw: Record<string, QADHUDefectCatalogItem> = snapshot.val() || {};
+    const raw: Record<string, QAOQLDefectCatalogItem> = snapshot.val() || {};
     return Object.values(raw).sort((a, b) => a.defectCode.localeCompare(b.defectCode, undefined, { numeric: true }));
   } catch {
     return [];
   }
 }
 
-export function listenToQADHUDefectCatalog(callback: (items: QADHUDefectCatalogItem[]) => void): () => void {
+export function listenToQAOQLDefectCatalog(callback: (items: QAOQLDefectCatalogItem[]) => void): () => void {
   const r = ref(db, 'qa-dhu-defect-catalog');
   return onValue(r, (snap) => {
-    const raw: Record<string, QADHUDefectCatalogItem> = snap.val() || {};
+    const raw: Record<string, QAOQLDefectCatalogItem> = snap.val() || {};
     callback(Object.values(raw).sort((a, b) => a.defectCode.localeCompare(b.defectCode, undefined, { numeric: true })));
   });
 }
 
-export async function deleteQADHUDefectCatalogItem(id: string): Promise<boolean> {
+export async function deleteQAOQLDefectCatalogItem(id: string): Promise<boolean> {
   try {
     await _init();
     await remove(ref(db, `qa-dhu-defect-catalog/${id}`));

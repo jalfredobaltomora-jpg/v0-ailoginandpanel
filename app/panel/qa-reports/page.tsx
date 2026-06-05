@@ -15,7 +15,7 @@ const WeeklyIssues = dynamic(() => import('@/components/qa-reports/weekly-issues
 const MonthlyIssues = dynamic(() => import('@/components/qa-reports/monthly-issues').then(m => m.MonthlyIssues), { ssr: false });
 const KpiReports = dynamic(() => import('@/components/qa-reports/kpi-reports').then(m => m.KpiReports), { ssr: false });
 const WeeklyRegistry = dynamic(() => import('@/components/qa-reports/weekly-registry').then(m => m.WeeklyRegistry), { ssr: false });
-const QADHUModal = dynamic(() => import('@/components/inventario/qa-dhu-modal').then(m => m.QADHUModal), { ssr: false });
+const QAOQLModal = dynamic(() => import('@/components/inventario/qa-oql-modal').then(m => m.QAOQLModal), { ssr: false });
 const InLineDefectModal = dynamic(() => import('@/components/inventario/in-line-defect-modal').then(m => m.InLineDefectModal), { ssr: false });
 const AnalyticsModal = dynamic(() => import('@/components/inventario/analytics-modal').then(m => m.AnalyticsModal), { ssr: false });
 
@@ -46,10 +46,10 @@ export default function QAReportsPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UsuarioIT | null>(null);
   const [view, setView] = useState<'tiles' | 'extractor' | 'weekly' | 'monthly' | 'kpi' | 'registry' | 'dhu'>('tiles');
-  const [dhuTab, setDhuTab] = useState<'inline' | 'defect' | 'catalog'>('inline');
-  const [qaDhuOpen, setQaDhuOpen] = useState(false);
+  const [oqlTab, setDhuTab] = useState<'inline' | 'defect' | 'catalog'>('inline');
+  const [qaOqlOpen, setQaDhuOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<any>(null);
-  const [qaDhuRecords, setQaDhuRecords] = useState<any[]>([]);
+  const [qaOqlRecords, setQaDhuRecords] = useState<any[]>([]);
   const [catalogItems, setCatalogItems] = useState<any[]>([]);
   const [inLineDefectOpen, setInLineDefectOpen] = useState(false);
   const [editingDefectRecord, setEditingDefectRecord] = useState<any>(null);
@@ -78,11 +78,11 @@ export default function QAReportsPage() {
     let unsub2: () => void;
     let unsub3: () => void;
     let unsub4: () => void;
-    import('@/lib/firebase').then(({ listenToQADHURecords, listenToQADHUCatalog, listenToInLineDefectRecords, listenToQADHUDefectCatalog, getEmpleadosActivos }) => {
-      unsub1 = listenToQADHURecords((data: any) => setQaDhuRecords(data));
-      unsub2 = listenToQADHUCatalog((data: any) => setCatalogItems(data));
+    import('@/lib/firebase').then(({ listenToQAOQLRecords, listenToQAOQLCatalog, listenToInLineDefectRecords, listenToQAOQLDefectCatalog, getEmpleadosActivos }) => {
+      unsub1 = listenToQAOQLRecords((data: any) => setQaDhuRecords(data));
+      unsub2 = listenToQAOQLCatalog((data: any) => setCatalogItems(data));
       unsub3 = listenToInLineDefectRecords((data: any) => setInLineDefectRecords(data));
-      unsub4 = listenToQADHUDefectCatalog((data: any) => setDefectCatalogItems(data));
+      unsub4 = listenToQAOQLDefectCatalog((data: any) => setDefectCatalogItems(data));
       getEmpleadosActivos().then(setEmpleados);
     });
     return () => { if (unsub1) unsub1(); if (unsub2) unsub2(); if (unsub3) unsub3(); if (unsub4) unsub4(); };
@@ -107,16 +107,16 @@ export default function QAReportsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar este registro de IN LINE?')) return;
-    const { deleteQADHURecord } = await import('@/lib/firebase');
-    if (deleteQADHURecord) await deleteQADHURecord(id);
+    const { deleteQAOQLRecord } = await import('@/lib/firebase');
+    if (deleteQAOQLRecord) await deleteQAOQLRecord(id);
   };
 
   const handleSaveDefectCatalog = async () => {
     if (!newDefectCat.defectCode) return;
     setSavingDefectCat(true);
-    const { saveQADHUDefectCatalogItem } = await import('@/lib/firebase');
+    const { saveQAOQLDefectCatalogItem } = await import('@/lib/firebase');
     const user = getStoredUser();
-    await saveQADHUDefectCatalogItem({
+    await saveQAOQLDefectCatalogItem({
       ...newDefectCat,
       createdAt: Date.now(),
       createdBy: user?.codigo || '',
@@ -126,8 +126,8 @@ export default function QAReportsPage() {
   };
 
   const handleDeleteDefectCatalog = async (id: string) => {
-    const { deleteQADHUDefectCatalogItem } = await import('@/lib/firebase');
-    await deleteQADHUDefectCatalogItem(id);
+    const { deleteQAOQLDefectCatalogItem } = await import('@/lib/firebase');
+    await deleteQAOQLDefectCatalogItem(id);
   };
 
   const handleEditDefect = (r: any) => {
@@ -147,7 +147,7 @@ export default function QAReportsPage() {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false });
       const user = getStoredUser();
-      const { saveQADHUDefectCatalogItem } = await import('@/lib/firebase');
+      const { saveQAOQLDefectCatalogItem } = await import('@/lib/firebase');
       let imported = 0;
       let skipped = 0;
       for (let i = 1; i < rows.length; i++) {
@@ -156,7 +156,7 @@ export default function QAReportsPage() {
         const defectCode = (row[0] || '').toString().trim();
         if (!defectCode) { skipped++; continue; }
         setImportProgress(`Importando ${i}/${rows.length - 1}: ${defectCode}`);
-        await saveQADHUDefectCatalogItem({
+        await saveQAOQLDefectCatalogItem({
           defectCode,
           defectDescription: (row[1] || '').toString().trim(),
           catEnglish: (row[2] || '').toString().trim(),
@@ -243,7 +243,7 @@ export default function QAReportsPage() {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
       const user = getStoredUser();
-      const { saveQADHURecord } = await import('@/lib/firebase');
+      const { saveQAOQLRecord } = await import('@/lib/firebase');
       let imported = 0; let skipped = 0;
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
@@ -272,14 +272,14 @@ export default function QAReportsPage() {
         const visualSample = parseInt(String(row[11]).replace(/[^0-9.-]/g, '')) || 0;
         const visualReject = parseInt(String(row[12]).replace(/[^0-9.-]/g, '')) || 0;
         const visualApproved = Math.max(0, visualSample - visualReject);
-        const dhuScorePct = visualSample > 0 ? visualReject / visualSample : 0;
-        const perf = dhuScorePct <= 0.03 ? 'Excellent' : dhuScorePct <= 0.05 ? 'Good' : 'Very Bad';
+        const oqlScorePct = visualSample > 0 ? visualReject / visualSample : 0;
+        const perf = oqlScorePct <= 0.03 ? 'Excellent' : oqlScorePct <= 0.05 ? 'Good' : 'Very Bad';
         const passRatePct = visualSample > 0 ? visualApproved / visualSample : 0;
-        await saveQADHURecord({
+        await saveQAOQLRecord({
           item, inspectionDate, week, month, factory, line, po, color, buyer,
           auditor, style, visualSample, visualReject, visualApproved,
-          dhuScorePercent: Math.round(dhuScorePct * 10000) / 10000,
-          performanceDHU: perf,
+          oqlScorePercent: Math.round(oqlScorePct * 10000) / 10000,
+          performanceOQL: perf,
           passRateScorePercent: Math.round(passRatePct * 10000) / 10000,
           createdAt: Date.now(), createdBy: user?.codigo || '',
         });
@@ -420,10 +420,10 @@ export default function QAReportsPage() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-foreground">
-                {dhuTab === 'inline' ? 'QA - OQL % SAE - Indicator' : dhuTab === 'defect' ? 'In Line Defect' : 'Catálogo de defectos'}
+                {oqlTab === 'inline' ? 'QA - OQL % SAE - Indicator' : oqlTab === 'defect' ? 'In Line Defect' : 'Catálogo de defectos'}
               </h3>
               <div className="flex gap-2">
-                {(dhuTab === 'inline' || dhuTab === 'defect') && puedeVer(currentUser, 'qa_analytics') && (
+                {(oqlTab === 'inline' || oqlTab === 'defect') && puedeVer(currentUser, 'qa_analytics') && (
                   <>
                     <Button size="sm" variant="outline" onClick={() => setAnalyticsOpen(true)}
                       className="border-primary/50 text-primary hover:bg-primary/10">
@@ -431,7 +431,7 @@ export default function QAReportsPage() {
                     </Button>
                   </>
                 )}
-                {dhuTab === 'inline' && (
+                {oqlTab === 'inline' && (
                   <div className="flex items-center gap-2">
                     <input ref={inlineFileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImportInline} className="hidden" id="inline-excel-upload" />
                     <Button size="sm" variant="outline" disabled={importingInline} onClick={() => document.getElementById('inline-excel-upload')?.click()}>
@@ -442,7 +442,7 @@ export default function QAReportsPage() {
                     </Button>
                   </div>
                 )}
-                {dhuTab === 'defect' && (
+                {oqlTab === 'defect' && (
                   <div className="flex items-center gap-2">
                     <input ref={defectFileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImportDefect} className="hidden" id="defect-excel-upload" />
                     <Button size="sm" variant="outline" disabled={importingDefect} onClick={() => document.getElementById('defect-excel-upload')?.click()}>
@@ -459,30 +459,30 @@ export default function QAReportsPage() {
             {/* Sub-tabs */}
             <div className="flex gap-4 border-b border-border">
               <button onClick={() => setDhuTab('inline')}
-                className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${dhuTab === 'inline' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+                className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${oqlTab === 'inline' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
                 <ClipboardList className="h-4 w-4" /> IN LINE
               </button>
               <button onClick={() => setDhuTab('defect')}
-                className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${dhuTab === 'defect' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+                className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${oqlTab === 'defect' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
                 <Bug className="h-4 w-4" /> In Line Defect
               </button>
               <button onClick={() => setDhuTab('catalog')}
-                className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${dhuTab === 'catalog' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+                className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${oqlTab === 'catalog' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
                 <BookOpen className="h-4 w-4" /> Catálogo de defectos
               </button>
             </div>
 
             {/* IN LINE Tab */}
-            {dhuTab === 'inline' && (
+            {oqlTab === 'inline' && (
               <>
                 {inlineImportProgress && (
                   <div className={`text-xs ${inlineImportProgress.includes('✅') ? 'text-green-500' : inlineImportProgress.includes('❌') ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {inlineImportProgress}
                   </div>
                 )}
-                {qaDhuRecords.length === 0 ? (
+                {qaOqlRecords.length === 0 ? (
                   <div className="py-12 text-center text-muted-foreground border rounded-lg border-border">
-                    No hay registros QA DHU.
+                    No hay registros QA OQL.
                   </div>
                 ) : (
                   <div className="overflow-x-auto rounded-lg border border-border">
@@ -503,7 +503,7 @@ export default function QAReportsPage() {
                           <th className="p-2 text-left font-medium text-primary">Sample</th>
                           <th className="p-2 text-left font-medium text-primary">Reject</th>
                           <th className="p-2 text-left font-medium text-primary">Approved</th>
-                          <th className="p-2 text-left font-medium text-primary">DHU %</th>
+                          <th className="p-2 text-left font-medium text-primary">OQL %</th>
                           <th className="p-2 text-left font-medium text-primary">Performance</th>
                            <th className="p-2 text-left font-medium text-primary">Pass Rate %</th>
                            {isAdmin && <th className="p-2 text-left font-medium text-primary">Creado por</th>}
@@ -511,7 +511,7 @@ export default function QAReportsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {qaDhuRecords.map(r => (
+                        {qaOqlRecords.map(r => (
                           <tr key={r.id} className="border-b border-border hover:bg-muted/20">
                             <td className="p-2 font-medium">{r.item}</td>
                             <td className="p-2 text-xs">{r.inspectionDate}</td>
@@ -527,9 +527,9 @@ export default function QAReportsPage() {
                             <td className="p-2 text-xs">{r.visualSample}</td>
                             <td className="p-2 text-xs">{r.visualReject}</td>
                             <td className="p-2 text-xs">{r.visualApproved}</td>
-                            <td className="p-2 text-xs">{(r.dhuScorePercent * 100).toFixed(2)}%</td>
+                            <td className="p-2 text-xs">{(r.oqlScorePercent * 100).toFixed(2)}%</td>
                             <td className="p-2">
-                              <span className={`text-xs font-bold ${r.performanceDHU === 'Excellent' ? 'text-green-500' : r.performanceDHU === 'Good' ? 'text-yellow-500' : 'text-red-500'}`}>{r.performanceDHU}</span>
+                              <span className={`text-xs font-bold ${r.performanceOQL === 'Excellent' ? 'text-green-500' : r.performanceOQL === 'Good' ? 'text-yellow-500' : 'text-red-500'}`}>{r.performanceOQL}</span>
                             </td>
                             <td className="p-2 text-xs">{(r.passRateScorePercent * 100).toFixed(2)}%</td>
                             {isAdmin && <td className="p-2 text-xs">{r.createdBy || '-'}</td>}
@@ -551,7 +551,7 @@ export default function QAReportsPage() {
             )}
 
             {/* In Line Defect Tab */}
-            {dhuTab === 'defect' && (
+            {oqlTab === 'defect' && (
               <>
                 {defectImportProgress && (
                   <div className={`text-xs ${defectImportProgress.includes('✅') ? 'text-green-500' : defectImportProgress.includes('❌') ? 'text-destructive' : 'text-muted-foreground'}`}>
@@ -635,7 +635,7 @@ export default function QAReportsPage() {
             )}
 
             {/* Catálogo de defectos Tab */}
-            {dhuTab === 'catalog' && (
+            {oqlTab === 'catalog' && (
               <div className="space-y-6">
                 <div className="rounded-lg border border-border p-4">
                   <h4 className="mb-3 text-sm font-semibold text-foreground">Catálogo de Defectos</h4>
@@ -741,15 +741,15 @@ export default function QAReportsPage() {
               </div>
             )}
 
-            {qaDhuOpen && (
-              <QADHUModal onClose={() => { setQaDhuOpen(false); setEditingRecord(null); }} onSaved={() => {}} record={editingRecord} />
+            {qaOqlOpen && (
+              <QAOQLModal onClose={() => { setQaDhuOpen(false); setEditingRecord(null); }} onSaved={() => {}} record={editingRecord} />
             )}
             {inLineDefectOpen && (
               <InLineDefectModal onClose={() => { setInLineDefectOpen(false); setEditingDefectRecord(null); }} onSaved={() => {}} record={editingDefectRecord} />
             )}
             {analyticsOpen && (
               <AnalyticsModal
-                inlineRecords={qaDhuRecords}
+                inlineRecords={qaOqlRecords}
                 defectRecords={inLineDefectRecords}
                 empleados={empleados}
                 defectCatalogItems={defectCatalogItems}

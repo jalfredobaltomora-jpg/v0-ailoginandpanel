@@ -164,7 +164,7 @@ export const ARBOL_PERMISOS: PermisoItem[] = [
       },
       {
         key: 'qa_dhu',
-        label: 'DHU (IN LINE / In Line Defect / Catálogo de defectos)',
+        label: 'OQL (IN LINE / In Line Defect / Catálogo de defectos)',
         children: [
           { key: 'qa_dhu_ver', label: 'Ver' },
           { key: 'qa_dhu_editar', label: 'Editar' },

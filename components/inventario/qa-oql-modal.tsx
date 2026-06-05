@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getStoredUser } from '@/lib/auth-store';
-import { getEmpleadosActivos, getQADHURecords, saveQADHURecord, updateQADHURecord, type Empleado } from '@/lib/firebase';
+import { getEmpleadosActivos, getQAOQLRecords, saveQAOQLRecord, updateQAOQLRecord, type Empleado } from '@/lib/firebase';
 
-interface QADHUModalProps {
+interface QAOQLModalProps {
   onClose: () => void;
   onSaved: () => void;
   record?: any;
@@ -25,7 +25,7 @@ function getISOWeekNumber(date: Date): number {
 const factories = ['TECHNOTEX #2', 'EINS', 'DASOLTEX SA'];
 const buyers = ['Target', "Kohl's", 'Walmart', 'Carhartt'];
 
-export function QADHUModal({ onClose, onSaved, record }: QADHUModalProps) {
+export function QAOQLModal({ onClose, onSaved, record }: QAOQLModalProps) {
   const isEditing = !!record;
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [saving, setSaving] = useState(false);
@@ -51,7 +51,7 @@ export function QADHUModal({ onClose, onSaved, record }: QADHUModalProps) {
 
   useEffect(() => {
     if (isEditing) return;
-    getQADHURecords().then(records => {
+    getQAOQLRecords().then(records => {
       let maxNum = 0;
       for (const r of records) {
         const match = r.item?.match(/^#(\d+)$/);
@@ -67,12 +67,12 @@ export function QADHUModal({ onClose, onSaved, record }: QADHUModalProps) {
   const dateObj = useMemo(() => new Date(inspectionDate + 'T12:00:00'), [inspectionDate]);
   const week = useMemo(() => getISOWeekNumber(dateObj), [dateObj]);
   const visualApproved = useMemo(() => Math.max(0, visualSample - visualReject), [visualSample, visualReject]);
-  const dhuScorePercent = useMemo(() => visualSample > 0 ? visualReject / visualSample : 0, [visualReject, visualSample]);
-  const performanceDHU = useMemo(() => {
-    if (dhuScorePercent <= 0.03) return 'Excellent';
-    if (dhuScorePercent <= 0.05) return 'Good';
+  const oqlScorePercent = useMemo(() => visualSample > 0 ? visualReject / visualSample : 0, [visualReject, visualSample]);
+  const performanceOQL = useMemo(() => {
+    if (oqlScorePercent <= 0.03) return 'Excellent';
+    if (oqlScorePercent <= 0.05) return 'Good';
     return 'Very Bad';
-  }, [dhuScorePercent]);
+  }, [oqlScorePercent]);
   const passRateScorePercent = useMemo(() => visualSample > 0 ? visualApproved / visualSample : 0, [visualApproved, visualSample]);
 
   const handleSave = async () => {
@@ -102,17 +102,17 @@ export function QADHUModal({ onClose, onSaved, record }: QADHUModalProps) {
       visualSample,
       visualReject,
       visualApproved,
-      dhuScorePercent: Math.round(dhuScorePercent * 10000) / 10000,
-      performanceDHU,
+      oqlScorePercent: Math.round(oqlScorePercent * 10000) / 10000,
+      performanceOQL,
       passRateScorePercent: Math.round(passRateScorePercent * 10000) / 10000,
       createdAt: record?.createdAt || Date.now(),
       createdBy: record?.createdBy || user?.codigo || '',
     };
     let ok: boolean;
     if (isEditing) {
-      ok = await updateQADHURecord(record.id, data);
+      ok = await updateQAOQLRecord(record.id, data);
     } else {
-      ok = !!(await saveQADHURecord(data));
+      ok = !!(await saveQAOQLRecord(data));
     }
     setSaving(false);
     if (ok) { onSaved(); onClose(); }
@@ -208,8 +208,8 @@ export function QADHUModal({ onClose, onSaved, record }: QADHUModalProps) {
 
             {/* Auto-calculated */}
             <Field label="Visual Approved" value={String(visualApproved)} readOnly accent />
-            <Field label="DHU Score %" value={visualSample > 0 ? `${(dhuScorePercent * 100).toFixed(2)}%` : '0%'} readOnly accent />
-            <Field label="Performance DHU" value={performanceDHU} readOnly accent highlight />
+            <Field label="OQL Score %" value={visualSample > 0 ? `${(oqlScorePercent * 100).toFixed(2)}%` : '0%'} readOnly accent />
+            <Field label="Performance OQL" value={performanceOQL} readOnly accent highlight />
             <Field label="Pass Rate Score %" value={visualSample > 0 ? `${(passRateScorePercent * 100).toFixed(2)}%` : '0%'} readOnly accent />
           </div>
 

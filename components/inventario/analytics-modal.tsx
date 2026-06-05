@@ -8,15 +8,15 @@ import {
   BarChart, Bar, AreaChart, Area, ComposedChart, PieChart as RePieChart, Pie, Cell,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts';
-import type { QADHURecord, InLineDefectRecord, QADHUDefectCatalogItem } from '@/lib/firebase';
+import type { QAOQLRecord, InLineDefectRecord, QAOQLDefectCatalogItem } from '@/lib/firebase';
 
 interface Empleado { code: string; nombres: string; apellidos: string; }
 
 interface AnalyticsModalProps {
-  inlineRecords: QADHURecord[];
+  inlineRecords: QAOQLRecord[];
   defectRecords: InLineDefectRecord[];
   empleados: Empleado[];
-  defectCatalogItems: QADHUDefectCatalogItem[];
+  defectCatalogItems: QAOQLDefectCatalogItem[];
   onClose: () => void;
   isAdmin?: boolean;
 }
@@ -43,7 +43,7 @@ const X_AXIS_OPTIONS = [
   { value: 'buyer', label: 'Buyer' }, { value: 'auditor', label: 'Auditor' },
 ];
 const INLINE_METRIC_OPTIONS = [
-  { value: 'dhuPct', label: 'DHU %' }, { value: 'passRate', label: 'Pass Rate %' },
+  { value: 'oqlPct', label: 'OQL %' }, { value: 'passRate', label: 'Pass Rate %' },
   { value: 'sample', label: 'Sample' }, { value: 'reject', label: 'Reject' },
   { value: 'approved', label: 'Approved' }, { value: 'count', label: 'Count' },
 ];
@@ -82,7 +82,7 @@ function getFieldValue(r: any, field: string): string {
 }
 
 function getMetricValue(r: any, metric: string): number {
-  if (metric === 'dhuPct') return r.dhuScorePercent != null ? r.dhuScorePercent * 100 : 0;
+  if (metric === 'oqlPct') return r.oqlScorePercent != null ? r.oqlScorePercent * 100 : 0;
   if (metric === 'passRate') return r.passRateScorePercent != null ? r.passRateScorePercent * 100 : 0;
   if (metric === 'count') return 1;
   return r[metric] || 0;
@@ -115,7 +115,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
   const [tab, setTab] = useState<'inline' | 'defect' | 'pivot'>('inline');
   const [chartType, setChartType] = useState('line');
   const [chartXAxis, setChartXAxis] = useState('week');
-  const [chartMetrics, setChartMetrics] = useState<string[]>(['dhuPct']);
+  const [chartMetrics, setChartMetrics] = useState<string[]>(['oqlPct']);
   const [chartAgg, setChartAgg] = useState<'sum' | 'avg'>('avg');
   const [chartTitle, setChartTitle] = useState('');
   const [showDataLabels, setShowDataLabels] = useState(false);
@@ -221,15 +221,15 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     const totalSample = filteredInline.reduce((s, r) => s + (r.visualSample || 0), 0);
     const totalReject = filteredInline.reduce((s, r) => s + (r.visualReject || 0), 0);
     const totalApproved = filteredInline.reduce((s, r) => s + (r.visualApproved || 0), 0);
-    const avgDHU = totalSample > 0 ? (totalReject / totalSample) * 100 : 0;
+    const avgOQL = totalSample > 0 ? (totalReject / totalSample) * 100 : 0;
     const avgPassRate = totalSample > 0 ? (totalApproved / totalSample) * 100 : 0;
     const perfCount = { Excellent: 0, Good: 0, 'Very Bad': 0 };
     filteredInline.forEach(r => {
-      if (r.performanceDHU === 'Excellent') perfCount.Excellent++;
-      else if (r.performanceDHU === 'Good') perfCount.Good++;
+      if (r.performanceOQL === 'Excellent') perfCount.Excellent++;
+      else if (r.performanceOQL === 'Good') perfCount.Good++;
       else perfCount['Very Bad']++;
     });
-    return { totalSample, totalReject, totalApproved, avgDHU, avgPassRate, perfCount, count: filteredInline.length };
+    return { totalSample, totalReject, totalApproved, avgOQL, avgPassRate, perfCount, count: filteredInline.length };
   }, [filteredInline]);
 
   const defectMetrics = useMemo(() => {
@@ -345,7 +345,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
       else if (valKey === 'sample') val = rec.visualSample || 0;
       else if (valKey === 'reject') val = rec.visualReject || 0;
       else if (valKey === 'approved') val = rec.visualApproved || 0;
-      else if (valKey === 'dhuPct') val = rec.dhuScorePercent != null ? rec.dhuScorePercent * 100 : 0;
+      else if (valKey === 'oqlPct') val = rec.oqlScorePercent != null ? rec.oqlScorePercent * 100 : 0;
       else if (valKey === 'passRate') val = rec.passRateScorePercent != null ? rec.passRateScorePercent * 100 : 0;
       else if (valKey === 'total') val = rec.total || 0;
       cells[rv][cv].sum += val;
@@ -529,19 +529,19 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
 
   // ─── HTML export functions ───
   const generateInlineHTML = () => {
-    const header = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Sample', 'Reject', 'Approved', 'DHU %', 'Performance', 'Pass Rate %'];
+    const header = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Sample', 'Reject', 'Approved', 'OQL %', 'Performance', 'Pass Rate %'];
     if (isAdmin) header.push('Created By');
     const rows = filteredInline.map(r => {
-      const perfClass = r.performanceDHU === 'Very Bad' ? 'perf-vbad' : r.performanceDHU === 'Excellent' ? 'perf-excellent' : 'perf-good';
-      const dhuPct = (r.dhuScorePercent * 100).toFixed(2);
-      const dhuClass = r.performanceDHU === 'Very Bad' ? 'perf-vbad' : r.performanceDHU === 'Excellent' ? 'perf-excellent' : '';
+      const perfClass = r.performanceOQL === 'Very Bad' ? 'perf-vbad' : r.performanceOQL === 'Excellent' ? 'perf-excellent' : 'perf-good';
+      const oqlPct = (r.oqlScorePercent * 100).toFixed(2);
+      const oqlClass = r.performanceOQL === 'Very Bad' ? 'perf-vbad' : r.performanceOQL === 'Excellent' ? 'perf-excellent' : '';
       const row = [
         r.item, r.inspectionDate, `#${computeWeek(r.inspectionDate)}`, r.month || '',
         r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
         getAuditorName(r.auditor, empleados), r.style || '',
         r.visualSample, r.visualReject, r.visualApproved,
-        `<span class="${dhuClass}">${dhuPct}%</span>`,
-        `<span class="${perfClass}">${r.performanceDHU}</span>`,
+        `<span class="${oqlClass}">${oqlPct}%</span>`,
+        `<span class="${perfClass}">${r.performanceOQL}</span>`,
         (r.passRateScorePercent * 100).toFixed(2) + '%',
       ];
       if (isAdmin) row.push(r.createdBy || '');
@@ -565,7 +565,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
   };
 
   // ─── Excel export with ExcelJS ───
-  const inlineHeader = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Sample', 'Reject', 'Approved', 'DHU %', 'Performance', 'Pass Rate %'];
+  const inlineHeader = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Sample', 'Reject', 'Approved', 'OQL %', 'Performance', 'Pass Rate %'];
   const defectHeader = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Defecto', 'Total', 'C\u00f3digo Defecto', 'Descripci\u00f3n', 'CAT EN', 'ACR', 'Defect CAT EN', 'Descripci\u00f3n Defecto', 'CAT ES', 'ACR S', 'Defect CAT ES'];
 
   const headerStyle = {
@@ -613,8 +613,8 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
         r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
         getAuditorName(r.auditor, empleados), r.style || '',
         r.visualSample, r.visualReject, r.visualApproved,
-        (r.dhuScorePercent * 100).toFixed(2) + '%',
-        r.performanceDHU,
+        (r.oqlScorePercent * 100).toFixed(2) + '%',
+        r.performanceOQL,
         (r.passRateScorePercent * 100).toFixed(2) + '%'
       ];
       const row = ws.getRow(rowNum);
@@ -625,7 +625,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
       });
       row.eachCell({ includeEmpty: true }, (cell: any) => { cell.border = cellBorder; });
 
-      const perf = r.performanceDHU || '';
+      const perf = r.performanceOQL || '';
       if (performanceStyles[perf]) {
         [15, 16].forEach(col => {
           const cell = ws.getCell(rowNum, col);
@@ -845,10 +845,10 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                   <div className="text-xs text-muted-foreground">Total Sample</div>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-4 text-center">
-                  <div className={`text-2xl font-bold ${inlineMetrics.avgDHU <= 3 ? 'text-green-500' : inlineMetrics.avgDHU <= 5 ? 'text-yellow-500' : 'text-red-500'}`}>
-                    {inlineMetrics.avgDHU.toFixed(2)}%
+                  <div className={`text-2xl font-bold ${inlineMetrics.avgOQL <= 3 ? 'text-green-500' : inlineMetrics.avgOQL <= 5 ? 'text-yellow-500' : 'text-red-500'}`}>
+                    {inlineMetrics.avgOQL.toFixed(2)}%
                   </div>
-                  <div className="text-xs text-muted-foreground">Avg DHU %</div>
+                  <div className="text-xs text-muted-foreground">Avg OQL %</div>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-4 text-center">
                   <div className="text-2xl font-bold text-blue-500">{inlineMetrics.avgPassRate.toFixed(2)}%</div>
@@ -904,7 +904,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                   <div className="col-span-3">
                     <label className="mb-1 block text-xs text-muted-foreground">T\u00edtulo de la gr\u00e1fica</label>
                     <input type="text" value={chartTitle} onChange={e => setChartTitle(e.target.value)}
-                      placeholder="Ej: DHU % por Semana"
+                      placeholder="Ej: OQL % por Semana"
                       className="w-full rounded-lg border border-border bg-input px-2 py-2 text-xs text-foreground" />
                   </div>
                   <div className="flex items-end pb-1">
@@ -954,7 +954,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                         <th className="p-2 text-left font-medium text-primary">Sample</th>
                         <th className="p-2 text-left font-medium text-primary">Reject</th>
                         <th className="p-2 text-left font-medium text-primary">Approved</th>
-                        <th className="p-2 text-left font-medium text-primary">DHU %</th>
+                        <th className="p-2 text-left font-medium text-primary">OQL %</th>
                         <th className="p-2 text-left font-medium text-primary">Performance</th>
                         <th className="p-2 text-left font-medium text-primary">Pass Rate %</th>
                       </tr>
@@ -976,9 +976,9 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                           <td className="p-2 text-xs">{r.visualSample}</td>
                           <td className="p-2 text-xs">{r.visualReject}</td>
                           <td className="p-2 text-xs">{r.visualApproved}</td>
-                          <td className="p-2 text-xs">{(r.dhuScorePercent * 100).toFixed(2)}%</td>
+                          <td className="p-2 text-xs">{(r.oqlScorePercent * 100).toFixed(2)}%</td>
                           <td className="p-2">
-                            <span className={`text-xs font-bold ${r.performanceDHU === 'Excellent' ? 'text-green-500' : r.performanceDHU === 'Good' ? 'text-yellow-500' : 'text-red-500'}`}>{r.performanceDHU}</span>
+                            <span className={`text-xs font-bold ${r.performanceOQL === 'Excellent' ? 'text-green-500' : r.performanceOQL === 'Good' ? 'text-yellow-500' : 'text-red-500'}`}>{r.performanceOQL}</span>
                           </td>
                           <td className="p-2 text-xs">{(r.passRateScorePercent * 100).toFixed(2)}%</td>
                         </tr>
@@ -1057,7 +1057,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                   <div className="col-span-3">
                     <label className="mb-1 block text-xs text-muted-foreground">T\u00edtulo de la gr\u00e1fica</label>
                     <input type="text" value={chartTitle} onChange={e => setChartTitle(e.target.value)}
-                      placeholder="Ej: DHU % por Semana"
+                      placeholder="Ej: OQL % por Semana"
                       className="w-full rounded-lg border border-border bg-input px-2 py-2 text-xs text-foreground" />
                   </div>
                   <div className="flex items-end pb-1">
@@ -1267,7 +1267,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                           <option value="sample">Sample</option>
                           <option value="reject">Reject</option>
                           <option value="approved">Approved</option>
-                          <option value="dhuPct">DHU %</option>
+                          <option value="oqlPct">OQL %</option>
                           <option value="passRate">Pass Rate %</option>
                           <option value="count">Count</option>
                         </>
@@ -1310,8 +1310,8 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                           <td className="sticky left-0 z-10 bg-card p-2 text-xs font-medium">{rv}</td>
                           {pivotTableData.colValues.map(cv => {
                             const val = pivotTableData.getCell(rv, cv);
-                            const isDHU = pivotValue === 'dhuPct';
-                            const cls = isDHU ? (
+                            const isOQL = pivotValue === 'oqlPct';
+                            const cls = isOQL ? (
                               val <= 3 ? 'text-green-500' : val <= 5 ? 'text-yellow-500' : 'text-red-500'
                             ) : '';
                             return (
