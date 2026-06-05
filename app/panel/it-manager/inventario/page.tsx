@@ -28,6 +28,7 @@ export default function InventarioPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [photoGallery, setPhotoGallery] = useState<{ photos: { url: string; label: string }[]; index: number } | null>(null);
   const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [viewSignature, setViewSignature] = useState<string | null>(null);
 
   useEffect(() => {
     import('@/lib/inventory-reminder').then(({ scheduleReminderCheck }) => {
@@ -99,7 +100,7 @@ export default function InventarioPage() {
 
   // All historial entries aggregated for inspection tab
   const allAudits = useMemo(() => {
-    const audits: { equipoId: string; serialNumber: string; tipo: string; empleado: string; empleadoNombre: string; historial: any }[] = [];
+    const audits: { equipoId: string; serialNumber: string; tipo: string; empleado: string; empleadoNombre: string; estaAsignado: boolean; historial: any }[] = [];
     for (const eq of equipos) {
       if (eq.historial && eq.historial.length > 0) {
         for (const h of eq.historial) {
@@ -109,6 +110,7 @@ export default function InventarioPage() {
             tipo: eq.tipo === 'tablet' ? 'Tablet' : 'Scanner',
             empleado: eq.empleadoAsignado || 'Sin asignar',
             empleadoNombre: getEmpleadoNombre(eq.empleadoAsignado),
+            estaAsignado: !!eq.empleadoAsignado,
             historial: h,
           });
         }
@@ -117,6 +119,19 @@ export default function InventarioPage() {
     audits.sort((a, b) => (b.historial.timestamp || 0) - (a.historial.timestamp || 0));
     return audits;
   }, [equipos, empleadosMap]);
+
+  const auditsGrouped = useMemo(() => {
+    const groups: { label: string; tipos: { label: string; audits: typeof allAudits }[] }[] = [
+      { label: 'Equipo Asignado', tipos: [{ label: 'Tablet', audits: [] }, { label: 'Scanner', audits: [] }] },
+      { label: 'Equipo No asignado', tipos: [{ label: 'Tablet', audits: [] }, { label: 'Scanner', audits: [] }] },
+    ];
+    for (const a of allAudits) {
+      const grupo = a.estaAsignado ? groups[0] : groups[1];
+      const tipo = grupo.tipos.find(t => t.label === a.tipo);
+      if (tipo) tipo.audits.push(a);
+    }
+    return groups;
+  }, [allAudits]);
 
   const handleCreateNew = () => {
     setSelectedEquipo(null);
@@ -162,58 +177,182 @@ export default function InventarioPage() {
       Serie: a.serialNumber,
       Tipo: a.tipo,
       Empleado: a.empleadoNombre,
+      'Eq. Asignado': a.estaAsignado ? 'Si' : 'No',
       Mes: a.historial.mes || '-',
       Score_JAB: a.historial.scoreJAB >= 0 ? a.historial.scoreJAB + '%' : '-',
       Comentarios: a.historial.comentarios || '-',
+      'Firma Asignado': a.historial.firmaAsignado ? 'Si' : 'No',
+      'Firma Auditor': a.historial.firmaAuditor ? 'Si' : 'No',
       Fecha: a.historial.timestamp ? new Date(a.historial.timestamp).toLocaleDateString('es-MX') : '-',
     }));
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(data);
+    // Professional PowerBI-style header styling
+    const headerKeys = Object.keys(data[0] || {});
+    const headerR = XLSX.utils.encode_cell({ r: 0, c: 0 });
+    if (ws[headerR]) {
+      ws[headerR].s = {
+        fill: { fgColor: { rgb: '005A8C' } },
+        font: { bold: true, color: { rgb: 'FFFFFF' }, size: 11, name: 'Segoe UI' },
+        alignment: { horizontal: 'center', vertical: 'center' },
+        border: {
+          top: { style: 'thin', color: { rgb: 'FFFFFF' } },
+          bottom: { style: 'medium', color: { rgb: '003D66' } },
+          left: { style: 'thin', color: { rgb: 'FFFFFF' } },
+          right: { style: 'thin', color: { rgb: 'FFFFFF' } },
+        },
+      };
+    }
+    // Style all header cells
+    for (let c = 0; c < headerKeys.length; c++) {
+      const addr = XLSX.utils.encode_cell({ r: 0, c });
+      if (ws[addr]) {
+        ws[addr].s = {
+          fill: { fgColor: { rgb: '005A8C' } },
+          font: { bold: true, color: { rgb: 'FFFFFF' }, size: 11, name: 'Segoe UI' },
+          alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+          border: {
+            top: { style: 'thin', color: { rgb: 'FFFFFF' } },
+            bottom: { style: 'medium', color: { rgb: '003D66' } },
+            left: { style: 'thin', color: { rgb: 'FFFFFF' } },
+            right: { style: 'thin', color: { rgb: 'FFFFFF' } },
+          },
+        };
+      }
+    }
+    // Style data rows with alternating colors
+    for (let r = 1; r <= data.length; r++) {
+      const rowBg = r % 2 === 0 ? 'F2F7FB' : 'FFFFFF';
+      for (let c = 0; c < headerKeys.length; c++) {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if (ws[addr]) {
+          ws[addr].s = {
+            fill: { fgColor: { rgb: rowBg } },
+            font: { name: 'Segoe UI', size: 10, color: { rgb: '333333' } },
+            alignment: { vertical: 'center' },
+            border: {
+              top: { style: 'thin', color: { rgb: 'DEE2E6' } },
+              bottom: { style: 'thin', color: { rgb: 'DEE2E6' } },
+              left: { style: 'thin', color: { rgb: 'DEE2E6' } },
+              right: { style: 'thin', color: { rgb: 'DEE2E6' } },
+            },
+          };
+        }
+      }
+    }
+    // Special formatting for Score column (index 5)
+    const scoreIdx = headerKeys.findIndex(k => k === 'Score_JAB');
+    if (scoreIdx >= 0) {
+      for (let r = 1; r <= data.length; r++) {
+        const addr = XLSX.utils.encode_cell({ r, c: scoreIdx });
+        if (ws[addr]) {
+          const val = data[r - 1].Score_JAB;
+          const numVal = parseInt(val);
+          if (!isNaN(numVal)) {
+            ws[addr].s = {
+              ...ws[addr].s,
+              font: {
+                ...ws[addr].s.font,
+                bold: true,
+                color: { rgb: numVal >= 80 ? '16A34A' : numVal >= 60 ? 'CA8A04' : 'DC2626' },
+              },
+              alignment: { horizontal: 'center', vertical: 'center' },
+            };
+          }
+        }
+      }
+    }
     XLSX.utils.book_append_sheet(wb, ws, 'Auditorias');
-    const colWidths = Object.keys(data[0] || {}).map(k => ({
-      wch: Math.max(k.length, ...data.map(r => String((r as any)[k] || '').length)) + 2,
+    const colWidths = headerKeys.map(k => ({
+      wch: Math.max(k.length, ...data.map(r => String((r as any)[k] || '').length)) + 3,
     }));
     ws['!cols'] = colWidths;
+    // Freeze top row
+    ws['!freeze'] = { x: 0, y: 1 };
     XLSX.writeFile(wb, `auditorias-inventario-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const handlePrintReport = () => {
     const win = window.open('', '_blank');
     if (!win) return;
-    const now = new Date().toLocaleDateString('es-MX');
+    const now = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
     let html = `<!DOCTYPE html><html><head><title>Reporte de Auditorias</title>
       <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        h1 { text-align: center; font-size: 16px; margin-bottom: 4px; }
-        .sub { text-align: center; font-size: 12px; color: #666; margin-bottom: 20px; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; padding: 30px; background: #f8fafc; }
+        .report-container { max-width: 1200px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); overflow: hidden; }
+        .report-header { background: linear-gradient(135deg, #005A8C 0%, #0077B6 100%); padding: 28px 32px; color: #fff; }
+        .report-header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+        .report-header p { margin: 6px 0 0; font-size: 13px; opacity: 0.85; font-weight: 300; }
+        .report-body { padding: 24px 32px; }
+        .summary-row { display: flex; gap: 16px; margin-bottom: 24px; }
+        .summary-card { flex: 1; background: #f1f5f9; border-radius: 8px; padding: 14px 18px; text-align: center; }
+        .summary-card .num { font-size: 24px; font-weight: 700; color: #005A8C; }
+        .summary-card .lbl { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th, td { border: 1px solid #999; padding: 4px 6px; text-align: left; }
-        th { background: #06b6d4; color: #fff; font-weight: bold; }
-        tr:nth-child(even) { background: #f5f5f5; }
-        .score-high { color: #16a34a; font-weight: bold; }
-        .score-mid { color: #ca8a04; font-weight: bold; }
-        .score-low { color: #dc2626; font-weight: bold; }
-        .footer { text-align: center; font-size: 10px; color: #999; margin-top: 16px; }
-        @media print { body { padding: 8px; } }
+        th { background: #005A8C; color: #fff; font-weight: 600; padding: 10px 8px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; border: none; }
+        td { padding: 8px; border-bottom: 1px solid #e2e8f0; color: #334155; }
+        tr:nth-child(even) td { background: #f8fafc; }
+        tr:hover td { background: #eef2f7; }
+        .score-high { color: #16a34a; font-weight: 700; }
+        .score-mid { color: #ca8a04; font-weight: 700; }
+        .score-low { color: #dc2626; font-weight: 700; }
+        .footer { text-align: center; font-size: 10px; color: #94a3b8; margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+        .section-title { font-size: 14px; font-weight: 700; color: #005A8C; margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #005A8C; }
+        .group-title { font-size: 12px; font-weight: 600; color: #334155; margin: 14px 0 6px; padding: 4px 8px; background: #eef2f7; border-radius: 4px; display: inline-block; }
+        .signature-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 9px; font-weight: 600; }
+        .sig-yes { background: #dcfce7; color: #16a34a; }
+        .sig-no { background: #fef2f2; color: #dc2626; }
+        @media print {
+          body { background: #fff; padding: 0; }
+          .report-container { box-shadow: none; border-radius: 0; }
+          .report-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          tr:nth-child(even) td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
       </style></head><body>
-      <h1>REPORTE DE AUDITORIAS DE INVENTARIO</h1>
-      <p class="sub">${now}</p>
-      <table><thead><tr>
-        <th>Serie</th><th>Tipo</th><th>Empleado</th><th>Mes</th><th>Score JAB</th><th>Comentarios</th><th>Fecha</th>
-      </tr></thead><tbody>`;
-    for (const a of allAudits) {
-      const score = a.historial.scoreJAB;
-      const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-mid' : 'score-low';
-      html += `<tr>
-        <td>${a.serialNumber}</td><td>${a.tipo}</td><td>${a.empleadoNombre}</td>
-        <td>${a.historial.mes || '-'}</td>
-        <td class="${scoreClass}">${score >= 0 ? score + '%' : '-'}</td>
-        <td>${a.historial.comentarios || '-'}</td>
-        <td>${a.historial.timestamp ? new Date(a.historial.timestamp).toLocaleDateString('es-MX') : '-'}</td>
-      </tr>`;
+      <div class="report-container">
+        <div class="report-header">
+          <h1>REPORTE DE AUDITORIAS DE INVENTARIO</h1>
+          <p>Generado: ${now} &mdash; Total de auditorias: ${allAudits.length}</p>
+        </div>
+        <div class="report-body">
+          <div class="summary-row">
+            <div class="summary-card"><div class="num">${auditsGrouped[0].tipos.reduce((s, t) => s + t.audits.length, 0)}</div><div class="lbl">Equipos Asignados</div></div>
+            <div class="summary-card"><div class="num">${auditsGrouped[1].tipos.reduce((s, t) => s + t.audits.length, 0)}</div><div class="lbl">Equipos No asignados</div></div>
+            <div class="summary-card"><div class="num">${allAudits.filter(a => a.historial.scoreJAB >= 80).length}</div><div class="lbl">Aprobados (&ge;80%)</div></div>
+            <div class="summary-card"><div class="num">${allAudits.filter(a => a.historial.scoreJAB >= 0 && a.historial.scoreJAB < 80).length}</div><div class="lbl">Pendientes (&lt;80%)</div></div>
+          </div>`;
+    for (const grupo of auditsGrouped) {
+      const totalGrupo = grupo.tipos.reduce((s, t) => s + t.audits.length, 0);
+      if (totalGrupo === 0) continue;
+      html += `<div class="section-title">${grupo.label}</div>`;
+      for (const tipo of grupo.tipos) {
+        if (tipo.audits.length === 0) continue;
+        html += `<div class="group-title">${tipo.label} (${tipo.audits.length})</div>`;
+        html += `<table><thead><tr>
+          <th>Serie</th><th>Empleado</th><th>Mes</th><th>Score JAB</th><th>Comentarios</th><th>F. Asignado</th><th>F. Auditor</th><th>Fecha</th>
+        </tr></thead><tbody>`;
+        for (const a of tipo.audits) {
+          const score = a.historial.scoreJAB;
+          const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-mid' : 'score-low';
+          html += `<tr>
+            <td style="font-family: monospace; font-size: 10px;">${a.serialNumber}</td>
+            <td>${a.empleadoNombre}</td>
+            <td>${a.historial.mes || '-'}</td>
+            <td class="${scoreClass}">${score >= 0 ? score + '%' : '-'}</td>
+            <td style="max-width: 200px;">${a.historial.comentarios || '-'}</td>
+            <td><span class="signature-badge ${a.historial.firmaAsignado ? 'sig-yes' : 'sig-no'}">${a.historial.firmaAsignado ? 'Si' : 'No'}</span></td>
+            <td><span class="signature-badge ${a.historial.firmaAuditor ? 'sig-yes' : 'sig-no'}">${a.historial.firmaAuditor ? 'Si' : 'No'}</span></td>
+            <td>${a.historial.timestamp ? new Date(a.historial.timestamp).toLocaleDateString('es-MX') : '-'}</td>
+          </tr>`;
+        }
+        html += `</tbody></table>`;
+      }
     }
-    html += `</tbody></table>
-      <div class="footer">Generado el ${new Date().toLocaleString('es-MX')}</div>
+    html += `
+        <div class="footer">Reporte generado automaticamente el ${new Date().toLocaleString('es-MX')}</div>
+      </div></div>
     </body></html>`;
     win.document.write(html);
     win.document.close();
@@ -357,47 +496,81 @@ export default function InventarioPage() {
               )}
 
               {activeTab === 'inspection' && (
-                <div>
+                <div className="space-y-8">
                   {allAudits.length === 0 ? (
                     <div className="py-12 text-center text-muted-foreground">
                       No hay auditorias registradas. Presiona "Agregar Auditoria de inventario" para comenzar.
                     </div>
                   ) : (
-                    <div className="overflow-x-auto rounded-lg border border-border">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="bg-primary/10 border-b border-border">
-                            <th className="p-2 text-left font-medium text-primary">Serie</th>
-                            <th className="p-2 text-left font-medium text-primary">Tipo</th>
-                            <th className="p-2 text-left font-medium text-primary">Empleado</th>
-                            <th className="p-2 text-left font-medium text-primary">Mes</th>
-                            <th className="p-2 text-left font-medium text-primary">Score JAB</th>
-                            <th className="p-2 text-left font-medium text-primary">Comentarios</th>
-                            <th className="p-2 text-left font-medium text-primary">Fecha</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {allAudits.map((a, i) => (
-                            <tr key={`${a.equipoId}-${i}`} className="border-b border-border hover:bg-muted/20">
-                              <td className="p-2 font-mono text-xs text-primary">{a.serialNumber}</td>
-                              <td className="p-2">{a.tipo}</td>
-                              <td className="p-2 font-medium">{a.empleadoNombre}</td>
-                              <td className="p-2 text-xs">{a.historial.mes || '-'}</td>
-                              <td className="p-2">
-                                {a.historial.scoreJAB >= 0 ? (
-                                  <span className={`font-bold text-sm ${
-                                    a.historial.scoreJAB >= 80 ? 'text-green-500' :
-                                    a.historial.scoreJAB >= 60 ? 'text-yellow-500' : 'text-red-500'
-                                  }`}>{a.historial.scoreJAB}%</span>
-                                ) : (<span className="text-muted-foreground text-xs">-</span>)}
-                              </td>
-                              <td className="p-2 text-xs text-muted-foreground max-w-60 truncate">{a.historial.comentarios || '-'}</td>
-                              <td className="p-2 text-xs">{a.historial.timestamp ? new Date(a.historial.timestamp).toLocaleDateString('es-MX') : '-'}</td>
-                            </tr>
+                    auditsGrouped.map(grupo => (
+                      <div key={grupo.label}>
+                        <h3 className="flex items-center gap-2 mb-4 text-base font-semibold text-foreground border-b border-border pb-2">
+                          {grupo.label === 'Equipo Asignado' ? <UserCheck className="h-5 w-5 text-green-500" /> : <UserX className="h-5 w-5 text-muted-foreground" />}
+                          {grupo.label}
+                        </h3>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {grupo.tipos.map(tipo => tipo.audits.length > 0 && (
+                            <div key={tipo.label} className="rounded-lg border border-border bg-muted/10 overflow-hidden">
+                              <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border bg-muted/20">
+                                {tipo.label}
+                              </div>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="bg-primary/5 border-b border-border">
+                                      <th className="p-2 text-left font-medium text-primary text-[11px]">Serie</th>
+                                      <th className="p-2 text-left font-medium text-primary text-[11px]">Empleado</th>
+                                      <th className="p-2 text-left font-medium text-primary text-[11px]">Mes</th>
+                                      <th className="p-2 text-left font-medium text-primary text-[11px]">Score</th>
+                                      <th className="p-2 text-left font-medium text-primary text-[11px]">Comentarios</th>
+                                      <th className="p-2 text-left font-medium text-primary text-[11px]">Fecha</th>
+                                      <th className="p-2 text-left font-medium text-primary text-[11px]">Firmas</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {tipo.audits.map((a, i) => (
+                                      <tr key={`${a.equipoId}-${i}`} className="border-b border-border hover:bg-muted/20">
+                                        <td className="p-2 font-mono text-[11px] text-primary whitespace-nowrap">{a.serialNumber}</td>
+                                        <td className="p-2 text-xs font-medium whitespace-nowrap">{a.empleadoNombre}</td>
+                                        <td className="p-2 text-[11px] whitespace-nowrap">{a.historial.mes || '-'}</td>
+                                        <td className="p-2">
+                                          {a.historial.scoreJAB >= 0 ? (
+                                            <span className={`font-bold text-xs ${
+                                              a.historial.scoreJAB >= 80 ? 'text-green-500' :
+                                              a.historial.scoreJAB >= 60 ? 'text-yellow-500' : 'text-red-500'
+                                            }`}>{a.historial.scoreJAB}%</span>
+                                          ) : (<span className="text-muted-foreground text-[11px]">-</span>)}
+                                        </td>
+                                        <td className="p-2 text-[11px] text-muted-foreground max-w-40 truncate">{a.historial.comentarios || '-'}</td>
+                                        <td className="p-2 text-[11px] whitespace-nowrap">{a.historial.timestamp ? new Date(a.historial.timestamp).toLocaleDateString('es-MX') : '-'}</td>
+                                        <td className="p-2">
+                                          <div className="flex gap-1">
+                                            {a.historial.firmaAsignado ? (
+                                              <button onClick={() => setViewSignature(a.historial.firmaAsignado)}
+                                                className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[10px] text-blue-400 hover:bg-blue-500/20 border border-blue-500/20"
+                                                title="Ver firma del asignado">
+                                                Asig.
+                                              </button>
+                                            ) : <span className="text-[10px] text-muted-foreground">-</span>}
+                                            {a.historial.firmaAuditor ? (
+                                              <button onClick={() => setViewSignature(a.historial.firmaAuditor)}
+                                                className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[10px] text-purple-400 hover:bg-purple-500/20 border border-purple-500/20"
+                                                title="Ver firma del auditor">
+                                                Audit.
+                                              </button>
+                                            ) : null}
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
                           ))}
-                        </tbody>
-                      </table>
-                    </div>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               )}
@@ -421,6 +594,17 @@ export default function InventarioPage() {
 
       {photoGallery && (
         <PhotoGallery photos={photoGallery.photos} initialIndex={photoGallery.index} onClose={() => setPhotoGallery(null)} />
+      )}
+
+      {viewSignature && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setViewSignature(null)}>
+          <div className="max-w-md w-full rounded-lg bg-white p-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <img src={viewSignature} alt="Firma" className="w-full h-auto rounded border border-gray-200" />
+            <div className="mt-3 flex justify-end">
+              <Button variant="outline" size="sm" onClick={() => setViewSignature(null)} className="border-border">Cerrar</Button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

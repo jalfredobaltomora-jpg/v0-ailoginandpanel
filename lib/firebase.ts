@@ -700,6 +700,8 @@ export interface HistorialMensual {
   scoreJAB: number;
   timestamp: number;
   firma?: string;
+  firmaAsignado?: string;
+  firmaAuditor?: string;
 }
 
 export interface EquipoInventario {

@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { X, Loader2, Camera, Search, CheckSquare, Brain, Check } from 'lucide-react';
+import { X, Loader2, Camera, Search, CheckSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { SignaturePad } from './signature-pad';
 import { updateEquipoInventario, getEquipoInventario, type EquipoInventario, type HistorialMensual } from '@/lib/firebase';
 
 interface MonthlyAuditModalProps {
@@ -60,6 +61,8 @@ export function MonthlyAuditModal({ equipos, empleadosMap, onClose, onSaved }: M
   const [loadingSerie, setLoadingSerie] = useState(false);
   const [fotos, setFotos] = useState({ ...defaultFotos });
   const [comentarios, setComentarios] = useState('');
+  const [firmaAsignado, setFirmaAsignado] = useState('');
+  const [firmaAuditor, setFirmaAuditor] = useState('');
   const [aprobado, setAprobado] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<EquipoInventario>>({});
@@ -114,6 +117,8 @@ export function MonthlyAuditModal({ equipos, empleadosMap, onClose, onSaved }: M
       comentarios: comentarios || 'Auditoria de inventario',
       scoreJAB: aprobado ? 100 : -1,
       timestamp: Date.now(),
+      ...(firmaAsignado ? { firmaAsignado } : {}),
+      ...(firmaAuditor ? { firmaAuditor } : {}),
     };
 
     const updates: Partial<EquipoInventario> = {
@@ -264,6 +269,12 @@ export function MonthlyAuditModal({ equipos, empleadosMap, onClose, onSaved }: M
               <div>
                 <label className="mb-2 block text-sm font-medium text-primary">Comentarios de la auditoria</label>
                 <Textarea value={comentarios} onChange={e => setComentarios(e.target.value)} placeholder="Resultados de la auditoria..." className="border-border bg-input" rows={3} />
+              </div>
+
+              {/* Signatures */}
+              <div className="grid grid-cols-2 gap-4">
+                <SignaturePad value={firmaAsignado} onChange={setFirmaAsignado} label="Firma del Asignado" />
+                <SignaturePad value={firmaAuditor} onChange={setFirmaAuditor} label="Firma del Auditor" />
               </div>
 
               {error && <div className="rounded border border-destructive/50 bg-destructive/10 p-2 text-xs text-destructive">{error}</div>}
