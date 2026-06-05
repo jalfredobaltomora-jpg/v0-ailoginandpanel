@@ -66,7 +66,7 @@ export default function QAReportsPage() {
   const [defectCatalogSearch, setDefectCatalogSearch] = useState('');
   const [empleados, setEmpleados] = useState<any[]>([]);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
-  const [recalcProgress, setRecalcProgress] = useState('');
+
   const isAdmin = currentUser?.rol === 'admin' || currentUser?.rol === 'it-manager';
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inlineFileInputRef = useRef<HTMLInputElement>(null);
@@ -361,39 +361,6 @@ export default function QAReportsPage() {
     setTimeout(() => setDefectImportProgress(''), 5000);
   };
 
-  const handleRecalculateWeeks = async () => {
-    if (!confirm('¿Recalcular semanas para todos los registros IN LINE e In Line Defect?')) return;
-    setRecalcProgress('Recalculando...');
-    try {
-      const { updateQADHURecord, updateInLineDefectRecord } = await import('@/lib/firebase');
-      let updated = 0;
-      for (const r of qaDhuRecords) {
-        const parsed = parseExcelDate(r.inspectionDate);
-        if (!isNaN(parsed.dateObj.getTime())) {
-          const newWeek = getISOWeekNumber(parsed.dateObj);
-          if (newWeek !== r.week) {
-            await updateQADHURecord(r.id, { week: newWeek });
-            updated++;
-          }
-        }
-      }
-      for (const r of inLineDefectRecords) {
-        const parsed = parseExcelDate(r.inspectionDate);
-        if (!isNaN(parsed.dateObj.getTime())) {
-          const newWeek = getISOWeekNumber(parsed.dateObj);
-          if (newWeek !== r.week) {
-            await updateInLineDefectRecord(r.id, { week: newWeek });
-            updated++;
-          }
-        }
-      }
-      setRecalcProgress(`✅ Semanas recalculadas: ${updated} registros actualizados`);
-    } catch (err) {
-      setRecalcProgress(`❌ Error: ${err instanceof Error ? err.message : 'Error desconocido'}`);
-    }
-    setTimeout(() => setRecalcProgress(''), 5000);
-  };
-
   return (
     <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       <div className="flex items-center justify-between border-b border-border bg-card/50 p-4">
@@ -437,7 +404,7 @@ export default function QAReportsPage() {
                 color="bg-gradient-to-br from-green-500 to-green-700" onClick={() => setView('kpi')} />
             )}
             {puedeVer(currentUser, 'qa_dhu') && (
-              <Tile title="QA - DHU % SAE" subtitle="Indicator IN LINE" icon={<LineChart className="h-8 w-8" />}
+              <Tile title="QA - OQL % SAE" subtitle="Indicator" icon={<LineChart className="h-8 w-8" />}
                 color="bg-gradient-to-br from-rose-500 to-rose-700" onClick={() => setView('dhu')} />
             )}
           </div>
@@ -453,7 +420,7 @@ export default function QAReportsPage() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-foreground">
-                {dhuTab === 'inline' ? 'QA - DHU % SAE - Indicator IN LINE' : dhuTab === 'defect' ? 'In Line Defect' : 'Catálogo de defectos'}
+                {dhuTab === 'inline' ? 'QA - OQL % SAE - Indicator' : dhuTab === 'defect' ? 'In Line Defect' : 'Catálogo de defectos'}
               </h3>
               <div className="flex gap-2">
                 {(dhuTab === 'inline' || dhuTab === 'defect') && puedeVer(currentUser, 'qa_analytics') && (
@@ -461,10 +428,6 @@ export default function QAReportsPage() {
                     <Button size="sm" variant="outline" onClick={() => setAnalyticsOpen(true)}
                       className="border-primary/50 text-primary hover:bg-primary/10">
                       <Activity className="mr-2 h-4 w-4" /> Analytics
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={handleRecalculateWeeks}
-                      className="border-orange-400 text-orange-500 hover:bg-orange-500/10">
-                      Recalcular Semanas
                     </Button>
                   </>
                 )}
@@ -515,11 +478,6 @@ export default function QAReportsPage() {
                 {inlineImportProgress && (
                   <div className={`text-xs ${inlineImportProgress.includes('✅') ? 'text-green-500' : inlineImportProgress.includes('❌') ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {inlineImportProgress}
-                  </div>
-                )}
-                {recalcProgress && (
-                  <div className={`text-xs ${recalcProgress.includes('✅') ? 'text-green-500' : recalcProgress.includes('❌') ? 'text-destructive' : 'text-orange-500'}`}>
-                    {recalcProgress}
                   </div>
                 )}
                 {qaDhuRecords.length === 0 ? (
@@ -598,11 +556,6 @@ export default function QAReportsPage() {
                 {defectImportProgress && (
                   <div className={`text-xs ${defectImportProgress.includes('✅') ? 'text-green-500' : defectImportProgress.includes('❌') ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {defectImportProgress}
-                  </div>
-                )}
-                {recalcProgress && (
-                  <div className={`text-xs ${recalcProgress.includes('✅') ? 'text-green-500' : recalcProgress.includes('❌') ? 'text-destructive' : 'text-orange-500'}`}>
-                    {recalcProgress}
                   </div>
                 )}
                 {inLineDefectRecords.length === 0 ? (

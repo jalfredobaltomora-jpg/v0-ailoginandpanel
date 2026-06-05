@@ -128,7 +128,7 @@ export function QADHUModal({ onClose, onSaved, record }: QADHUModalProps) {
       <Card className="w-full max-w-3xl border-primary/20 bg-card max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex-row items-center justify-between border-b border-border sticky top-0 bg-card z-10">
           <CardTitle className="flex items-center gap-2 text-primary text-base">
-            {isEditing ? 'Editar Registro' : 'QA - DHU % SAE - Indicator IN LINE'}
+            {isEditing ? 'Editar Registro' : 'QA - OQL % SAE - Indicator'}
           </CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-5 w-5" /></Button>
         </CardHeader>
