@@ -504,7 +504,7 @@ export function WeeklyIssues() {
       return (
         <input
           type="text"
-          defaultValue={value}
+          value={value}
           onChange={(e) => handleCellChange(index, field, e.target.value)}
           className="w-[70px] rounded border-2 border-amber-500 bg-amber-900/20 px-2 py-1 text-center text-sm font-bold text-foreground"
         />
