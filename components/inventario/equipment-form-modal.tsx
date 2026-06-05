@@ -53,7 +53,7 @@ function compressImageBase64(base64: string, maxSize = 300): Promise<string> {
 }
 
 export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormModalProps) {
-  const [isEditing, setIsEditing] = useState(!equipo);
+  const [isEditing, setIsEditing] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
