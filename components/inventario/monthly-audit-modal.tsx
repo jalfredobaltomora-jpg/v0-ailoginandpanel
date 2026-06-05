@@ -71,7 +71,7 @@ export function MonthlyAuditModal({ equipos, empleadosMap, onClose, onSaved }: M
   const searchResults = useMemo(() => {
     if (!searchSerie.trim()) return [];
     const q = searchSerie.trim().toLowerCase();
-    return equipos.filter(e => e.serialNumber.toLowerCase().includes(q)).slice(0, 10);
+    return equipos.filter(e => (e.serialNumber || '').toLowerCase().includes(q)).slice(0, 10);
   }, [searchSerie, equipos]);
 
   const handleSelectEquipo = (eq: EquipoInventario) => {

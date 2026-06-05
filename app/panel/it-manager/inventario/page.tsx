@@ -352,11 +352,7 @@ export default function InventarioPage() {
                       </div>
                     </div>
                   )}
-                  <div className="mt-4 flex justify-end">
-                    <Button onClick={handleCreateNew} className="bg-primary text-primary-foreground">
-                      <Plus className="mr-2 h-4 w-4" /> Nuevo
-                    </Button>
-                  </div>
+                  
                 </>
               )}
 
