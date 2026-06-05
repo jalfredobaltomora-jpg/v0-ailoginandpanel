@@ -73,6 +73,11 @@ export default function InventarioPage() {
     return () => { if (unsubscribe) unsubscribe(); };
   }, []);
 
+  const getEmpleadoNombre = (code: string) => {
+    if (!code) return 'Sin asignar';
+    return empleadosMap[code] || code;
+  };
+
   const filteredEquipos = equipos.filter((e) => {
     if (activeTab === 'agregar' || activeTab === 'inspection') return false;
     const matchesTipo = e.tipo === activeTab;
@@ -135,11 +140,6 @@ export default function InventarioPage() {
       const { deleteEquipoInventario } = await import('@/lib/firebase');
       await deleteEquipoInventario(equipo.id);
     }
-  };
-
-  const getEmpleadoNombre = (code: string) => {
-    if (!code) return 'Sin asignar';
-    return empleadosMap[code] || code;
   };
 
   const accesorioLabels: Record<string, string> = {

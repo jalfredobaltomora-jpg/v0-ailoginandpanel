@@ -76,7 +76,11 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
           setStoredLunchTime(fbSchedule.lunchTime);
           setLunchTime(fbSchedule.lunchTime);
         }
-        if (fbSchedule.lunchWeek) setLunchPromptWeek(fbSchedule.lunchWeek);
+        if (fbSchedule.lunchWeek != null) {
+          setLunchPromptWeek(fbSchedule.lunchWeek);
+        } else if (fbSchedule.lunchTime) {
+          setLunchPromptWeek(getWeekNumber());
+        }
         if (fbSchedule.satExitTime) {
           setStoredSatExitTime(fbSchedule.satExitTime);
           setSatExitTime(fbSchedule.satExitTime);
@@ -111,8 +115,19 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
           const fbLunchWeek = fbSchedule?.lunchWeek;
           const currWeek = getWeekNumber();
           if (fbHasLunch) {
-            if (fbLunchWeek != null && fbLunchWeek !== currWeek) {
-              setNeedsLunchPrompt(true);
+            if (fbLunchWeek != null) {
+              if (fbLunchWeek !== currWeek) setNeedsLunchPrompt(true);
+            } else {
+              // Legacy: lunchTime exists but no week saved yet
+              // Auto-save current week to Firebase so it never asks again until new week
+              saveUserSchedule(user.codigo, {
+                lunchTime: fbSchedule.lunchTime,
+                lunchWeek: currWeek,
+                satExitTime: fbSchedule.satExitTime || undefined,
+                satEatCompany: fbSchedule.satEatCompany,
+                satLunchTime: fbSchedule.satLunchTime || undefined,
+                satWeek: fbSchedule.satWeek,
+              });
             }
           } else if (shouldAskLunch()) {
             setNeedsLunchPrompt(true);
