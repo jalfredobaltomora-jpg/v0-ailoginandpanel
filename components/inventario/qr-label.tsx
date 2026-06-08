@@ -97,34 +97,38 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
 
   const getCanvasDataUrl = (): string | null => {
     const canvas = containerRef.current?.querySelector('canvas');
-    if (!canvas) return null;
-    try { return canvas.toDataURL('image/png'); } catch { return null; }
+    if (!canvas) { console.warn('QR print: no canvas found'); return null; }
+    try {
+      const url = canvas.toDataURL('image/png');
+      console.log('QR print: data URL length', url.length);
+      return url;
+    } catch (e) { console.warn('QR print: toDataURL failed', e); return null; }
   };
 
   const handlePrint = () => {
     const dataUrl = getCanvasDataUrl();
-    if (!dataUrl) return;
+    if (!dataUrl) { console.warn('QR print: no data URL, aborting'); return; }
     const { asignado, equipo: eqData } = buildLabelLines(equipo, empleadoNombre);
     const tipo = equipo.tipo === 'tablet' ? 'Tablet' : 'Scanner';
     const html = `<!DOCTYPE html><html><head>
       <title>Etiqueta - ${equipo.serialNumber}</title>
       <style>
-        @page { size: 58mm 22mm; margin: 0; }
-        body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; width: 58mm; height: 22mm; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .label { width: 58mm; height: 22mm; box-sizing: border-box; border: 1px solid #1a365d; display: flex; flex-direction: column; background: #fff; }
-        .header { background: linear-gradient(135deg, #1a365d, #2b6cb0); color: #fff; padding: 1px 5px; display: flex; justify-content: space-between; align-items: center; font-size: 6px; letter-spacing: 0.5px; }
+        @page { size: 58mm 18mm; margin: 0; }
+        body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; width: 58mm; height: 18mm; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .label { width: 58mm; height: 18mm; box-sizing: border-box; border: 1px solid #1a365d; display: flex; flex-direction: column; background: #fff; }
+        .header { background: linear-gradient(135deg, #1a365d, #2b6cb0); color: #fff; padding: 1px 4px; display: flex; justify-content: space-between; align-items: center; font-size: 5.5px; letter-spacing: 0.4px; }
         .header .title { font-weight: 700; text-transform: uppercase; }
-        .header .badge { background: rgba(255,255,255,0.2); padding: 0 3px; border-radius: 2px; font-size: 5px; font-weight: 600; }
+        .header .badge { background: rgba(255,255,255,0.2); padding: 0 2px; border-radius: 2px; font-size: 4.5px; font-weight: 600; }
         .body { flex: 1; display: flex; min-height: 0; }
-        .info { flex: 1; padding: 1px 4px 0; display: flex; flex-direction: column; gap: 0; justify-content: flex-start; }
-        .section-label { font-size: 4.5px; font-weight: 700; color: #2b6cb0; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1.2; }
-        .row { display: flex; font-size: 5px; line-height: 1.2; }
-        .row .lbl { color: #718096; min-width: 22px; font-weight: 500; }
+        .info { padding: 1px 2px 0 4px; display: flex; flex-direction: column; gap: 0; justify-content: flex-start; }
+        .section-label { font-size: 4px; font-weight: 700; color: #2b6cb0; text-transform: uppercase; letter-spacing: 0.2px; line-height: 1.15; }
+        .row { display: flex; font-size: 4.5px; line-height: 1.15; }
+        .row .lbl { color: #718096; min-width: 20px; font-weight: 500; }
         .row .val { color: #1a202c; font-weight: 600; }
-        .qr-side { width: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1px 3px; border-left: 1px solid #e2e8f0; }
-        .qr-side img { width: 20px; height: 20px; display: block; }
-        .qr-side .hint { font-size: 3px; color: #a0aec0; line-height: 1; }
-        .footer { border-top: 1px solid #e2e8f0; padding: 0.5px 5px; font-size: 4px; color: #a0aec0; display: flex; justify-content: space-between; }
+        .qr-side { width: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1px 3px; border-left: 1px solid #e2e8f0; flex-shrink: 0; }
+        .qr-side img { width: 18px; height: 18px; display: block; }
+        .qr-side .hint { font-size: 2.5px; color: #a0aec0; line-height: 1; }
+        .footer { border-top: 1px solid #e2e8f0; padding: 0.5px 4px; font-size: 3.5px; color: #a0aec0; display: flex; justify-content: space-between; }
         @media print { body { margin: 0; padding: 0; } }
       </style></head><body>
       <div class="label">
@@ -140,7 +144,7 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
             ${eqData.map(r => `<div class="row"><span class="lbl">${r.label}:</span><span class="val">${r.value}</span></div>`).join('')}
           </div>
           <div class="qr-side">
-            <img src="${dataUrl}" alt="QR" />
+            <img src="${dataUrl}" alt="QR" id="qr-img" onerror="console.warn('QR img load error')" />
             <span class="hint">Escanear</span>
           </div>
         </div>
@@ -154,7 +158,7 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
     iframe.style.cssText = 'position:fixed;right:-9999px;bottom:-9999px;width:1px;height:1px;border:none';
     document.body.appendChild(iframe);
     const win = iframe.contentWindow;
-    if (!win) return;
+    if (!win) { console.warn('QR print: no iframe contentWindow'); return; }
     const doc = win.document;
     doc.open();
     doc.write(html);
@@ -163,16 +167,38 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
       if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
       window.focus();
     };
-    const doPrint = () => {
-      if (!win) return;
+    const img = win.document.getElementById('qr-img') as HTMLImageElement | null;
+    if (img) {
+      img.onload = () => {
+        console.log('QR print: image loaded, printing');
+        win.print();
+        win.addEventListener('afterprint', cleanup, { once: true });
+        setTimeout(cleanup, 2000);
+      };
+      img.onerror = () => {
+        console.warn('QR print: image error, printing anyway');
+        win.print();
+        win.addEventListener('afterprint', cleanup, { once: true });
+        setTimeout(cleanup, 2000);
+      };
+      if (img.complete) {
+        if (img.naturalWidth > 0) {
+          console.log('QR print: image already complete, printing');
+          win.print();
+          win.addEventListener('afterprint', cleanup, { once: true });
+          setTimeout(cleanup, 2000);
+        } else {
+          console.warn('QR print: image complete but 0 width');
+          win.print();
+          win.addEventListener('afterprint', cleanup, { once: true });
+          setTimeout(cleanup, 2000);
+        }
+      }
+    } else {
+      console.warn('QR print: no img element found, printing anyway');
       win.print();
       win.addEventListener('afterprint', cleanup, { once: true });
       setTimeout(cleanup, 2000);
-    };
-    if (win.document.readyState === 'complete') {
-      doPrint();
-    } else {
-      iframe.onload = doPrint;
     }
   };
 
