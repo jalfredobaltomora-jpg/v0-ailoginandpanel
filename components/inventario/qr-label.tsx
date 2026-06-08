@@ -113,22 +113,21 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
     const html = `<!DOCTYPE html><html><head>
       <title>Etiqueta - ${equipo.serialNumber}</title>
       <style>
-        @page { size: 58mm 17mm; margin: 0; }
-        body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; width: 58mm; height: 17mm; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .label { width: 58mm; height: 17mm; box-sizing: border-box; border: 1px solid #1a365d; display: flex; flex-direction: column; background: #fff; }
-        .header { background: linear-gradient(135deg, #1a365d, #2b6cb0); color: #fff; padding: 1px 4px; display: flex; justify-content: space-between; align-items: center; font-size: 5.5px; letter-spacing: 0.4px; }
+        @page { size: 58mm 15mm; margin: 0; }
+        body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; width: 58mm; height: 15mm; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .label { width: 58mm; height: 15mm; box-sizing: border-box; border: 1px solid #1a365d; display: flex; flex-direction: column; background: #fff; }
+        .header { background: linear-gradient(135deg, #1a365d, #2b6cb0); color: #fff; padding: 0.5px 4px; display: flex; justify-content: space-between; align-items: center; font-size: 5px; letter-spacing: 0.3px; }
         .header .title { font-weight: 700; text-transform: uppercase; }
-        .header .badge { background: rgba(255,255,255,0.2); padding: 0 2px; border-radius: 2px; font-size: 4.5px; font-weight: 600; }
+        .header .badge { background: rgba(255,255,255,0.2); padding: 0 2px; border-radius: 2px; font-size: 4px; font-weight: 600; }
         .body { flex: 1; display: flex; min-height: 0; }
-        .info { padding: 1px 0 0 4px; display: flex; flex-direction: column; gap: 0; justify-content: flex-start; }
-        .section-label { font-size: 4px; font-weight: 700; color: #2b6cb0; text-transform: uppercase; letter-spacing: 0.2px; line-height: 1.1; }
-        .row { display: flex; font-size: 4.5px; line-height: 1.1; }
-        .row .lbl { color: #718096; min-width: 20px; font-weight: 500; }
+        .info { padding: 0.5px 0 0 3px; display: flex; flex-direction: column; gap: 0; justify-content: flex-start; }
+        .section-label { font-size: 3.5px; font-weight: 700; color: #2b6cb0; text-transform: uppercase; letter-spacing: 0.1px; line-height: 1; }
+        .row { display: flex; font-size: 4px; line-height: 1; }
+        .row .lbl { color: #718096; min-width: 18px; font-weight: 500; }
         .row .val { color: #1a202c; font-weight: 600; }
-        .qr-side { width: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1px 0 1px 1px; flex-shrink: 0; }
-        .qr-side img { width: 22px; height: 22px; display: block; }
-        .qr-side .hint { font-size: 2.5px; color: #a0aec0; line-height: 1; }
-        .footer { border-top: 1px solid #e2e8f0; padding: 0.5px 4px; font-size: 3.5px; color: #a0aec0; display: flex; justify-content: space-between; }
+        .qr-side { width: 20px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; flex-shrink: 0; }
+        .qr-side img { width: 20px; height: 20px; display: block; }
+        .footer { padding: 0 3px; font-size: 3.5px; color: #a0aec0; display: flex; justify-content: space-between; }
         @media print { body { margin: 0; padding: 0; } }
       </style></head><body>
       <div class="label">
@@ -145,7 +144,6 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
           </div>
           <div class="qr-side">
             <img src="${dataUrl}" alt="QR" id="qr-img" onerror="console.warn('QR img load error')" />
-            <span class="hint">Escanear</span>
           </div>
         </div>
         <div class="footer">
