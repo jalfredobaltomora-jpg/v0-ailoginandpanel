@@ -132,18 +132,24 @@ export function FloatingAI() {
     onListeningChange: setIsListening,
   });
 
+  // Unlock speechSynthesis on first user gesture (required by Chrome mobile)
+  const unlockedRef = useRef(false);
+  const unlockSpeech = useCallback(() => {
+    if (unlockedRef.current) return;
+    if (!window.speechSynthesis) return;
+    unlockedRef.current = true;
+    try {
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      window.speechSynthesis.speak(u);
+    } catch {}
+  }, []);
+
   // Greeting
   const greetedRef = useRef(false);
   useEffect(() => {
-    if (!isChatOpen) {
-      console.log('JAB: chat closed, greeting skipped');
-      return;
-    }
-    if (greetedRef.current) {
-      console.log('JAB: already greeted');
-      return;
-    }
-    console.log('JAB: showing greeting');
+    if (!isChatOpen) return;
+    if (greetedRef.current) return;
     greetedRef.current = true;
     const hours = new Date().getHours();
     const greeting = hours >= 6 && hours < 12 ? (lang === 'es' ? 'Buenos días' : 'Good morning')
@@ -151,12 +157,13 @@ export function FloatingAI() {
       : (lang === 'es' ? 'Buenas noches' : 'Good evening');
 
     const intro = lang === 'es'
-      ? `${greeting} ${userName}! 👋\n\nSoy JAB, tu asistente inteligente 🤖\n\nPuedo ayudarte con:\n✨ Navegación del sistema\n🔍 Búsquedas en Google\n🎵 Reproducción de música\n⚙️ Comandos del sistema\n💬 Conversación natural\n\nDigitaliza "jab help" para más info`
-      : `${greeting} ${userName}! 👋\n\nI'm JAB, your intelligent assistant 🤖\n\nI can help with:\n✨ System navigation\n🔍 Google search\n🎵 Music playback\n⚙️ System commands\n💬 Natural conversation\n\nType "jab help" for more info`;
+      ? `${greeting} ${userName}! 👋\n\nSoy JAB, tu asistente inteligente 🤖`
+      : `${greeting} ${userName}! 👋\n\nI'm JAB, your intelligent assistant 🤖`;
 
     setMessages([{ role: 'assistant', content: intro, timestamp: Date.now() }]);
-    console.log('JAB: greeting set, messages length:', 1);
-  }, [isChatOpen, lang, userName]);
+    // Speak greeting after a short delay to allow speechSynthesis to initialize
+    setTimeout(() => speak(intro), 300);
+  }, [isChatOpen, lang, userName, speak]);
 
   const speak = useCallback(
     (text: string, cb?: () => void) => {
@@ -354,7 +361,7 @@ export function FloatingAI() {
               bottom: isMobile ? '1rem' : '2rem',
               filter: 'drop-shadow(0 8px 16px rgba(6, 182, 212, 0.3))',
             }}
-            onClick={() => setIsChatOpen(!isChatOpen)}
+            onClick={() => { unlockSpeech(); setIsChatOpen(!isChatOpen); }}
           >
             <div className="relative">
               <EVARobotComponent
