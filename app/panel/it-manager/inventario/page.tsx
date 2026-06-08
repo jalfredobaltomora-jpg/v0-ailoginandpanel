@@ -180,11 +180,16 @@ export default function InventarioPage() {
 
   const handleDeleteAudit = async (audit: typeof allAudits[0]) => {
     if (!confirm(`Eliminar esta auditoria de ${audit.serialNumber} (${audit.historial.mes})?`)) return;
-    const { updateEquipoInventario } = await import('@/lib/firebase');
-    const eq = equipos.find(e => e.id === audit.equipoId);
-    if (!eq) return;
-    const historial = (eq.historial || []).filter(h => h.timestamp !== audit.historial.timestamp);
-    await updateEquipoInventario(audit.equipoId, { historial });
+    try {
+      const { updateEquipoInventario } = await import('@/lib/firebase');
+      const eq = equipos.find(e => e.id === audit.equipoId);
+      if (!eq) { alert('No se encontro el equipo en la lista local. Intenta recargar la pagina.'); return; }
+      const historial = (eq.historial || []).filter(h => h.timestamp !== audit.historial.timestamp);
+      const ok = await updateEquipoInventario(audit.equipoId, { historial });
+      if (!ok) alert('Error al eliminar la auditoria en Firebase. Intenta de nuevo.');
+    } catch (err) {
+      alert('Error inesperado: ' + (err instanceof Error ? err.message : 'Error desconocido'));
+    }
   };
 
   const handleCloseAuditModal = () => {

@@ -773,8 +773,9 @@ export async function deleteEquipoInventario(id: string): Promise<boolean> {
 export function listenToEquiposInventario(callback: (equipos: EquipoInventario[]) => void): () => void {
   const r = ref(db, 'equipos-inventario');
   return onValue(r, (snap) => {
-    const raw: Record<string, EquipoInventario> = snap.val() || {};
-    callback(Object.values(raw));
+    const raw: Record<string, any> = snap.val() || {};
+    const list: EquipoInventario[] = Object.keys(raw).map(key => ({ ...raw[key], id: raw[key].id || key }));
+    callback(list);
   });
 }
 
