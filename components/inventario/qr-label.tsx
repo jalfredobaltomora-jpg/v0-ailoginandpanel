@@ -73,7 +73,6 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
         height: size,
         colorDark: '#000000',
         colorLight: '#ffffff',
-        typeNumber: 0,
         correctLevel: QRCode.CorrectLevel?.L || 1,
       });
     } catch (e) {
