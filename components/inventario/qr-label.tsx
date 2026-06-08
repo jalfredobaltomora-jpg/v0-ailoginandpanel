@@ -120,7 +120,7 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
         .header .title { font-weight: 700; text-transform: uppercase; }
         .header .badge { background: rgba(255,255,255,0.2); padding: 0 2px; border-radius: 2px; font-size: 4px; font-weight: 600; }
         .body { flex: 1; display: flex; min-height: 0; }
-        .info { padding: 0.5px 0 0 3px; display: flex; flex-direction: column; gap: 0; justify-content: flex-start; }
+        .info { flex: 1; padding: 0.5px 0 0 3px; display: flex; flex-direction: column; gap: 0; justify-content: flex-start; }
         .section-label { font-size: 3.5px; font-weight: 700; color: #2b6cb0; text-transform: uppercase; letter-spacing: 0.1px; line-height: 1; }
         .row { display: flex; font-size: 4px; line-height: 1; }
         .row .lbl { color: #718096; min-width: 18px; font-weight: 500; }
