@@ -34,21 +34,20 @@ function truncate(v: string | undefined | null, max: number): string {
 }
 
 function buildQRLines(equipo: EquipoInventario, empleadoNombre: string): string {
-  const accs = Object.entries(equipo.accesorios || {})
-    .filter(([k, v]) => v && accesorioLabelsQR[k])
-    .map(([k]) => accesorioLabelsQR[k])
-    .join(', ');
+  const emp = (empleadoNombre || '-').slice(0, 40).replace(/[^ -~]/g, '');
+  const cod = (equipo.empleadoAsignado || '-').slice(0, 15);
+  const tipo = equipo.tipo === 'tablet' ? 'T' : 'S';
+  const marca = (equipo.marca || '-').slice(0, 20).replace(/[^ -~]/g, '');
+  const modelo = (equipo.modelo || '-').slice(0, 20).replace(/[^ -~]/g, '');
+  const serie = equipo.serialNumber.slice(0, 30);
+  const estado = (equipo.estado || '-').slice(0, 60).replace(/[^ -~]/g, '');
+  const mes = (equipo.mesInventario || '-').slice(0, 10);
   return [
-    `Emp: ${truncate(empleadoNombre, 80) || 'Sin asignar'}`,
-    `Cod: ${equipo.empleadoAsignado || '-'}`,
-    `Tipo: ${equipo.tipo === 'tablet' ? 'Tablet' : 'Scanner'}`,
-    `Marca: ${truncate(equipo.marca, 30)}`,
-    `Modelo: ${truncate(equipo.modelo, 40)}`,
-    `Serie: ${equipo.serialNumber}`,
-    `Est: ${truncate(equipo.estado, 200)}`,
-    `Acc: ${truncate(accs, 150) || 'Ninguno'}`,
-    `Asig: ${truncate(equipo.fechaAsignacion, 20)}`,
-    `Mes: ${truncate(equipo.mesInventario, 30)}`,
+    `${serie}`,
+    `${cod}|${emp}`,
+    `${tipo}|${marca} ${modelo}`,
+    `${estado}`,
+    `${mes}`,
   ].join('\n');
 }
 
