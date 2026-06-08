@@ -145,26 +145,6 @@ export function FloatingAI() {
     } catch {}
   }, []);
 
-  // Greeting
-  const greetedRef = useRef(false);
-  useEffect(() => {
-    if (!isChatOpen) return;
-    if (greetedRef.current) return;
-    greetedRef.current = true;
-    const hours = new Date().getHours();
-    const greeting = hours >= 6 && hours < 12 ? (lang === 'es' ? 'Buenos días' : 'Good morning')
-      : hours >= 12 && hours < 18 ? (lang === 'es' ? 'Buenas tardes' : 'Good afternoon')
-      : (lang === 'es' ? 'Buenas noches' : 'Good evening');
-
-    const intro = lang === 'es'
-      ? `${greeting} ${userName}! 👋\n\nSoy JAB, tu asistente inteligente 🤖`
-      : `${greeting} ${userName}! 👋\n\nI'm JAB, your intelligent assistant 🤖`;
-
-    setMessages([{ role: 'assistant', content: intro, timestamp: Date.now() }]);
-    // Speak greeting after a short delay to allow speechSynthesis to initialize
-    setTimeout(() => speak(intro), 300);
-  }, [isChatOpen, lang, userName, speak]);
-
   const speak = useCallback(
     (text: string, cb?: () => void) => {
       if (!soundEnabled || !window.speechSynthesis) {
@@ -196,6 +176,25 @@ export function FloatingAI() {
     },
     [lang, soundEnabled]
   );
+
+  // Greeting
+  const greetedRef = useRef(false);
+  useEffect(() => {
+    if (!isChatOpen) return;
+    if (greetedRef.current) return;
+    greetedRef.current = true;
+    const hours = new Date().getHours();
+    const greeting = hours >= 6 && hours < 12 ? (lang === 'es' ? 'Buenos días' : 'Good morning')
+      : hours >= 12 && hours < 18 ? (lang === 'es' ? 'Buenas tardes' : 'Good afternoon')
+      : (lang === 'es' ? 'Buenas noches' : 'Good evening');
+
+    const intro = lang === 'es'
+      ? `${greeting} ${userName}! 👋\n\nSoy JAB, tu asistente inteligente 🤖`
+      : `${greeting} ${userName}! 👋\n\nI'm JAB, your intelligent assistant 🤖`;
+
+    setMessages([{ role: 'assistant', content: intro, timestamp: Date.now() }]);
+    setTimeout(() => speak(intro), 300);
+  }, [isChatOpen, lang, userName, speak]);
 
   const addMessage = useCallback((role: 'user' | 'assistant', content: string) => {
     setMessages((prev) => [...prev, { role, content, timestamp: Date.now() }]);
