@@ -6,6 +6,15 @@ import { Button } from '@/components/ui/button';
 import type { EquipoInventario } from '@/lib/firebase';
 import QRCode from '@/lib/qrcode-engine';
 
+// The bundled qrcode-engine has a buggy makeImage() that crashes after draw().
+// The canvas is already drawn by draw(), so makeImage is unnecessary.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const QRCodeAny = QRCode as any;
+if (QRCodeAny.prototype?.makeImage) {
+  QRCodeAny.prototype.makeImage = function () {};
+}
+
+
 interface QRLabelProps {
   equipo: EquipoInventario;
   empleadoNombre: string;
@@ -76,8 +85,11 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
         correctLevel: QRCode.CorrectLevel?.L || 1,
       });
     } catch (e) {
-      console.error('QR generation error:', e);
-      setQrError(true);
+      console.warn('QR non-fatal error (canvas may still be drawn):', e);
+      // If the canvas was drawn before the error, keep it visible
+      if (!container.querySelector('canvas')) {
+        setQrError(true);
+      }
     }
   }, [equipo, empleadoNombre, size]);
 
