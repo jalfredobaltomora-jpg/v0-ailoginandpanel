@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { X, Loader2, Camera, Search, CheckSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { updateEquipoInventario, getEquipoInventario, type EquipoInventario, typ
 interface MonthlyAuditModalProps {
   equipos: EquipoInventario[];
   empleadosMap: Record<string, string>;
+  editAudit?: { equipoId: string; historial: HistorialMensual } | null;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -55,7 +56,7 @@ const accesorioLabels: Record<string, string> = {
   cableOTG: 'Cable OTG',
 };
 
-export function MonthlyAuditModal({ equipos, empleadosMap, onClose, onSaved }: MonthlyAuditModalProps) {
+export function MonthlyAuditModal({ equipos, empleadosMap, editAudit, onClose, onSaved }: MonthlyAuditModalProps) {
   const [searchSerie, setSearchSerie] = useState('');
   const [selectedEquipo, setSelectedEquipo] = useState<EquipoInventario | null>(null);
   const [loadingSerie, setLoadingSerie] = useState(false);
@@ -69,6 +70,24 @@ export function MonthlyAuditModal({ equipos, empleadosMap, onClose, onSaved }: M
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+
+  // Auto-select equipo when editing an existing audit
+  useEffect(() => {
+    if (!editAudit) return;
+    const eq = equipos.find(e => e.id === editAudit.equipoId);
+    if (eq) {
+      setSelectedEquipo(eq);
+      setSearchSerie(eq.serialNumber);
+      setEditData({ ...eq });
+      setComentarios(editAudit.historial.comentarios || '');
+      setFirmaAsignado(editAudit.historial.firmaAsignado || '');
+      setFirmaAuditor(editAudit.historial.firmaAuditor || '');
+      setAprobado(editAudit.historial.scoreJAB >= 80);
+      if (editAudit.historial.fotos) {
+        setFotos({ ...defaultFotos, ...editAudit.historial.fotos });
+      }
+    }
+  }, [editAudit, equipos]);
 
   // Search equipment locally first, then Firebase
   const searchResults = useMemo(() => {
@@ -110,19 +129,29 @@ export function MonthlyAuditModal({ equipos, empleadosMap, onClose, onSaved }: M
     setSaving(true);
     setError('');
 
-    const mes = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const mes = editAudit
+      ? editAudit.historial.mes
+      : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+
     const entry: HistorialMensual = {
       mes,
       fotos: fotos as EquipoInventario['fotos'],
       comentarios: comentarios || 'Auditoria de inventario',
       scoreJAB: aprobado ? 100 : -1,
-      timestamp: Date.now(),
+      timestamp: editAudit ? editAudit.historial.timestamp : Date.now(),
       ...(firmaAsignado ? { firmaAsignado } : {}),
       ...(firmaAuditor ? { firmaAuditor } : {}),
     };
 
+    let historial = selectedEquipo.historial || [];
+    if (editAudit) {
+      historial = historial.map(h => h.timestamp === editAudit.historial.timestamp ? entry : h);
+    } else {
+      historial = [...historial, entry];
+    }
+
     const updates: Partial<EquipoInventario> = {
-      historial: [...(selectedEquipo.historial || []), entry],
+      historial,
     };
 
     if (editing) {
@@ -149,7 +178,7 @@ export function MonthlyAuditModal({ equipos, empleadosMap, onClose, onSaved }: M
         <CardHeader className="flex-row items-center justify-between border-b border-border sticky top-0 bg-card z-10">
           <CardTitle className="flex items-center gap-2 text-primary">
             <CheckSquare className="h-5 w-5" />
-            Auditoria de Inventario
+            {editAudit ? 'Editar Auditoria de Inventario' : 'Auditoria de Inventario'}
           </CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-5 w-5" />
@@ -283,7 +312,7 @@ export function MonthlyAuditModal({ equipos, empleadosMap, onClose, onSaved }: M
                 <Button variant="outline" onClick={onClose}>Cancelar</Button>
                 <Button onClick={handleSave} disabled={saving} className="bg-primary text-primary-foreground">
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Guardar Auditoria
+                  {editAudit ? 'Actualizar Auditoria' : 'Guardar Auditoria'}
                 </Button>
               </div>
             </>

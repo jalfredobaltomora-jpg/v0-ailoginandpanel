@@ -7,6 +7,7 @@ import { ArrowLeft, Tablet, Scan, Search, Plus, Trash2, Camera, ClipboardCheck, 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStoredUser } from '@/lib/auth-store';
 import type { EquipoInventario, UsuarioIT } from '@/lib/firebase';
 import { tienePermiso } from '@/lib/permisos';
@@ -28,7 +29,9 @@ export default function InventarioPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [photoGallery, setPhotoGallery] = useState<{ photos: { url: string; label: string }[]; index: number } | null>(null);
   const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [editAudit, setEditAudit] = useState<{ equipoId: string; historial: any } | null>(null);
   const [viewSignature, setViewSignature] = useState<string | null>(null);
+  const [filterMes, setFilterMes] = useState('');
 
   useEffect(() => {
     import('@/lib/inventory-reminder').then(({ scheduleReminderCheck }) => {
@@ -120,18 +123,31 @@ export default function InventarioPage() {
     return audits;
   }, [equipos, empleadosMap]);
 
+  const uniqueMeses = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of allAudits) {
+      if (a.historial.mes) set.add(a.historial.mes);
+    }
+    return Array.from(set).sort().reverse();
+  }, [allAudits]);
+
+  const filteredAudits = useMemo(() => {
+    if (!filterMes) return allAudits;
+    return allAudits.filter(a => a.historial.mes === filterMes);
+  }, [allAudits, filterMes]);
+
   const auditsGrouped = useMemo(() => {
     const groups: { label: string; tipos: { label: string; audits: typeof allAudits }[] }[] = [
       { label: 'Equipo Asignado', tipos: [{ label: 'Tablet', audits: [] }, { label: 'Scanner', audits: [] }] },
       { label: 'Equipo No asignado', tipos: [{ label: 'Tablet', audits: [] }, { label: 'Scanner', audits: [] }] },
     ];
-    for (const a of allAudits) {
+    for (const a of filteredAudits) {
       const grupo = a.estaAsignado ? groups[0] : groups[1];
       const tipo = grupo.tipos.find(t => t.label === a.tipo);
       if (tipo) tipo.audits.push(a);
     }
     return groups;
-  }, [allAudits]);
+  }, [filteredAudits]);
 
   const handleCreateNew = () => {
     setSelectedEquipo(null);
@@ -157,6 +173,25 @@ export default function InventarioPage() {
     }
   };
 
+  const handleEditAudit = (audit: typeof allAudits[0]) => {
+    setEditAudit({ equipoId: audit.equipoId, historial: audit.historial });
+    setAuditModalOpen(true);
+  };
+
+  const handleDeleteAudit = async (audit: typeof allAudits[0]) => {
+    if (!confirm(`Eliminar esta auditoria de ${audit.serialNumber} (${audit.historial.mes})?`)) return;
+    const { updateEquipoInventario } = await import('@/lib/firebase');
+    const eq = equipos.find(e => e.id === audit.equipoId);
+    if (!eq) return;
+    const historial = (eq.historial || []).filter(h => h.timestamp !== audit.historial.timestamp);
+    await updateEquipoInventario(audit.equipoId, { historial });
+  };
+
+  const handleCloseAuditModal = () => {
+    setAuditModalOpen(false);
+    setEditAudit(null);
+  };
+
   const accesorioLabels: Record<string, string> = {
     usbCable: 'Cable USB',
     chargerCube: 'Cubo Cargador',
@@ -173,7 +208,8 @@ export default function InventarioPage() {
 
   const handleGenerateReport = async () => {
     const XLSX = await import('xlsx');
-    const data = allAudits.map(a => ({
+    const source = filterMes ? filteredAudits : allAudits;
+    const data = source.map(a => ({
       Serie: a.serialNumber,
       Tipo: a.tipo,
       Empleado: a.empleadoNombre,
@@ -276,6 +312,9 @@ export default function InventarioPage() {
     const win = window.open('', '_blank');
     if (!win) return;
     const now = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+    const source = filterMes ? filteredAudits : allAudits;
+    const sourceGrouped = auditsGrouped;
+    const totalSource = source.length;
     let html = `<!DOCTYPE html><html><head><title>Reporte de Auditorias</title>
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
@@ -314,16 +353,16 @@ export default function InventarioPage() {
       <div class="report-container">
         <div class="report-header">
           <h1>REPORTE DE AUDITORIAS DE INVENTARIO</h1>
-          <p>Generado: ${now} &mdash; Total de auditorias: ${allAudits.length}</p>
+          <p>Generado: ${now} &mdash; ${filterMes ? `Filtro: ${filterMes} &mdash; ` : ''}Total de auditorias: ${totalSource}</p>
         </div>
         <div class="report-body">
           <div class="summary-row">
-            <div class="summary-card"><div class="num">${auditsGrouped[0].tipos.reduce((s, t) => s + t.audits.length, 0)}</div><div class="lbl">Equipos Asignados</div></div>
-            <div class="summary-card"><div class="num">${auditsGrouped[1].tipos.reduce((s, t) => s + t.audits.length, 0)}</div><div class="lbl">Equipos No asignados</div></div>
-            <div class="summary-card"><div class="num">${allAudits.filter(a => a.historial.scoreJAB >= 80).length}</div><div class="lbl">Aprobados (&ge;80%)</div></div>
-            <div class="summary-card"><div class="num">${allAudits.filter(a => a.historial.scoreJAB >= 0 && a.historial.scoreJAB < 80).length}</div><div class="lbl">Pendientes (&lt;80%)</div></div>
+            <div class="summary-card"><div class="num">${sourceGrouped[0].tipos.reduce((s, t) => s + t.audits.length, 0)}</div><div class="lbl">Equipos Asignados</div></div>
+            <div class="summary-card"><div class="num">${sourceGrouped[1].tipos.reduce((s, t) => s + t.audits.length, 0)}</div><div class="lbl">Equipos No asignados</div></div>
+            <div class="summary-card"><div class="num">${source.filter(a => a.historial.scoreJAB >= 80).length}</div><div class="lbl">Aprobados (&ge;80%)</div></div>
+            <div class="summary-card"><div class="num">${source.filter(a => a.historial.scoreJAB >= 0 && a.historial.scoreJAB < 80).length}</div><div class="lbl">Pendientes (&lt;80%)</div></div>
           </div>`;
-    for (const grupo of auditsGrouped) {
+    for (const grupo of sourceGrouped) {
       const totalGrupo = grupo.tipos.reduce((s, t) => s + t.audits.length, 0);
       if (totalGrupo === 0) continue;
       html += `<div class="section-title">${grupo.label}</div>`;
@@ -392,16 +431,39 @@ export default function InventarioPage() {
                 </div>
               )}
               {activeTab === 'inspection' && (
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="border-border" onClick={handlePrintReport}>
-                    <Printer className="mr-2 h-4 w-4" /> Imprimir
-                  </Button>
-                  <Button variant="outline" size="sm" className="border-border" onClick={handleGenerateReport}>
-                    <FileSpreadsheet className="mr-2 h-4 w-4" /> Generar Reporte
-                  </Button>
-                  <Button onClick={() => setAuditModalOpen(true)} className="bg-primary text-primary-foreground">
-                    <Plus className="mr-2 h-4 w-4" /> Agregar Auditoria de inventario
-                  </Button>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">Filtrar por mes:</span>
+                    <Select value={filterMes} onValueChange={setFilterMes}>
+                      <SelectTrigger className="h-8 w-36 border-border bg-input text-xs">
+                        <SelectValue placeholder="Todos los meses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value=" " className="text-xs">Todos los meses</SelectItem>
+                          {uniqueMeses.map(m => (
+                            <SelectItem key={m} value={m} className="text-xs">{m}</SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    {filterMes && (
+                      <Button variant="ghost" size="sm" onClick={() => setFilterMes('')} className="h-8 px-2 text-xs text-muted-foreground">
+                        Limpiar
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex gap-2 ml-auto">
+                    <Button variant="outline" size="sm" className="border-border" onClick={handlePrintReport}>
+                      <Printer className="mr-2 h-4 w-4" /> Imprimir
+                    </Button>
+                    <Button variant="outline" size="sm" className="border-border" onClick={handleGenerateReport}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" /> Generar Reporte
+                    </Button>
+                    <Button onClick={() => setAuditModalOpen(true)} className="bg-primary text-primary-foreground">
+                      <Plus className="mr-2 h-4 w-4" /> Agregar Auditoria de inventario
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -525,6 +587,7 @@ export default function InventarioPage() {
                                       <th className="p-2 text-left font-medium text-primary text-[11px]">Comentarios</th>
                                       <th className="p-2 text-left font-medium text-primary text-[11px]">Fecha</th>
                                       <th className="p-2 text-left font-medium text-primary text-[11px]">Firmas</th>
+                                      <th className="p-2 text-center font-medium text-primary text-[11px]">Acciones</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -561,6 +624,20 @@ export default function InventarioPage() {
                                             ) : null}
                                           </div>
                                         </td>
+                                        <td className="p-2">
+                                          <div className="flex items-center justify-center gap-1">
+                                            <button onClick={() => handleEditAudit(a)}
+                                              className="rounded bg-amber-500/10 px-1.5 py-1 text-[10px] text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
+                                              title="Editar auditoria">
+                                              <Edit className="h-3 w-3" />
+                                            </button>
+                                            <button onClick={() => handleDeleteAudit(a)}
+                                              className="rounded bg-red-500/10 px-1.5 py-1 text-[10px] text-red-400 hover:bg-red-500/20 border border-red-500/20"
+                                              title="Eliminar auditoria">
+                                              <Trash2 className="h-3 w-3" />
+                                            </button>
+                                          </div>
+                                        </td>
                                       </tr>
                                     ))}
                                   </tbody>
@@ -587,7 +664,8 @@ export default function InventarioPage() {
         <MonthlyAuditModal
           equipos={equipos}
           empleadosMap={empleadosMap}
-          onClose={() => setAuditModalOpen(false)}
+          editAudit={editAudit}
+          onClose={handleCloseAuditModal}
           onSaved={() => {}}
         />
       )}
