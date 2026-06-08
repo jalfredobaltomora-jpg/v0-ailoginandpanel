@@ -420,7 +420,7 @@ export default function QAReportsPage() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-foreground">
-                {oqlTab === 'inline' ? 'QA - OQL % SAE - Indicator' : oqlTab === 'defect' ? 'In Line Defect' : 'Catálogo de defectos'}
+                {oqlTab === 'catalog' ? 'Catálogo de defectos' : 'QA - OQL % SAE - Indicator'}
               </h3>
               <div className="flex gap-2">
                 {(oqlTab === 'inline' || oqlTab === 'defect') && puedeVer(currentUser, 'qa_analytics') && (
@@ -449,7 +449,7 @@ export default function QAReportsPage() {
                       <Upload className="mr-2 h-4 w-4" />{importingDefect ? 'Importando...' : 'Importar Excel'}
                     </Button>
                     <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => { setEditingDefectRecord(null); setInLineDefectOpen(true); }}>
-                      + Nuevo Defecto
+                      + Nuevo Registro
                     </Button>
                   </div>
                 )}
