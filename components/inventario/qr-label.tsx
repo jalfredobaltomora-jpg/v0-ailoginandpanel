@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { Printer, Loader2 } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { EquipoInventario } from '@/lib/firebase';
 import QRCode from '@/lib/qrcode-engine';
@@ -19,24 +19,27 @@ const accesorioLabelsQR: Record<string, string> = {
   cableOTG: 'Cable OTG',
 };
 
+function truncate(v: string | undefined | null, max: number): string {
+  if (!v) return '-';
+  return v.length > max ? v.slice(0, max) + '…' : v;
+}
+
 function buildQRLines(equipo: EquipoInventario, empleadoNombre: string): string {
   const accs = Object.entries(equipo.accesorios || {})
     .filter(([k, v]) => v && accesorioLabelsQR[k])
     .map(([k]) => accesorioLabelsQR[k])
     .join(', ');
   return [
-    `=== INVENTARIO ===`,
-    ``,
-    `Empleado: ${empleadoNombre || 'Sin asignar'}`,
-    `Codigo: ${equipo.empleadoAsignado || '-'}`,
-    `Equipo: ${equipo.tipo === 'tablet' ? 'Tablet' : 'Scanner'}`,
-    `Marca: ${equipo.marca || '-'}`,
-    `Modelo: ${equipo.modelo || '-'}`,
+    `Emp: ${truncate(empleadoNombre, 80) || 'Sin asignar'}`,
+    `Cod: ${equipo.empleadoAsignado || '-'}`,
+    `Tipo: ${equipo.tipo === 'tablet' ? 'Tablet' : 'Scanner'}`,
+    `Marca: ${truncate(equipo.marca, 30)}`,
+    `Modelo: ${truncate(equipo.modelo, 40)}`,
     `Serie: ${equipo.serialNumber}`,
-    `Estado: ${equipo.estado || 'Sin comentarios'}`,
-    `Accesorios: ${accs || 'Ninguno'}`,
-    `Asignacion: ${equipo.fechaAsignacion}`,
-    `Mes Inventario: ${equipo.mesInventario}`,
+    `Est: ${truncate(equipo.estado, 200)}`,
+    `Acc: ${truncate(accs, 150) || 'Ninguno'}`,
+    `Asig: ${truncate(equipo.fechaAsignacion, 20)}`,
+    `Mes: ${truncate(equipo.mesInventario, 30)}`,
   ].join('\n');
 }
 
@@ -54,14 +57,12 @@ function buildLabelLines(equipo: EquipoInventario, empleadoNombre: string): stri
 
 export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [qrReady, setQrReady] = useState(false);
   const [qrError, setQrError] = useState(false);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    setQrReady(false);
     setQrError(false);
     container.innerHTML = '';
 
@@ -72,9 +73,9 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
         height: size,
         colorDark: '#000000',
         colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel?.M || 0,
+        typeNumber: 0,
+        correctLevel: QRCode.CorrectLevel?.L || 1,
       });
-      setQrReady(true);
     } catch (e) {
       console.error('QR generation error:', e);
       setQrError(true);
@@ -142,12 +143,9 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
         <div className="flex items-center justify-center rounded bg-destructive/10 text-destructive text-[10px] px-1" style={{width:size,height:size}}>
           Error QR
         </div>
-      ) : !qrReady ? (
-        <div className="flex items-center justify-center" style={{width:size,height:size}}>
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-        </div>
-      ) : null}
-      <div ref={containerRef} className={qrReady ? '' : 'hidden'} />
+      ) : (
+        <div ref={containerRef} className="flex items-center justify-center" style={{width:size,height:size}} />
+      )}
       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handlePrint} title="Imprimir etiqueta">
         <Printer className="h-3 w-3" />
       </Button>
