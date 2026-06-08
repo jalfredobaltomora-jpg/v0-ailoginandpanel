@@ -6,7 +6,7 @@
  * and OLED eye visor for rich expressions
  */
 
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 
 export type EVAExpression = 'idle' | 'happy' | 'thinking' | 'surprised' | 'curious' | 'concerned' | 'scanning' | 'processing';
 
@@ -504,13 +504,15 @@ export function EVARobotComponent(props: EVADesignProps) {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>(0);
+  const [canvasFailed, setCanvasFailed] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) { setCanvasFailed(true); return; }
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) { setCanvasFailed(true); console.error('JAB canvas: getContext failed'); return; }
 
+    setCanvasFailed(false);
     canvas.width = 130 * scale;
     canvas.height = 160 * scale;
 
@@ -519,41 +521,46 @@ export function EVARobotComponent(props: EVADesignProps) {
     let shouldBlink = false;
 
     const render = () => {
-      time += 0.016;
-      const w = canvas.width;
-      const h = canvas.height;
+      try {
+        time += 0.016;
+        const w = canvas.width;
+        const h = canvas.height;
 
-      ctx.clearRect(0, 0, w, h);
-      ctx.save();
-      ctx.translate(w / 2, h / 2);
+        ctx.clearRect(0, 0, w, h);
+        ctx.save();
+        ctx.translate(w / 2, h / 2);
 
-      // Blink logic
-      blinkCounter++;
-      if (blinkCounter > 180 + Math.random() * 120) {
-        shouldBlink = blinkCounter < 185 + Math.random() * 120;
-        if (blinkCounter > 200) blinkCounter = 0;
+        blinkCounter++;
+        if (blinkCounter > 180 + Math.random() * 120) {
+          shouldBlink = blinkCounter < 185 + Math.random() * 120;
+          if (blinkCounter > 200) blinkCounter = 0;
+        }
+
+        drawEVARobot(ctx, w, h, expression, time, shouldBlink, isListening, isSpeaking, scale);
+
+        ctx.restore();
+        animFrameRef.current = requestAnimationFrame(render);
+      } catch (e) {
+        console.error('JAB canvas render error:', e);
+        setCanvasFailed(true);
       }
-
-      drawEVARobot(
-        ctx,
-        w,
-        h,
-        expression,
-        time,
-        shouldBlink,
-        isListening,
-        isSpeaking,
-        scale
-      );
-
-      ctx.restore();
-      animFrameRef.current = requestAnimationFrame(render);
     };
 
     animFrameRef.current = requestAnimationFrame(render);
 
     return () => cancelAnimationFrame(animFrameRef.current);
   }, [expression, isSpeaking, isListening, scale]);
+
+  if (canvasFailed) {
+    return (
+      <div
+        className={`flex items-center justify-center ${interactive ? 'cursor-pointer' : ''}`}
+        style={{ width: `${130 * scale}px`, height: `${160 * scale}px` }}
+      >
+        <span className="text-4xl">🤖</span>
+      </div>
+    );
+  }
 
   return (
     <canvas

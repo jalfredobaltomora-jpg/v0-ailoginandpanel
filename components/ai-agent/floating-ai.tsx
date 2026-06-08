@@ -135,19 +135,27 @@ export function FloatingAI() {
   // Greeting
   const greetedRef = useRef(false);
   useEffect(() => {
-    if (isChatOpen && !greetedRef.current) {
-      greetedRef.current = true;
-      const hours = new Date().getHours();
-      const greeting = hours >= 6 && hours < 12 ? (lang === 'es' ? 'Buenos días' : 'Good morning')
-        : hours >= 12 && hours < 18 ? (lang === 'es' ? 'Buenas tardes' : 'Good afternoon')
-        : (lang === 'es' ? 'Buenas noches' : 'Good evening');
-
-      const intro = lang === 'es'
-        ? `${greeting} ${userName}! 👋\n\nSoy JAB, tu asistente inteligente 🤖\n\nPuedo ayudarte con:\n✨ Navegación del sistema\n🔍 Búsquedas en Google\n🎵 Reproducción de música\n⚙️ Comandos del sistema\n💬 Conversación natural\n\nDigitaliza "jab help" para más info`
-        : `${greeting} ${userName}! 👋\n\nI'm JAB, your intelligent assistant 🤖\n\nI can help with:\n✨ System navigation\n🔍 Google search\n🎵 Music playback\n⚙️ System commands\n💬 Natural conversation\n\nType "jab help" for more info`;
-
-      setMessages([{ role: 'assistant', content: intro, timestamp: Date.now() }]);
+    if (!isChatOpen) {
+      console.log('JAB: chat closed, greeting skipped');
+      return;
     }
+    if (greetedRef.current) {
+      console.log('JAB: already greeted');
+      return;
+    }
+    console.log('JAB: showing greeting');
+    greetedRef.current = true;
+    const hours = new Date().getHours();
+    const greeting = hours >= 6 && hours < 12 ? (lang === 'es' ? 'Buenos días' : 'Good morning')
+      : hours >= 12 && hours < 18 ? (lang === 'es' ? 'Buenas tardes' : 'Good afternoon')
+      : (lang === 'es' ? 'Buenas noches' : 'Good evening');
+
+    const intro = lang === 'es'
+      ? `${greeting} ${userName}! 👋\n\nSoy JAB, tu asistente inteligente 🤖\n\nPuedo ayudarte con:\n✨ Navegación del sistema\n🔍 Búsquedas en Google\n🎵 Reproducción de música\n⚙️ Comandos del sistema\n💬 Conversación natural\n\nDigitaliza "jab help" para más info`
+      : `${greeting} ${userName}! 👋\n\nI'm JAB, your intelligent assistant 🤖\n\nI can help with:\n✨ System navigation\n🔍 Google search\n🎵 Music playback\n⚙️ System commands\n💬 Natural conversation\n\nType "jab help" for more info`;
+
+    setMessages([{ role: 'assistant', content: intro, timestamp: Date.now() }]);
+    console.log('JAB: greeting set, messages length:', 1);
   }, [isChatOpen, lang, userName]);
 
   const speak = useCallback(
@@ -189,7 +197,8 @@ export function FloatingAI() {
   const processMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed || processingRef.current) return;
+      if (!trimmed || processingRef.current) { console.log('JAB: processMessage skipped', { trimmed, processing: processingRef.current }); return; }
+      console.log('JAB: processMessage start', trimmed);
       processingRef.current = true;
 
       addMessage('user', trimmed);
@@ -200,6 +209,7 @@ export function FloatingAI() {
       // Auto-response
       const autoResp = AUTO_RESPONSES.find(r => r.pattern.test(trimmed));
       if (autoResp) {
+        console.log('JAB: auto-response matched');
         const response = lang === 'es' ? autoResp.es : autoResp.en;
         addMessage('assistant', response);
         setExpression('happy');
@@ -213,6 +223,7 @@ export function FloatingAI() {
       try {
         const jarvisResult = await executeJARVISCommand(trimmed);
         if (jarvisResult) {
+          console.log('JAB: JARVIS command executed');
           addMessage('assistant', jarvisResult);
           setExpression('happy');
           speak(jarvisResult);
@@ -220,12 +231,14 @@ export function FloatingAI() {
           processingRef.current = false;
           return;
         }
-      } catch {}
+      } catch (e) { console.warn('JAB: JARVIS command error', e); }
 
-      // AI fallback
+      // AI API
+      console.log('JAB: calling askAI');
       try {
         const history = messages.slice(-4).map(m => ({ role: m.role, content: m.content }));
         const aiResponse = await askAI(trimmed, lang, userName, undefined, history);
+        console.log('JAB: askAI response', aiResponse?.content?.slice(0, 80));
         if (aiResponse?.content) {
           addMessage('assistant', aiResponse.content);
           setExpression('happy');
@@ -234,11 +247,13 @@ export function FloatingAI() {
           const fallback = lang === 'es'
             ? 'No entendí bien. Di "Ayuda" para ver todo lo que puedo hacer.'
             : 'I didn\'t understand. Say "Help" to see everything I can do.';
+          console.log('JAB: fallback response');
           addMessage('assistant', fallback);
           setExpression('concerned');
           speak(fallback);
         }
       } catch (error) {
+        console.error('JAB: askAI error', error);
         const errMsg = lang === 'es' ? 'Disculpa, ocurrió un error.' : 'Sorry, an error occurred.';
         addMessage('assistant', errMsg);
         setExpression('concerned');
