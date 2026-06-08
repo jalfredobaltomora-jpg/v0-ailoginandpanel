@@ -5,21 +5,21 @@ ${d}
 ${c}`),width:s,height:s,colorDark:"#000000",colorLight:"#ffffff",correctLevel:a.CorrectLevel?.L||1})}catch(t){console.warn("QR non-fatal error (canvas may still be drawn):",t),r.querySelector("canvas")||u(!0)}}},[t,e,s]),(0,r.jsxs)("div",{className:"flex flex-col items-center gap-1",onClick:t=>t.stopPropagation(),children:[h?(0,r.jsx)("div",{className:"flex items-center justify-center rounded bg-destructive/10 text-destructive text-[10px] px-1",style:{width:s,height:s},children:"Error QR"}):(0,r.jsx)("div",{ref:l,className:"flex items-center justify-center",style:{width:s,height:s}}),(0,r.jsx)(n.Button,{variant:"ghost",size:"icon",className:"h-6 w-6",onClick:()=>{let r=(()=>{let t=l.current?.querySelector("canvas");if(!t)return console.warn("QR print: no canvas found"),null;try{let e=t.toDataURL("image/png");return console.log("QR print: data URL length",e.length),e}catch(t){return console.warn("QR print: toDataURL failed",t),null}})();if(!r)return void console.warn("QR print: no data URL, aborting");let{asignado:i,equipo:o}={asignado:[{label:"Código",value:t.empleadoAsignado||"Sin asignar"},{label:"Nombre",value:e||"Sin asignar"}],equipo:[{label:"Marca",value:t.marca||"-"},{label:"Modelo",value:t.modelo||"-"},{label:"Serie",value:t.serialNumber},{label:"Fecha",value:t.mesInventario||"-"}]},n="tablet"===t.tipo?"Tablet":"Scanner",a=`<!DOCTYPE html><html><head>
       <title>Etiqueta - ${t.serialNumber}</title>
       <style>
-        @page { size: 58mm 15mm; margin: 0; }
-        body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; width: 58mm; height: 15mm; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .label { width: 58mm; height: 15mm; box-sizing: border-box; border: 1px solid #1a365d; display: flex; flex-direction: column; background: #fff; }
-        .header { background: linear-gradient(135deg, #1a365d, #2b6cb0); color: #fff; padding: 0.5px 4px; display: flex; justify-content: space-between; align-items: center; font-size: 5px; letter-spacing: 0.3px; }
+        @page { size: 50mm 25mm; margin: 0; }
+        body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; width: 50mm; height: 25mm; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .label { width: 50mm; height: 25mm; box-sizing: border-box; border: 1px solid #1a365d; display: flex; flex-direction: column; background: #fff; }
+        .header { background: linear-gradient(135deg, #1a365d, #2b6cb0); color: #fff; padding: 1.5px 4px; display: flex; justify-content: space-between; align-items: center; font-size: 7px; letter-spacing: 0.5px; }
         .header .title { font-weight: 700; text-transform: uppercase; }
-        .header .badge { background: rgba(255,255,255,0.2); padding: 0 2px; border-radius: 2px; font-size: 4px; font-weight: 600; }
+        .header .badge { background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px; font-size: 6px; font-weight: 600; }
         .body { flex: 1; display: flex; min-height: 0; }
-        .info { flex: 1; padding: 0.5px 0 0 3px; display: flex; flex-direction: column; gap: 0; justify-content: flex-start; }
-        .section-label { font-size: 3.5px; font-weight: 700; color: #2b6cb0; text-transform: uppercase; letter-spacing: 0.1px; line-height: 1; }
-        .row { display: flex; font-size: 4px; line-height: 1; }
-        .row .lbl { color: #718096; min-width: 18px; font-weight: 500; }
+        .info { width: 30mm; padding: 2px 0 0 4px; display: flex; flex-direction: column; gap: 0; justify-content: flex-start; box-sizing: border-box; }
+        .section-label { font-size: 5px; font-weight: 700; color: #2b6cb0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.3; }
+        .row { display: flex; font-size: 6px; line-height: 1.3; }
+        .row .lbl { color: #718096; min-width: 22px; font-weight: 500; }
         .row .val { color: #1a202c; font-weight: 600; }
-        .qr-side { width: 20px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; flex-shrink: 0; }
-        .qr-side img { width: 20px; height: 20px; display: block; }
-        .footer { padding: 0 3px; font-size: 3.5px; color: #a0aec0; display: flex; justify-content: space-between; }
+        .qr-side { width: 20mm; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
+        .qr-side img { width: 18mm; height: 18mm; display: block; }
+        .footer { padding: 1px 4px; font-size: 5px; color: #a0aec0; display: flex; justify-content: space-between; }
         @media print { body { margin: 0; padding: 0; } }
       </style></head><body>
       <div class="label">
