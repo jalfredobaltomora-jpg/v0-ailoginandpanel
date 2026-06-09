@@ -54,6 +54,7 @@ export function FloatingAI() {
   const [isVisible, setIsVisible] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [voiceActivated, setVoiceActivated] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const processingRef = useRef(false);
@@ -87,8 +88,9 @@ export function FloatingAI() {
       if (saved) setMessages(JSON.parse(saved));
       const settings = localStorage.getItem(LS_SETTINGS);
       if (settings) {
-        const { sound } = JSON.parse(settings);
-        if (sound !== undefined) setSoundEnabled(sound);
+        const s = JSON.parse(settings);
+        if (s.sound !== undefined) setSoundEnabled(s.sound);
+        if (s.voice !== undefined) setVoiceActivated(s.voice);
       }
     } catch {}
   }, []);
@@ -98,8 +100,8 @@ export function FloatingAI() {
   }, [messages]);
 
   useEffect(() => {
-    localStorage.setItem(LS_SETTINGS, JSON.stringify({ sound: soundEnabled }));
-  }, [soundEnabled]);
+    localStorage.setItem(LS_SETTINGS, JSON.stringify({ sound: soundEnabled, voice: voiceActivated }));
+  }, [soundEnabled, voiceActivated]);
 
   // Auto-expression animation (idle life)
   const exprTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -119,10 +121,9 @@ export function FloatingAI() {
     return () => { if (exprTimeoutRef.current) clearTimeout(exprTimeoutRef.current); };
   }, []);
 
-  // Wake word detection (Capacitor/mobile)
-  const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+  // Wake word detection — always on when voiceActivated is true
   useWakeWord({
-    enabled: isCapacitor || (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)),
+    enabled: voiceActivated,
     onWake: (text) => {
       setIsChatOpen(true);
       setIsVisible(true);
@@ -212,6 +213,29 @@ export function FloatingAI() {
       setIsLoading(true);
       setExpression('scanning');
 
+      // Voice activation toggle commands
+      const cmd = trimmed.toLowerCase().replace(/\bjabe?\b/gi, '').trim();
+      if (/disconnect|dejar de escuchar|desconectar|stop listening/i.test(cmd)) {
+        setVoiceActivated(false);
+        const msg = lang === 'es' ? 'Entendido. Dejo de escuchar. Di "jab reconnect" o activa la voz en ajustes para volver a activarme.' : 'Understood. I\'ll stop listening. Say "jab reconnect" or enable voice in settings to reactivate me.';
+        addMessage('assistant', msg);
+        setExpression('idle');
+        speak(msg);
+        setIsLoading(false);
+        processingRef.current = false;
+        return;
+      }
+      if (/reconnect|volver a escuchar|reconectar|listen again/i.test(cmd)) {
+        setVoiceActivated(true);
+        const msg = lang === 'es' ? 'Listo. Vuelvo a escuchar. Di "jab" para activarme.' : 'Ready. I\'m listening again. Say "jab" to wake me.';
+        addMessage('assistant', msg);
+        setExpression('happy');
+        speak(msg);
+        setIsLoading(false);
+        processingRef.current = false;
+        return;
+      }
+
       // Auto-response
       const autoResp = AUTO_RESPONSES.find(r => r.pattern.test(trimmed));
       if (autoResp) {
@@ -269,7 +293,7 @@ export function FloatingAI() {
         processingRef.current = false;
       }
     },
-    [messages, lang, userName, addMessage, speak]
+    [messages, lang, userName, addMessage, speak, setVoiceActivated]
   );
 
   const toggleListening = useCallback(() => {
@@ -370,9 +394,15 @@ export function FloatingAI() {
                 scale={isMobile ? 0.9 : 1}
                 interactive
               />
-              <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0d1117] animate-pulse ${
-                isListening ? 'bg-green-400' : isSpeaking ? 'bg-orange-400' : 'bg-cyan-400'
-              }`} />
+              {voiceActivated && (
+                <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0d1117] animate-pulse ${
+                  isListening ? 'bg-green-400' : isSpeaking ? 'bg-orange-400' : 'bg-cyan-400'
+                }`} title={isListening ? 'Escuchando...' : 'Activación por voz activa'} />
+              )}
+              {!voiceActivated && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0d1117] bg-gray-500"
+                     title="Activación por voz desactivada" />
+              )}
             </div>
           </div>
 
@@ -502,6 +532,15 @@ export function FloatingAI() {
                         {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-gray-500" />}
                       </button>
                       <button
+                        onClick={() => setVoiceActivated(!voiceActivated)}
+                        className="w-full flex items-center justify-between p-3 hover:bg-[#161b22] rounded-lg transition"
+                      >
+                        <span className="text-sm text-gray-300">{lang === 'es' ? 'Activación por voz' : 'Voice Activation'}</span>
+                        {voiceActivated
+                          ? <Mic className="w-4 h-4 text-green-400" />
+                          : <MicOff className="w-4 h-4 text-gray-500" />}
+                      </button>
+                      <button
                         onClick={() => toggleLang()}
                         className="w-full flex items-center justify-between p-3 hover:bg-[#161b22] rounded-lg transition text-sm text-gray-300"
                       >
@@ -517,18 +556,35 @@ export function FloatingAI() {
                   {showHelp && (
                     <div className="bg-[#21262d] border border-blue-500/20 rounded-xl p-4 space-y-2 text-xs text-gray-300 animate-in fade-in max-h-48 overflow-y-auto">
                       <p className="font-bold text-blue-400">💡 {lang === 'es' ? 'Comandos Útiles' : 'Useful Commands'}:</p>
+                      <p>• "{lang === 'es' ? 'di' : 'say'} jab" - {lang === 'es' ? 'Activar JAB' : 'Wake JAB'}</p>
+                      <p>• "jab disconnect" - {lang === 'es' ? 'Desconectar / dejar de escuchar' : 'Disconnect / stop listening'}</p>
+                      <p>• "jab reconnect" - {lang === 'es' ? 'Volver a escuchar' : 'Reconnect / listen again'}</p>
                       <p>• "jab status" - {lang === 'es' ? 'Estado del sistema' : 'System status'}</p>
                       <p>• "jab open google" - {lang === 'es' ? 'Abrir URL' : 'Open URL'}</p>
-                      <p>• "jab battery" - {lang === 'es' ? 'Batería' : 'Battery'}</p>
-                      <p>• "jab screenshot" - {lang === 'es' ? 'Captura' : 'Screenshot'}</p>
                     </div>
                   )}
 
                   {/* Status Bar */}
                   <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-cyan-500/10">
-                    <span>{new Date().toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</span>
-                    {isSpeaking && <span className="text-cyan-400 animate-pulse">🔊 {lang === 'es' ? 'Hablando' : 'Speaking'}</span>}
-                    {isLoading && <span className="text-cyan-400 animate-pulse">⚙️ {lang === 'es' ? 'Procesando' : 'Processing'}</span>}
+                    <div className="flex items-center gap-2">
+                      <span>{new Date().toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                      {voiceActivated && (
+                        <span className={`flex items-center gap-1 ${isListening ? 'text-green-400' : 'text-cyan-400'}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${isListening ? 'bg-green-400 animate-pulse' : 'bg-cyan-400'}`} />
+                          {isListening ? (lang === 'es' ? 'Escuchando...' : 'Listening...') : (lang === 'es' ? 'Voz activa' : 'Voice on')}
+                        </span>
+                      )}
+                      {!voiceActivated && (
+                        <span className="text-gray-500 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+                          {lang === 'es' ? 'Voz off' : 'Voice off'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isSpeaking && <span className="text-cyan-400 animate-pulse">🔊 {lang === 'es' ? 'Hablando' : 'Speaking'}</span>}
+                      {isLoading && <span className="text-cyan-400 animate-pulse">⚙️ {lang === 'es' ? 'Procesando' : 'Processing'}</span>}
+                    </div>
                   </div>
                 </div>
               </div>
