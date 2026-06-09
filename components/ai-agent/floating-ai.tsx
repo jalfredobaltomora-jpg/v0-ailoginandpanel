@@ -605,7 +605,7 @@ export function FloatingAI() {
                 </div>
 
                 {/* Messages */}
-                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-transparent" style={{ scrollbarWidth: 'thin', scrollbarColor: '#6b7280 transparent' }}>
+                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4" style={{ scrollbarWidth: 'auto', scrollbarColor: '#4b5563 #1f2937' }}>
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
                       <Sparkles className="w-12 h-12 text-cyan-400 opacity-50" />

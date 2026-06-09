@@ -38,11 +38,18 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
     onListeningChange?.(true);
 
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const MAX_RETRIES = 3;
 
     if (SR) {
       // Use native SpeechRecognition (works on Android WebView with Google Play Services)
+      let micFailureCount = 0;
       const tryStart = () => {
         if (!activeRef.current) return;
+        if (micFailureCount >= MAX_RETRIES) {
+          activeRef.current = false;
+          onListeningChange?.(false);
+          return;
+        }
         try {
           const r = new SR();
           recogRef.current = r;
@@ -51,6 +58,7 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
           r.interimResults = false;
 
           r.onstart = () => {
+            micFailureCount = 0;
             retryRef.current = 0;
           };
 
@@ -67,8 +75,8 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
           r.onerror = () => {
             if (!activeRef.current) return;
             recogRef.current = null;
-            if (retryRef.current < 5) {
-              retryRef.current++;
+            micFailureCount++;
+            if (micFailureCount < MAX_RETRIES) {
               timerRef.current = setTimeout(tryStart, 3000);
             } else {
               activeRef.current = false;
@@ -78,7 +86,7 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
 
           r.onend = () => {
             recogRef.current = null;
-            if (activeRef.current) {
+            if (activeRef.current && micFailureCount < MAX_RETRIES) {
               timerRef.current = setTimeout(tryStart, 2000);
             }
           };
@@ -86,8 +94,8 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
           r.start();
         } catch {
           recogRef.current = null;
-          if (retryRef.current < 5) {
-            retryRef.current++;
+          micFailureCount++;
+          if (micFailureCount < MAX_RETRIES) {
             timerRef.current = setTimeout(tryStart, 3000);
           } else {
             activeRef.current = false;
@@ -99,13 +107,19 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
       tryStart();
     } else {
       // Fallback: MediaRecorder + Groq Whisper
+      let micFailureCount = 0;
       const tryStart = async () => {
         if (!activeRef.current) return;
+        if (micFailureCount >= MAX_RETRIES) {
+          activeRef.current = false;
+          onListeningChange?.(false);
+          return;
+        }
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           if (!activeRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
           streamRef.current = stream;
-          retryRef.current = 0;
+          micFailureCount = 0;
 
           const loop = () => {
             if (!activeRef.current) return;
@@ -121,7 +135,7 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
                   if (text && /\bjabe?\b/i.test(text.trim())) {
                     onWake(text);
                   }
-                } catch (e) { console.warn('JAB wake: transcribe error', e); }
+                } catch {}
               }
               if (activeRef.current) {
                 timerRef.current = setTimeout(loop, 200);
@@ -132,11 +146,12 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
           };
           loop();
         } catch {
-          activeRef.current = false;
-          onListeningChange?.(false);
-          if (retryRef.current < 5) {
-            retryRef.current++;
+          micFailureCount++;
+          if (micFailureCount < MAX_RETRIES) {
             timerRef.current = setTimeout(tryStart, 5000);
+          } else {
+            activeRef.current = false;
+            onListeningChange?.(false);
           }
         }
       };
