@@ -443,69 +443,71 @@ export function FloatingAI() {
   );
 
   const toggleListening = useCallback(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SR) {
-      if (!isMicActive) {
-        setIsMicActive(true);
-        setExpression('scanning');
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-          const mr = new MediaRecorder(stream);
-          const chunks: BlobPart[] = [];
-
-          mr.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
-          mr.onstop = async () => {
-            setIsMicActive(false);
-            stream.getTracks().forEach(t => t.stop());
-            const blob = new Blob(chunks);
-            if (blob.size < 400) return;
-
-            const text = await transcribeAudio(blob);
-            if (text) {
-              setInputText(text);
-              processMessage(text);
-            }
-          };
-
-          mr.start();
-          setTimeout(() => mr.state === 'recording' && mr.stop(), 8000);
-        }).catch(() => {
-          setIsMicActive(false);
-          setExpression('concerned');
-        });
-      } else {
-        setIsMicActive(false);
-      }
-      return;
-    }
-
     if (isMicActive) {
       setIsMicActive(false);
       return;
     }
 
-    const recognition = new SR();
-    recognition.lang = lang === 'es' ? 'es-CO' : 'en-US';
-    recognition.continuous = false;
+    setIsMicActive(true);
+    setExpression('scanning');
 
-    recognition.onstart = () => {
-      setIsMicActive(true);
-      setExpression('scanning');
-    };
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+      const mr = new MediaRecorder(stream, { mimeType });
+      const chunks: BlobPart[] = [];
+      let isStopped = false;
+      let silenceTimer: ReturnType<typeof setTimeout> | null = null;
 
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setInputText(transcript);
-      setIsMicActive(false);
-      processMessage(transcript);
-    };
+      const stopRecording = () => {
+        if (isStopped) return;
+        isStopped = true;
+        if (silenceTimer) clearTimeout(silenceTimer);
+        if (mr.state === 'recording') mr.stop();
+      };
 
-    recognition.onerror = () => {
+      // Silence detection via AudioContext
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+      const detectSilence = () => {
+        if (isStopped) return;
+        analyser.getByteFrequencyData(dataArray);
+        const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        if (avg < 5) {
+          if (!silenceTimer) silenceTimer = setTimeout(stopRecording, 1500);
+        } else {
+          if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+        }
+        if (!isStopped) requestAnimationFrame(detectSilence);
+      };
+
+      mr.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
+      mr.onstop = async () => {
+        setIsMicActive(false);
+        stream.getTracks().forEach(t => t.stop());
+        audioCtx.close();
+        const blob = new Blob(chunks, { type: mimeType });
+        if (blob.size < 400) return;
+        const text = await transcribeAudio(blob);
+        if (text) {
+          setInputText(text);
+          processMessage(text);
+        }
+      };
+
+      mr.start(100);
+      detectSilence();
+      setTimeout(stopRecording, 30000);
+    }).catch(() => {
       setIsMicActive(false);
       setExpression('concerned');
-    };
-
-    recognition.start();
+    });
   }, [isMicActive, lang, processMessage]);
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -534,6 +536,16 @@ export function FloatingAI() {
 
   return (
     <>
+      <style>{`
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+.animate-wave {
+  animation: wave 0.8s ease-in-out infinite;
+  transform-origin: bottom;
+}
+`}</style>
       {isVisible && (
         <>
           {/* JAB Robot - Floating Button */}
@@ -639,12 +651,22 @@ export function FloatingAI() {
                       disabled={isLoading}
                       className={`flex-1 p-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 font-medium text-sm ${
                         isMicActive
-                          ? 'bg-red-500/20 border border-red-500/50 text-red-400 animate-pulse'
+                          ? 'bg-red-500/20 border border-red-500/50 text-red-400'
                           : 'bg-cyan-600/20 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-600/30'
                       }`}
                     >
-                      {isMicActive ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                      <span className="hidden sm:inline">{lang === 'es' ? 'Escuchar' : 'Listen'}</span>
+                      {isMicActive ? (
+                        <div className="flex items-center gap-0.5 h-4">
+                          <span className="w-0.5 bg-red-400 rounded-full animate-wave" style={{ height: '40%', animationDelay: '0s' }} />
+                          <span className="w-0.5 bg-red-400 rounded-full animate-wave" style={{ height: '70%', animationDelay: '0.15s' }} />
+                          <span className="w-0.5 bg-red-400 rounded-full animate-wave" style={{ height: '100%', animationDelay: '0.3s' }} />
+                          <span className="w-0.5 bg-red-400 rounded-full animate-wave" style={{ height: '50%', animationDelay: '0.45s' }} />
+                          <span className="w-0.5 bg-red-400 rounded-full animate-wave" style={{ height: '80%', animationDelay: '0.6s' }} />
+                        </div>
+                      ) : (
+                        <Mic className="w-4 h-4" />
+                      )}
+                      <span className="hidden sm:inline">{lang === 'es' ? (isMicActive ? 'Grabando...' : 'Escuchar') : (isMicActive ? 'Recording...' : 'Listen')}</span>
                     </button>
                     <button
                       onClick={() => setShowHelp(!showHelp)}
