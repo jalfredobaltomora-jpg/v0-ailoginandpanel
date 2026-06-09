@@ -297,10 +297,9 @@ export function FloatingAI() {
   );
 
   const toggleListening = useCallback(() => {
-    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    if (!SR || isCapacitor) {
+    if (!SR) {
       if (!isListening) {
         setIsListening(true);
         setExpression('scanning');
@@ -323,7 +322,7 @@ export function FloatingAI() {
           };
 
           mr.start();
-          setTimeout(() => mr.state === 'recording' && mr.stop(), isCapacitor ? 10000 : 8000);
+          setTimeout(() => mr.state === 'recording' && mr.stop(), 8000);
         }).catch(() => {
           setIsListening(false);
           setExpression('concerned');
@@ -363,12 +362,27 @@ export function FloatingAI() {
     recognition.start();
   }, [isListening, lang, processMessage]);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const userScrolledUpRef = useRef(false);
   useEffect(() => {
     const el = messagesContainerRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+    if (!userScrolledUpRef.current || isNearBottom) {
+      el.scrollTop = el.scrollHeight;
+      userScrolledUpRef.current = false;
+    }
   }, [messages]);
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+      userScrolledUpRef.current = !isNearBottom;
+    };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
 
   if (pathname === '/') return null;
 
