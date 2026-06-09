@@ -19,6 +19,8 @@ import { executeJARVISCommand } from '@/lib/jarvis-commands';
 import { askAI } from '@/lib/ai-client';
 import { transcribeAudio } from '@/lib/transcribe-client';
 import { useWakeWord } from '@/lib/use-wake-word';
+import { getEmpleadoByCodigo, getUserSchedule, saveUserSchedule, type UserSchedule, type Empleado } from '@/lib/firebase';
+import { getWeekNumber, getDayEndTime, getDayEndAdjusted, setStoredLunchTime, setLunchPromptWeek, scheduleTodayAlarms, getStoredLunchTime } from '@/lib/alarm-engine';
 
 declare global {
   interface Window {
@@ -59,6 +61,12 @@ export function FloatingAI() {
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const processingRef = useRef(false);
+  const [userCode, setUserCode] = useState<string | null>(null);
+  const [empleado, setEmpleado] = useState<Empleado | null>(null);
+  const [schedule, setSchedule] = useState<UserSchedule | null | undefined>(undefined);
+  const [dayEndInfo, setDayEndInfo] = useState<{ base: string; label: string; offsetMin: number } | null>(null);
+  const [greetComplete, setGreetComplete] = useState(false);
+  const [awaitingLunchResponse, setAwaitingLunchResponse] = useState(false);
 
   // ─── Setup ───
   useEffect(() => {
@@ -68,16 +76,18 @@ export function FloatingAI() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Load user
+  // Load user, employee, and schedule
   useEffect(() => {
     try {
       const user = getStoredUser();
       if (user) {
-        import('@/lib/firebase').then(({ getEmpleadoByCodigo }) => {
-          getEmpleadoByCodigo(user.codigo).then((emp: any) => {
-            setUserName(emp?.nombres?.split(' ')[0] || 'User');
-          });
+        setUserCode(user.codigo);
+        getEmpleadoByCodigo(user.codigo).then((emp) => {
+          setEmpleado(emp);
+          setDayEndInfo(emp ? getDayEndAdjusted(emp) : { base: getDayEndTime(), label: `Salida ${getDayEndTime()}`, offsetMin: 10 });
+          setUserName(emp?.nombres?.split(' ')[0] || 'User');
         });
+        getUserSchedule(user.codigo).then(setSchedule);
       }
     } catch {}
   }, []);
@@ -217,29 +227,92 @@ export function FloatingAI() {
     if (!isChatOpen) return;
     if (greetedRef.current) return;
     greetedRef.current = true;
+    setGreetComplete(true);
     const hours = new Date().getHours();
     const timeGreeting = hours >= 6 && hours < 12 ? (lang === 'es' ? 'Buenos días' : 'Good morning')
       : hours >= 12 && hours < 18 ? (lang === 'es' ? 'Buenas tardes' : 'Good afternoon')
       : (lang === 'es' ? 'Buenas noches' : 'Good evening');
 
-    if (firstRunRef.current) {
-      const intro = lang === 'es'
-        ? `${timeGreeting} ${userName}! 👋\n\nSoy JAB, tu Asistente Técnico y Analítico del Sistema de Control Administrativo, inspirado en JARVIS de Iron Man.\n\nPuedo ayudarte con:\n• Análisis de datos y reportes\n• Navegación por el sistema\n• Búsqueda en Google\n• Diagnóstico de equipos\n• Y mucho más...\n\nSolo di "jab" y lo que necesitas para activarme por voz, o escríbeme directamente.`
-        : `${timeGreeting} ${userName}! 👋\n\nI'm JAB, your Technical Assistance and Analytical System of the Administrative Control System, inspired by JARVIS from Iron Man.\n\nI can help you with:\n• Data analysis and reports\n• System navigation\n• Google search\n• Equipment diagnostics\n• And much more...\n\nJust say "jab" followed by what you need to activate me by voice, or type directly.`;
-      setMessages([{ role: 'assistant', content: intro, timestamp: Date.now() }]);
-      setTimeout(() => speak(intro), 500);
-    } else {
-      const intro = lang === 'es'
-        ? `${timeGreeting} ${userName}! 👋\n\nSoy JAB, tu asistente inteligente 🤖`
-        : `${timeGreeting} ${userName}! 👋\n\nI'm JAB, your intelligent assistant 🤖`;
-      setMessages([{ role: 'assistant', content: intro, timestamp: Date.now() }]);
-      setTimeout(() => speak(intro), 300);
-    }
+    const intro = firstRunRef.current
+      ? (lang === 'es'
+          ? `${timeGreeting} ${userName}! 👋\n\nSoy JAB, tu Asistente Técnico y Analítico del Sistema de Control Administrativo, inspirado en JARVIS de Iron Man.\n\nPuedo ayudarte con:\n• Análisis de datos y reportes\n• Navegación por el sistema\n• Búsqueda en Google\n• Diagnóstico de equipos\n• Y mucho más...\n\nSolo di "jab" y lo que necesitas para activarme por voz, o escríbeme directamente.`
+          : `${timeGreeting} ${userName}! 👋\n\nI'm JAB, your Technical Assistance and Analytical System of the Administrative Control System, inspired by JARVIS from Iron Man.\n\nI can help you with:\n• Data analysis and reports\n• System navigation\n• Google search\n• Equipment diagnostics\n• And much more...\n\nJust say "jab" followed by what you need to activate me by voice, or type directly.`)
+      : (lang === 'es'
+          ? `${timeGreeting} ${userName}! 👋\n\nSoy JAB, tu asistente inteligente 🤖`
+          : `${timeGreeting} ${userName}! 👋\n\nI'm JAB, your intelligent assistant 🤖`);
+
+    setMessages((prev) => prev.length === 0 ? [{ role: 'assistant', content: intro, timestamp: Date.now() }] : prev);
+    setTimeout(() => speak(intro), firstRunRef.current ? 500 : 300);
   }, [isChatOpen, lang, userName, speak]);
 
   const addMessage = useCallback((role: 'user' | 'assistant', content: string) => {
     setMessages((prev) => [...prev, { role, content, timestamp: Date.now() }]);
   }, []);
+
+  // ─── Lunch prompt after greeting ───
+  useEffect(() => {
+    if (!isChatOpen) return;
+    if (!greetComplete) return;
+    if (schedule === undefined) return;
+    const day = new Date().getDay();
+    if (day === 0 || day === 6) return;
+    const week = getWeekNumber();
+    const storedWeek = schedule?.lunchWeek;
+    const storedLunch = schedule?.lunchTime;
+    if ((!storedLunch || storedWeek !== week) && userCode) {
+      setAwaitingLunchResponse(true);
+      const ask = lang === 'es'
+        ? '🕐 Antes de comenzar, ¿a qué hora almuerzas esta semana?'
+        : '🕐 Before we start, what time do you have lunch this week?';
+      setTimeout(() => {
+        addMessage('assistant', ask);
+        speak(ask);
+      }, 3000);
+    }
+  }, [isChatOpen, greetComplete, schedule, lang, addMessage, speak, userCode]);
+
+  // ─── Background timer for lunch/exit reminders ───
+  useEffect(() => {
+    if (!isChatOpen) return;
+    if (!schedule && !getStoredLunchTime()) return;
+    const lunchTime = schedule?.lunchTime || getStoredLunchTime();
+    const exitBase = dayEndInfo?.base;
+    const exitOffset = dayEndInfo?.offsetMin ?? 10;
+    const check = () => {
+      const now = new Date();
+      const currentMin = now.getHours() * 60 + now.getMinutes();
+      const todayStr = now.toISOString().slice(0, 10);
+      const sentKey = `jab-reminder-${todayStr}`;
+      const alreadySent = localStorage.getItem(sentKey);
+      if (lunchTime) {
+        const [lh, lm] = lunchTime.split(':').map(Number);
+        const lunchMin = lh * 60 + lm;
+        if (currentMin >= lunchMin - 10 && currentMin < lunchMin && alreadySent !== 'lunch') {
+          const msg = lang === 'es'
+            ? `🍽️ Te quedan 10 minutos para ir a almorzar (${lunchTime}).`
+            : `🍽️ You have 10 minutes until lunch (${lunchTime}).`;
+          addMessage('assistant', msg);
+          speak(msg);
+          localStorage.setItem(sentKey, 'lunch');
+        }
+      }
+      if (exitBase && exitBase !== '00:00') {
+        const [eh, em] = exitBase.split(':').map(Number);
+        const exitMin = eh * 60 + em;
+        if (currentMin >= exitMin - exitOffset && currentMin < exitMin && alreadySent !== 'exit') {
+          const msg = lang === 'es'
+            ? `🚪 Te quedan ${exitOffset} minutos para salir (${exitBase}).`
+            : `🚪 You have ${exitOffset} minutes until exit (${exitBase}).`;
+          addMessage('assistant', msg);
+          speak(msg);
+          localStorage.setItem(sentKey, 'exit');
+        }
+      }
+    };
+    check();
+    const interval = setInterval(check, 30000);
+    return () => clearInterval(interval);
+  }, [isChatOpen, schedule, dayEndInfo, lang, addMessage, speak]);
 
   const processMessage = useCallback(
     async (text: string) => {
@@ -289,6 +362,37 @@ export function FloatingAI() {
         return;
       }
 
+      // Lunch time response detection
+      if (awaitingLunchResponse && userCode) {
+        const timeMatch = trimmed.match(/(\d{1,2}):(\d{2})/);
+        if (timeMatch) {
+          const time = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
+          const week = getWeekNumber();
+          setStoredLunchTime(time);
+          setLunchPromptWeek(week);
+          scheduleTodayAlarms(time, empleado || undefined);
+          saveUserSchedule(userCode, {
+            lunchTime: time,
+            lunchWeek: week,
+            satExitTime: schedule?.satExitTime || undefined,
+            satEatCompany: schedule?.satEatCompany,
+            satLunchTime: schedule?.satLunchTime || undefined,
+            satWeek: schedule?.satWeek,
+          });
+          const confirm = lang === 'es'
+            ? `✅ Recordatorio de almuerzo programado a las ${time}.`
+            : `✅ Lunch reminder set for ${time}.`;
+          addMessage('assistant', confirm);
+          setExpression('happy');
+          speak(confirm);
+          setIsLoading(false);
+          processingRef.current = false;
+          setAwaitingLunchResponse(false);
+          return;
+        }
+        setAwaitingLunchResponse(false);
+      }
+
       // JARVIS commands
       try {
         const jarvisResult = await executeJARVISCommand(trimmed);
@@ -335,7 +439,7 @@ export function FloatingAI() {
         processingRef.current = false;
       }
     },
-    [messages, lang, userName, addMessage, speak, setVoiceActivated]
+    [messages, lang, userName, addMessage, speak, setVoiceActivated, awaitingLunchResponse, userCode, empleado, schedule]
   );
 
   const toggleListening = useCallback(() => {
@@ -465,7 +569,7 @@ export function FloatingAI() {
           {/* Chat Panel - Premium Design */}
           {isChatOpen && (
             <div
-              className="fixed z-[70] bottom-32 right-4 md:right-6 w-[calc(100vw-2rem)] md:w-96 max-h-[70vh] rounded-3xl shadow-2xl overflow-hidden"
+              className="fixed z-[70] bottom-32 right-4 md:right-6 w-[calc(100vw-2rem)] md:w-96 max-h-[85vh] rounded-3xl shadow-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-gradient-to-b from-[#0d1117] to-[#161b22] border border-cyan-500/20 rounded-3xl flex flex-col h-full">
@@ -489,7 +593,7 @@ export function FloatingAI() {
                 </div>
 
                 {/* Messages */}
-                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
+                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-transparent" style={{ scrollbarWidth: 'thin', scrollbarColor: '#6b7280 transparent' }}>
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
                       <Sparkles className="w-12 h-12 text-cyan-400 opacity-50" />
