@@ -187,23 +187,54 @@ export function FloatingAI() {
     [lang, soundEnabled]
   );
 
-  // Greeting
+  // Greeting & auto-show on app start
   const greetedRef = useRef(false);
+  const firstRunRef = useRef(false);
+  useEffect(() => {
+    // Check first run
+    try {
+      const val = localStorage.getItem('jab_first_run');
+      if (!val) {
+        firstRunRef.current = true;
+        localStorage.setItem('jab_first_run', 'done');
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    // Auto-show chat after app loads
+    const timer = setTimeout(() => {
+      setIsVisible(true);
+      unlockSpeech();
+    }, 1500);
+    const openTimer = setTimeout(() => {
+      setIsChatOpen(true);
+    }, 2500);
+    return () => { clearTimeout(timer); clearTimeout(openTimer); };
+  }, []);
+
   useEffect(() => {
     if (!isChatOpen) return;
     if (greetedRef.current) return;
     greetedRef.current = true;
     const hours = new Date().getHours();
-    const greeting = hours >= 6 && hours < 12 ? (lang === 'es' ? 'Buenos días' : 'Good morning')
+    const timeGreeting = hours >= 6 && hours < 12 ? (lang === 'es' ? 'Buenos días' : 'Good morning')
       : hours >= 12 && hours < 18 ? (lang === 'es' ? 'Buenas tardes' : 'Good afternoon')
       : (lang === 'es' ? 'Buenas noches' : 'Good evening');
 
-    const intro = lang === 'es'
-      ? `${greeting} ${userName}! 👋\n\nSoy JAB, tu asistente inteligente 🤖`
-      : `${greeting} ${userName}! 👋\n\nI'm JAB, your intelligent assistant 🤖`;
-
-    setMessages([{ role: 'assistant', content: intro, timestamp: Date.now() }]);
-    setTimeout(() => speak(intro), 300);
+    if (firstRunRef.current) {
+      const intro = lang === 'es'
+        ? `${timeGreeting} ${userName}! 👋\n\nSoy JAB, tu Asistente Técnico y Analítico del Sistema de Control Administrativo, inspirado en JARVIS de Iron Man.\n\nPuedo ayudarte con:\n• Análisis de datos y reportes\n• Navegación por el sistema\n• Búsqueda en Google\n• Diagnóstico de equipos\n• Y mucho más...\n\nSolo di "jab" y lo que necesitas para activarme por voz, o escríbeme directamente.`
+        : `${timeGreeting} ${userName}! 👋\n\nI'm JAB, your Technical Assistance and Analytical System of the Administrative Control System, inspired by JARVIS from Iron Man.\n\nI can help you with:\n• Data analysis and reports\n• System navigation\n• Google search\n• Equipment diagnostics\n• And much more...\n\nJust say "jab" followed by what you need to activate me by voice, or type directly.`;
+      setMessages([{ role: 'assistant', content: intro, timestamp: Date.now() }]);
+      setTimeout(() => speak(intro), 500);
+    } else {
+      const intro = lang === 'es'
+        ? `${timeGreeting} ${userName}! 👋\n\nSoy JAB, tu asistente inteligente 🤖`
+        : `${timeGreeting} ${userName}! 👋\n\nI'm JAB, your intelligent assistant 🤖`;
+      setMessages([{ role: 'assistant', content: intro, timestamp: Date.now() }]);
+      setTimeout(() => speak(intro), 300);
+    }
   }, [isChatOpen, lang, userName, speak]);
 
   const addMessage = useCallback((role: 'user' | 'assistant', content: string) => {
