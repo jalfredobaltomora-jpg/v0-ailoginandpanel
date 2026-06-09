@@ -57,7 +57,7 @@ export function FloatingAI() {
   const [isVisible, setIsVisible] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [voiceActivated, setVoiceActivated] = useState(true);
+  const [voiceActivated, setVoiceActivated] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const processingRef = useRef(false);

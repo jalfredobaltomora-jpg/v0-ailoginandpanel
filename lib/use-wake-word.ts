@@ -79,7 +79,7 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
           r.onend = () => {
             recogRef.current = null;
             if (activeRef.current) {
-              tryStart();
+              timerRef.current = setTimeout(tryStart, 2000);
             }
           };
 
