@@ -17,6 +17,7 @@ import { useLang } from '@/lib/lang-context';
 import { EVARobotComponent, type EVAExpression } from './eva-design';
 import { executeJARVISCommand } from '@/lib/jarvis-commands';
 import { askAI } from '@/lib/ai-client';
+import { detectIntent } from './system-knowledge';
 import { transcribeAudio } from '@/lib/transcribe-client';
 import { useWakeWord } from '@/lib/use-wake-word';
 import { getEmpleadoByCodigo, getUserSchedule, saveUserSchedule, type UserSchedule, type Empleado } from '@/lib/firebase';
@@ -314,6 +315,16 @@ export function FloatingAI() {
     return () => clearInterval(interval);
   }, [isChatOpen, schedule, dayEndInfo, lang, addMessage, speak]);
 
+  // Safety timeout: auto-reset processingRef and isLoading after 30s
+  useEffect(() => {
+    if (!isLoading) return;
+    const t = setTimeout(() => {
+      processingRef.current = false;
+      setIsLoading(false);
+    }, 30000);
+    return () => clearTimeout(t);
+  }, [isLoading]);
+
   const processMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
@@ -407,6 +418,13 @@ export function FloatingAI() {
         }
       } catch (e) { console.warn('JAB: JARVIS command error', e); }
 
+      // Navigate immediately if user asked to go somewhere
+      const intent = detectIntent(trimmed, lang);
+      const navRoute = intent.action === 'navigate' ? intent.params?.route : null;
+      if (navRoute) {
+        setTimeout(() => router.push(navRoute), 500);
+      }
+
       // AI API
       console.log('JAB: calling askAI');
       try {
@@ -416,9 +434,11 @@ export function FloatingAI() {
         const aiResponse = await Promise.race([aiPromise, timeoutPromise]);
         console.log('JAB: askAI response', aiResponse?.content?.slice(0, 80));
         if (aiResponse?.content) {
-          addMessage('assistant', aiResponse.content);
+          // Strip emoji parenthetical descriptions (e.g. "🤖 (Cara de Robot)" -> "🤖")
+          const clean = aiResponse.content.replace(/\p{Emoji}\s*\([^)]*\)/gu, (m) => m.replace(/\s*\([^)]*\)/u, ''));
+          addMessage('assistant', clean);
           setExpression('happy');
-          speak(aiResponse.content);
+          speak(clean);
         } else {
           const fallback = lang === 'es'
             ? 'No entendí bien. Di "Ayuda" para ver todo lo que puedo hacer.'
