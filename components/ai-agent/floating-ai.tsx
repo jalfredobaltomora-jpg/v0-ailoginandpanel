@@ -48,6 +48,7 @@ export function FloatingAI() {
   const { lang, toggleLang } = useLang();
   const [expression, setExpression] = useState<EVAExpression>('idle');
   const [isListening, setIsListening] = useState(false);
+  const [isMicActive, setIsMicActive] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [userName, setUserName] = useState('User');
   const [isMobile, setIsMobile] = useState(false);
@@ -122,11 +123,19 @@ export function FloatingAI() {
   }, []);
 
   // Wake word detection — always on when voiceActivated is true
+  const wakeSkipRef = useRef(false);
   useWakeWord({
     enabled: voiceActivated,
     onWake: (text) => {
-      setIsChatOpen(true);
-      setIsVisible(true);
+      if (processingRef.current) { console.log('JAB wake: skip, processing'); return; }
+      if (wakeSkipRef.current) return;
+      if (inputText.trim()) { console.log('JAB wake: skip, user is typing'); return; }
+      wakeSkipRef.current = true;
+      setTimeout(() => { wakeSkipRef.current = false; }, 4000);
+      if (!isChatOpen) {
+        setIsChatOpen(true);
+        setIsVisible(true);
+      }
       setExpression('happy');
       processMessage(text.replace(/\bjabe?\b/i, '').trim());
     },
@@ -267,7 +276,9 @@ export function FloatingAI() {
       console.log('JAB: calling askAI');
       try {
         const history = messages.slice(-4).map(m => ({ role: m.role, content: m.content }));
-        const aiResponse = await askAI(trimmed, lang, userName, undefined, history);
+        const aiPromise = askAI(trimmed, lang, userName, undefined, history);
+        const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('AI timeout')), 20000));
+        const aiResponse = await Promise.race([aiPromise, timeoutPromise]);
         console.log('JAB: askAI response', aiResponse?.content?.slice(0, 80));
         if (aiResponse?.content) {
           addMessage('assistant', aiResponse.content);
@@ -300,8 +311,8 @@ export function FloatingAI() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SR) {
-      if (!isListening) {
-        setIsListening(true);
+      if (!isMicActive) {
+        setIsMicActive(true);
         setExpression('scanning');
         navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
           const mr = new MediaRecorder(stream);
@@ -309,7 +320,7 @@ export function FloatingAI() {
 
           mr.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
           mr.onstop = async () => {
-            setIsListening(false);
+            setIsMicActive(false);
             stream.getTracks().forEach(t => t.stop());
             const blob = new Blob(chunks);
             if (blob.size < 400) return;
@@ -324,17 +335,17 @@ export function FloatingAI() {
           mr.start();
           setTimeout(() => mr.state === 'recording' && mr.stop(), 8000);
         }).catch(() => {
-          setIsListening(false);
+          setIsMicActive(false);
           setExpression('concerned');
         });
       } else {
-        setIsListening(false);
+        setIsMicActive(false);
       }
       return;
     }
 
-    if (isListening) {
-      setIsListening(false);
+    if (isMicActive) {
+      setIsMicActive(false);
       return;
     }
 
@@ -343,24 +354,24 @@ export function FloatingAI() {
     recognition.continuous = false;
 
     recognition.onstart = () => {
-      setIsListening(true);
+      setIsMicActive(true);
       setExpression('scanning');
     };
 
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       setInputText(transcript);
-      setIsListening(false);
+      setIsMicActive(false);
       processMessage(transcript);
     };
 
     recognition.onerror = () => {
-      setIsListening(false);
+      setIsMicActive(false);
       setExpression('concerned');
     };
 
     recognition.start();
-  }, [isListening, lang, processMessage]);
+  }, [isMicActive, lang, processMessage]);
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const userScrolledUpRef = useRef(false);
@@ -482,7 +493,6 @@ export function FloatingAI() {
                       </div>
                     </div>
                   )}
-                  <div ref={messagesEndRef} />
                 </div>
 
                 {/* Input Section */}
@@ -493,12 +503,12 @@ export function FloatingAI() {
                       onClick={toggleListening}
                       disabled={isLoading}
                       className={`flex-1 p-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 font-medium text-sm ${
-                        isListening
+                        isMicActive
                           ? 'bg-red-500/20 border border-red-500/50 text-red-400 animate-pulse'
                           : 'bg-cyan-600/20 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-600/30'
                       }`}
                     >
-                      {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                      {isMicActive ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                       <span className="hidden sm:inline">{lang === 'es' ? 'Escuchar' : 'Listen'}</span>
                     </button>
                     <button
