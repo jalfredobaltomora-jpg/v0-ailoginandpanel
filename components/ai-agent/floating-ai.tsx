@@ -21,7 +21,7 @@ import { detectIntent } from './system-knowledge';
 import { transcribeAudio } from '@/lib/transcribe-client';
 import { useWakeWord } from '@/lib/use-wake-word';
 import { getEmpleadoByCodigo, getUserSchedule, saveUserSchedule, type UserSchedule, type Empleado } from '@/lib/firebase';
-import { getWeekNumber, getDayEndTime, getDayEndAdjusted, setStoredLunchTime, setLunchPromptWeek, scheduleTodayAlarms, getStoredLunchTime } from '@/lib/alarm-engine';
+import { getWeekNumber, getDayEndTime, getDayEndAdjusted, setStoredLunchTime, setLunchPromptWeek, scheduleTodayAlarms, getStoredLunchTime, setStoredSatExitTime, setStoredSatEatCompany, setStoredSatLunchTime, setSatPromptWeek, scheduleSaturdayAlarms } from '@/lib/alarm-engine';
 
 declare global {
   interface Window {
@@ -68,6 +68,7 @@ export function FloatingAI() {
   const [dayEndInfo, setDayEndInfo] = useState<{ base: string; label: string; offsetMin: number } | null>(null);
   const [greetComplete, setGreetComplete] = useState(false);
   const [awaitingLunchResponse, setAwaitingLunchResponse] = useState(false);
+  const [awaitingSatResponse, setAwaitingSatResponse] = useState(false);
 
   // ─── Setup ───
   useEffect(() => {
@@ -250,14 +251,30 @@ export function FloatingAI() {
     setMessages((prev) => [...prev, { role, content, timestamp: Date.now() }]);
   }, []);
 
-  // ─── Lunch prompt after greeting ───
+  // ─── Lunch/Saturday prompt after greeting ───
   useEffect(() => {
     if (!isChatOpen) return;
     if (!greetComplete) return;
     if (schedule === undefined) return;
     const day = new Date().getDay();
-    if (day === 0 || day === 6) return;
     const week = getWeekNumber();
+    if (day === 0) return; // Sunday — never prompt
+    if (day === 6) {
+      // Saturday: always ask (extra day, not everyone stays)
+      const storedSatWeek = schedule?.satWeek;
+      if (storedSatWeek !== week && userCode) {
+        setAwaitingSatResponse(true);
+        const ask = lang === 'es'
+          ? '🕐 Hoy es sábado (horas extras). ¿A qué hora piensas salir? ¿Y almuerzas en la empresa si te quedas después de medio día?'
+          : '🕐 It\'s Saturday (extra hours). What time will you leave? And will you eat at the company if staying after noon?';
+        setTimeout(() => {
+          addMessage('assistant', ask);
+          speak(ask);
+        }, 3000);
+      }
+      return;
+    }
+    // Weekday (Monday-Friday): once per week
     const storedWeek = schedule?.lunchWeek;
     const storedLunch = schedule?.lunchTime;
     if ((!storedLunch || storedWeek !== week) && userCode) {
@@ -275,10 +292,11 @@ export function FloatingAI() {
   // ─── Background timer for lunch/exit reminders ───
   useEffect(() => {
     if (!isChatOpen) return;
-    if (!schedule && !getStoredLunchTime()) return;
-    const lunchTime = schedule?.lunchTime || getStoredLunchTime();
-    const exitBase = dayEndInfo?.base;
-    const exitOffset = dayEndInfo?.offsetMin ?? 10;
+    const isSaturday = new Date().getDay() === 6;
+    if (!schedule && !getStoredLunchTime() && !isSaturday) return;
+    const lunchTime = isSaturday ? (schedule?.satLunchTime || undefined) : (schedule?.lunchTime || getStoredLunchTime());
+    const exitBase = isSaturday ? (schedule?.satExitTime || undefined) : dayEndInfo?.base;
+    const exitOffset = isSaturday ? 10 : (dayEndInfo?.offsetMin ?? 10);
     const check = () => {
       const now = new Date();
       const currentMin = now.getHours() * 60 + now.getMinutes();
@@ -290,8 +308,8 @@ export function FloatingAI() {
         const lunchMin = lh * 60 + lm;
         if (currentMin >= lunchMin - 10 && currentMin < lunchMin && alreadySent !== 'lunch') {
           const msg = lang === 'es'
-            ? `🍽️ Te quedan 10 minutos para ir a almorzar (${lunchTime}).`
-            : `🍽️ You have 10 minutes until lunch (${lunchTime}).`;
+            ? (isSaturday ? `🍽️ Sábado: 10 min para almuerzo (${lunchTime}).` : `🍽️ Te quedan 10 minutos para ir a almorzar (${lunchTime}).`)
+            : (isSaturday ? `🍽️ Saturday: 10 min until lunch (${lunchTime}).` : `🍽️ You have 10 minutes until lunch (${lunchTime}).`);
           addMessage('assistant', msg);
           speak(msg);
           localStorage.setItem(sentKey, 'lunch');
@@ -302,8 +320,8 @@ export function FloatingAI() {
         const exitMin = eh * 60 + em;
         if (currentMin >= exitMin - exitOffset && currentMin < exitMin && alreadySent !== 'exit') {
           const msg = lang === 'es'
-            ? `🚪 Te quedan ${exitOffset} minutos para salir (${exitBase}).`
-            : `🚪 You have ${exitOffset} minutes until exit (${exitBase}).`;
+            ? (isSaturday ? `🚪 Sábado: 10 min para salir (${exitBase}).` : `🚪 Te quedan ${exitOffset} minutos para salir (${exitBase}).`)
+            : (isSaturday ? `🚪 Saturday: 10 min until exit (${exitBase}).` : `🚪 You have ${exitOffset} minutes until exit (${exitBase}).`);
           addMessage('assistant', msg);
           speak(msg);
           localStorage.setItem(sentKey, 'exit');
@@ -373,6 +391,47 @@ export function FloatingAI() {
         return;
       }
 
+      // Saturday response detection
+      if (awaitingSatResponse && userCode) {
+        const timeMatch = trimmed.match(/(\d{1,2}):(\d{2})/);
+        if (timeMatch) {
+          const exitTime = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
+          const eatCompany = /sí|si\b|yes|claro|ok|sim|almuerz|como|voy a comer/i.test(trimmed);
+          const lunchTime = eatCompany ? '12:00' : undefined;
+          const week = getWeekNumber();
+          setStoredSatExitTime(exitTime);
+          setStoredSatEatCompany(eatCompany);
+          setStoredSatLunchTime(lunchTime || '');
+          setSatPromptWeek(week);
+          scheduleSaturdayAlarms(exitTime, lunchTime);
+          const newSchedule: UserSchedule = {
+            lunchTime: schedule?.lunchTime || undefined,
+            lunchWeek: schedule?.lunchWeek,
+            satExitTime: exitTime,
+            satEatCompany: eatCompany,
+            satLunchTime: lunchTime,
+            satWeek: week,
+          };
+          try { await saveUserSchedule(userCode, newSchedule); } catch {}
+          setSchedule(newSchedule);
+          const confirm = lang === 'es'
+            ? (lunchTime
+              ? `✅ Sábado: salida a las ${exitTime}, almuerzas en la empresa.`
+              : `✅ Sábado: salida a las ${exitTime}, sin almuerzo en empresa.`)
+            : (lunchTime
+              ? `✅ Saturday: exit at ${exitTime}, you eat at the company.`
+              : `✅ Saturday: exit at ${exitTime}, no lunch at company.`);
+          addMessage('assistant', confirm);
+          setExpression('happy');
+          speak(confirm);
+          setIsLoading(false);
+          processingRef.current = false;
+          setAwaitingSatResponse(false);
+          return;
+        }
+        setAwaitingSatResponse(false);
+      }
+
       // Lunch time response detection
       if (awaitingLunchResponse && userCode) {
         const timeMatch = trimmed.match(/(\d{1,2}):(\d{2})/);
@@ -382,14 +441,16 @@ export function FloatingAI() {
           setStoredLunchTime(time);
           setLunchPromptWeek(week);
           scheduleTodayAlarms(time, empleado || undefined);
-          saveUserSchedule(userCode, {
+          const newSchedule: UserSchedule = {
             lunchTime: time,
             lunchWeek: week,
             satExitTime: schedule?.satExitTime || undefined,
             satEatCompany: schedule?.satEatCompany,
             satLunchTime: schedule?.satLunchTime || undefined,
             satWeek: schedule?.satWeek,
-          });
+          };
+          try { await saveUserSchedule(userCode, newSchedule); } catch {}
+          setSchedule(newSchedule);
           const confirm = lang === 'es'
             ? `✅ Recordatorio de almuerzo programado a las ${time}.`
             : `✅ Lunch reminder set for ${time}.`;
