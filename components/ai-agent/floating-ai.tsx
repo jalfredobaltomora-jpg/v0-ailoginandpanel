@@ -175,7 +175,8 @@ export function FloatingAI() {
         return;
       }
 
-      const utterance = new SpeechSynthesisUtterance(text.replace(/\bJAB\b/gi, 'Jab'));
+      const cleanText = text.replace(/\bJAB\b/gi, 'Jab').replace(/\p{Emoji}\s*/gu, '').trim();
+      const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = lang === 'es' ? 'es-CO' : 'en-US';
       utterance.rate = 1.1;
       utterance.pitch = 0.9;
@@ -545,8 +546,8 @@ export function FloatingAI() {
         const aiResponse = await Promise.race([aiPromise, timeoutPromise]);
         console.log('JAB: askAI response', aiResponse?.content?.slice(0, 80));
         if (aiResponse?.content) {
-          // Strip emoji parenthetical descriptions (e.g. "🤖 (Cara de Robot)" -> "🤖")
-          const clean = aiResponse.content.replace(/\p{Emoji}\s*\([^)]*\)/gu, (m) => m.replace(/\s*\([^)]*\)/u, ''));
+          // Strip emojis entirely (both standalone and parenthetical like "🤖 (Cara de Robot)")
+          const clean = aiResponse.content.replace(/\p{Emoji}\s*\([^)]*\)/gu, '').replace(/\p{Emoji}\s*/gu, '').trim();
           addMessage('assistant', clean);
           setExpression('happy');
           speak(clean);

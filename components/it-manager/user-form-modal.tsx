@@ -232,7 +232,7 @@ export function UserFormModal({ empleados, existingUser, onClose }: UserFormModa
       if (success) {
         onClose();
       } else {
-        setError('Error al guardar el usuario. Revisa la consola para mas detalles.');
+        setError('Error al guardar el usuario. Revisa la consola para más detalles.');
       }
     } catch (e) {
       console.error('Error saving user:', e);
@@ -287,10 +287,10 @@ export function UserFormModal({ empleados, existingUser, onClose }: UserFormModa
         <CardContent className="p-6 overflow-y-auto overscroll-contain flex-1">
           {activeTab === 'info' && (
             <div className="space-y-6">
-              {/* Buscar empleado por codigo */}
+              {/* Buscar empleado por código */}
               <div className="rounded-lg border border-border bg-muted/30 p-4">
                 <label className="mb-2 block text-sm font-medium text-primary">
-                  Codigo de Trabajador *
+                  Código de Trabajador *
                 </label>
                 <div className="flex gap-2">
                   <Input
@@ -322,7 +322,7 @@ export function UserFormModal({ empleados, existingUser, onClose }: UserFormModa
                     <p className="font-medium text-foreground">{selectedEmpleado.apellidos}</p>
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">Area</label>
+                    <label className="text-xs text-muted-foreground">                Área</label>
                     <p className="font-medium text-foreground">{selectedEmpleado.area}</p>
                   </div>
                   <div>
@@ -336,7 +336,7 @@ export function UserFormModal({ empleados, existingUser, onClose }: UserFormModa
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-primary">
-                    Usuario (generado automaticamente)
+                    Usuario (generado automáticamente)
                   </label>
                   <Input
                     value={username}
@@ -350,12 +350,12 @@ export function UserFormModal({ empleados, existingUser, onClose }: UserFormModa
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-medium text-primary">
-                    PIN (codigo de trabajador) *
+                    PIN (código de trabajador) *
                   </label>
                   <Input
                     value={pin}
                     onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    placeholder="Codigo del trabajador"
+                    placeholder="Código del trabajador"
                     maxLength={10}
                     className="border-border bg-input font-mono tracking-widest"
                   />

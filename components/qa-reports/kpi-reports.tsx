@@ -725,7 +725,7 @@ export function KpiReports() {
 
       // Find the main card content area to capture
       const contentEl = document.querySelector('.max-w-7xl');
-      if (!contentEl) { alert('No se encontro el contenido'); return; }
+      if (!contentEl) { alert('No se encontró el contenido'); return; }
 
       const canvas = await html2canvasFn(contentEl as HTMLElement, {
         backgroundColor: '#0b111b',
@@ -963,7 +963,7 @@ export function KpiReports() {
                                 </button>
                                 <button onClick={() => handleExportEngine('xlsx')} className="flex items-center gap-3 w-full text-xs p-2.5 hover:bg-[#1c2128] rounded text-gray-200 transition-colors">
                                   <FileXlsx className="h-4 w-4 text-green-400" />
-                                  <span className="text-left"><span className="block font-semibold">XLSX - Analitico</span><span className="text-[10px] text-gray-500">Dark theme, grafico insertado, filtros</span></span>
+                                  <span className="text-left"><span className="block font-semibold">XLSX - Analítico</span><span className="text-[10px] text-gray-500">Dark theme, gráfico insertado, filtros</span></span>
                                 </button>
                               </div>
                             </>

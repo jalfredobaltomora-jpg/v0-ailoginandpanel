@@ -88,7 +88,7 @@ export async function analyzeFotos(fotos: Record<string, string>): Promise<{ sco
     const content: any[] = [
       {
         type: 'text',
-        text: `Eres un inspector de equipos IT. Analiza estas ${fotosValidas.length} fotos de un equipo (Tablet o Scanner) desde diferentes angulos. Responde SOLO con JSON: {"score": 0-100, "analisis": "texto breve en español"}. Score: 100=perfecto, 80-99=buen estado, 60-79=desgaste menor, 40-59=daño significativo, <40=mal estado.`,
+        text: `Eres un inspector de equipos IT. Analiza estas ${fotosValidas.length} fotos de un equipo (Tablet o Scanner) desde diferentes ángulos. Responde SOLO con JSON: {"score": 0-100, "analisis": "texto breve en español"}. Score: 100=perfecto, 80-99=buen estado, 60-79=desgaste menor, 40-59=daño significativo, <40=mal estado.`,
       },
     ];
     for (const [, base64] of fotosValidas) {

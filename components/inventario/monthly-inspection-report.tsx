@@ -81,7 +81,7 @@ export function MonthlyInspectionReport({ equipos, empleadosMap }: MonthlyInspec
       <h1>REPORTE MENSUAL - INSPECCION DE INVENTARIO</h1>
       <p class="sub">${now} | Mes de referencia: ${mesActual()}</p>
       <table><thead><tr>
-        <th>Usuario</th><th>Codigo</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serie</th>
+        <th>Usuario</th><th>Código</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Serie</th>
         <th>Comentario</th><th>Accesorios</th><th>Asignacion</th><th>Ult. Revision</th>
       </tr></thead><tbody>`;
     for (const r of rows) {
@@ -123,14 +123,14 @@ export function MonthlyInspectionReport({ equipos, empleadosMap }: MonthlyInspec
       wch: Math.max(k.length, ...data.map(r => String((r as any)[k] || '').length)) + 2,
     }));
     ws['!cols'] = colWidths;
-    XLSX.writeFile(wb, `inspeccion-mensual-${mesActual()}.xlsx`);
+    XLSX.writeFile(wb, `inspección-mensual-${mesActual()}.xlsx`);
   };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-muted-foreground">
-          Reporte de inspeccion del mes: <strong>{mesActual()}</strong> — {rows.length} equipos registrados
+          Reporte de inspección del mes: <strong>{mesActual()}</strong> — {rows.length} equipos registrados
         </p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="border-border" onClick={handlePrint}>

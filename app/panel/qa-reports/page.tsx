@@ -384,7 +384,7 @@ export default function QAReportsPage() {
         {view === 'tiles' && (
           <div className="flex flex-wrap justify-center gap-6">
             {puedeVer(currentUser, 'qa_extractor') && (
-              <Tile title="Extractor" subtitle="Codigo de Caja" icon={<ScanLine className="h-8 w-8" />}
+              <Tile title="Extractor" subtitle="Código de Caja" icon={<ScanLine className="h-8 w-8" />}
                 color="bg-gradient-to-br from-cyan-500 to-cyan-700" onClick={() => setView('extractor')} />
             )}
             {puedeVer(currentUser, 'qa_weekly') && (
@@ -706,7 +706,7 @@ export default function QAReportsPage() {
                           <th className="p-2 text-left font-medium text-primary">CAT ES</th>
                           <th className="p-2 text-left font-medium text-primary">ACR S</th>
                           <th className="p-2 text-left font-medium text-primary">Defect CAT ES</th>
-                          <th className="p-2 text-center font-medium text-primary">Accion</th>
+                          <th className="p-2 text-center font-medium text-primary">Acción</th>
                         </tr>
                       </thead>
                       <tbody>

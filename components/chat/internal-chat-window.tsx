@@ -80,7 +80,7 @@ export function InternalChatWindow() {
           <div className="hidden md:flex flex-1 items-center justify-center text-center p-6 bg-background">
             <div>
               <MessageCircle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Selecciona una conversacion</p>
+              <p className="text-sm text-muted-foreground">Selecciona una conversación</p>
               <p className="text-xs text-muted-foreground/60 mt-1">
                 Elige un chat de la lista para empezar
               </p>

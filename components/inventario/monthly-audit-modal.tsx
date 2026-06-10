@@ -136,7 +136,7 @@ export function MonthlyAuditModal({ equipos, empleadosMap, editAudit, onClose, o
     const entry: HistorialMensual = {
       mes,
       fotos: fotos as EquipoInventario['fotos'],
-      comentarios: comentarios || 'Auditoria de inventario',
+      comentarios: comentarios || 'Auditoría de inventario',
       scoreJAB: aprobado ? 100 : -1,
       timestamp: editAudit ? editAudit.historial.timestamp : Date.now(),
       ...(firmaAsignado ? { firmaAsignado } : {}),
@@ -169,7 +169,7 @@ export function MonthlyAuditModal({ equipos, empleadosMap, editAudit, onClose, o
     const ok = await updateEquipoInventario(selectedEquipo.id, updates);
     setSaving(false);
     if (ok) { onSaved(); onClose(); }
-    else setError('Error al guardar la auditoria. Intenta de nuevo.');
+    else setError('Error al guardar la auditoría. Intenta de nuevo.');
   };
 
   return (
@@ -178,7 +178,7 @@ export function MonthlyAuditModal({ equipos, empleadosMap, editAudit, onClose, o
         <CardHeader className="flex-row items-center justify-between border-b border-border sticky top-0 bg-card z-10">
           <CardTitle className="flex items-center gap-2 text-primary">
             <CheckSquare className="h-5 w-5" />
-            {editAudit ? 'Editar Auditoria de Inventario' : 'Auditoria de Inventario'}
+            {editAudit ? 'Editar Auditoría de Inventario' : 'Auditoría de Inventario'}
           </CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-5 w-5" />
@@ -227,7 +227,7 @@ export function MonthlyAuditModal({ equipos, empleadosMap, editAudit, onClose, o
                       <p><span className="text-muted-foreground">Marca:</span> {editing ? <Input value={editData.marca || ''} onChange={e => setEditData(p => ({ ...p, marca: e.target.value }))} className="h-7 text-sm inline-block w-40" /> : (selectedEquipo.marca || '-')}</p>
                       <p><span className="text-muted-foreground">Modelo:</span> {editing ? <Input value={editData.modelo || ''} onChange={e => setEditData(p => ({ ...p, modelo: e.target.value }))} className="h-7 text-sm inline-block w-40" /> : (selectedEquipo.modelo || '-')}</p>
                       <p><span className="text-muted-foreground">Empleado:</span> {getEmpleadoNombre(selectedEquipo.empleadoAsignado)}</p>
-                      <p><span className="text-muted-foreground">Asignacion:</span> {selectedEquipo.fechaAsignacion}</p>
+                      <p><span className="text-muted-foreground">Asignación:</span> {selectedEquipo.fechaAsignacion}</p>
                       <p><span className="text-muted-foreground">Estado:</span> {editing ? <Input value={editData.estado || ''} onChange={e => setEditData(p => ({ ...p, estado: e.target.value }))} className="h-7 text-sm inline-block w-60" /> : (selectedEquipo.estado || 'Sin comentarios')}</p>
                       <p><span className="text-muted-foreground">Mes Inv.:</span> {editing ? <Input value={editData.mesInventario || ''} onChange={e => setEditData(p => ({ ...p, mesInventario: e.target.value }))} className="h-7 text-sm inline-block w-28" /> : selectedEquipo.mesInventario}</p>
                     </div>
@@ -256,7 +256,7 @@ export function MonthlyAuditModal({ equipos, empleadosMap, editAudit, onClose, o
                       <span className="text-sm font-medium">Aprobado</span>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => setEditing(!editing)} className="border-border">
-                      {editing ? 'Cancelar Edicion' : 'Editar Datos'}
+                      {editing ? 'Cancelar Edición' : 'Editar Datos'}
                     </Button>
                   </div>
                 </div>
@@ -296,8 +296,8 @@ export function MonthlyAuditModal({ equipos, empleadosMap, editAudit, onClose, o
 
               {/* Comments */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-primary">Comentarios de la auditoria</label>
-                <Textarea value={comentarios} onChange={e => setComentarios(e.target.value)} placeholder="Resultados de la auditoria..." className="border-border bg-input" rows={3} />
+                <label className="mb-2 block text-sm font-medium text-primary">Comentarios de la auditoría</label>
+                <Textarea value={comentarios} onChange={e => setComentarios(e.target.value)} placeholder="Resultados de la auditoría..." className="border-border bg-input" rows={3} />
               </div>
 
               {/* Signatures */}
@@ -312,7 +312,7 @@ export function MonthlyAuditModal({ equipos, empleadosMap, editAudit, onClose, o
                 <Button variant="outline" onClick={onClose}>Cancelar</Button>
                 <Button onClick={handleSave} disabled={saving} className="bg-primary text-primary-foreground">
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {editAudit ? 'Actualizar Auditoria' : 'Guardar Auditoria'}
+                  {editAudit ? 'Actualizar Auditoría' : 'Guardar Auditoría'}
                 </Button>
               </div>
             </>

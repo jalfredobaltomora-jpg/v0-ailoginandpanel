@@ -162,7 +162,7 @@ export function ReinspectionModal({ equipo, empleadoNombre, onClose, onEdit, onS
               onCheck={(v) => setChecks(prev => ({ ...prev, tipo: v }))}
             />
             <FieldCheck
-              label="Codigo de Trabajador"
+              label="Código de Trabajador"
               value={equipo.empleadoAsignado || 'Sin asignar'}
               checked={checks.codigo}
               onCheck={(v) => setChecks(prev => ({ ...prev, codigo: v }))}

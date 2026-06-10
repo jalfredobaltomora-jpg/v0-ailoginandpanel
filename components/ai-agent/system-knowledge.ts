@@ -60,7 +60,7 @@ export const FEATURES: { keywords: string[]; label: Record<Lang, string>; info: 
     info: { es: 'Sistema de mensajería en tiempo real entre empleados usando Firebase. Soporta mensajes de texto, imágenes, archivos y notas de audio. Las conversaciones se limpian automáticamente después de 90 días. Muestra notificaciones y estado de conexión.', en: 'Real-time messaging system between employees using Firebase. Supports text, images, files and audio notes. Conversations auto-clean after 90 days. Shows notifications and online status.' }
   },
   {
-    keywords: ['login', 'acceso', 'iniciar', 'sesion', 'auth', 'autenticacion', 'authentication'],
+    keywords: ['login', 'acceso', 'iniciar', 'sesión', 'auth', 'autenticación', 'authentication'],
     label: { es: 'Inicio de Sesión', en: 'Login' },
     info: { es: 'El acceso al sistema es por username + PIN de 6 dígitos. El username se valida con inteligencia artificial (corrección fuzzy con Levenshtein). El PIN se verifica contra Firebase. Los usuarios tienen roles: admin, user e it-manager con permisos granulares.', en: 'System access is by username + 6-digit PIN. Username is validated with AI (fuzzy Levenshtein correction). PIN is verified against Firebase. Users have roles: admin, user, and it-manager with granular permissions.' }
   },

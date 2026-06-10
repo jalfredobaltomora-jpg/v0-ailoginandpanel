@@ -241,7 +241,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved }: EmployeeFormMo
 
   const handleSave = async () => {
     if (!formData.code.trim()) {
-      setError('El codigo de empleado es requerido');
+      setError('El código de empleado es requerido');
       return;
     }
     if (!formData.nombres.trim() || !formData.apellidos.trim()) {
@@ -249,7 +249,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved }: EmployeeFormMo
       return;
     }
     if (!formData.cedula.trim()) {
-      setError('La cedula es requerida');
+      setError('La cédula es requerida');
       return;
     }
 
@@ -259,7 +259,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved }: EmployeeFormMo
     // Check for invalid Firebase path characters in code
     const invalidPathChars = /[.#$\[\]]/;
     if (invalidPathChars.test(code)) {
-      setError('El codigo contiene caracteres no validos (. # $ [ ])');
+      setError('El código contiene caracteres no válidos (. # $ [ ])');
       return;
     }
 
@@ -403,7 +403,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved }: EmployeeFormMo
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-2 block text-sm font-medium text-primary">
-                Codigo de Empleado *
+                Código de Empleado *
               </label>
               <Input
                 value={formData.code}
@@ -415,7 +415,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved }: EmployeeFormMo
             </div>
             <div>
               <label className="mb-2 block text-sm font-medium text-primary">
-                Cedula * (000-000000-0000X)
+                Cédula * (000-000000-0000X)
               </label>
               <Input
                 value={formData.cedula}
@@ -469,7 +469,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved }: EmployeeFormMo
               />
               {isEditing && formData.nacionalidad === 'nicaraguense' && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Se genera automaticamente desde la cedula
+                  Se genera automáticamente desde la cédula
                 </p>
               )}
               {isEditing && formData.nacionalidad === 'extranjero' && (
@@ -561,7 +561,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved }: EmployeeFormMo
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-2 block text-sm font-medium text-primary">
-                Area
+                Área
               </label>
               <Input
                 value={formData.area}
@@ -749,7 +749,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved }: EmployeeFormMo
                       </span>
                     </div>
                     <div>
-                      <span className="text-xs text-muted-foreground">1er Codigo:</span>
+                      <span className="text-xs text-muted-foreground">1er Código:</span>
                       <span className="ml-2 text-sm font-medium text-foreground">
                         {formData.firstEmployeeCode || '-'}
                       </span>

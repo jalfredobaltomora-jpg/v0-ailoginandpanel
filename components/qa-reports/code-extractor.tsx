@@ -37,7 +37,7 @@ export function CodeExtractor() {
       <CardHeader className="border-b border-border">
         <CardTitle className="flex items-center gap-2 text-primary">
           <ScanLine className="h-5 w-5" />
-          Extractor de Codigo de Caja
+          Extractor de Código de Caja
         </CardTitle>
       </CardHeader>
       <CardContent className="p-6">
@@ -46,8 +46,8 @@ export function CodeExtractor() {
           <div className="mb-4 flex items-center gap-3">
             <Store className="h-6 w-6 text-[#25D366]" />
             <div>
-              <h3 className="font-bold text-[#25D366]">Generador de codigos para Kohl's</h3>
-              <p className="text-xs text-muted-foreground">Extrae los ultimos 8 digitos de cada codigo de barras</p>
+              <h3 className="font-bold text-[#25D366]">Generador de códigos para Kohl's</h3>
+              <p className="text-xs text-muted-foreground">Extrae los últimos 8 dígitos de cada código de barras</p>
             </div>
           </div>
 
@@ -55,7 +55,7 @@ export function CodeExtractor() {
             <textarea
               value={kohlsInput}
               onChange={(e) => setKohlsInput(e.target.value)}
-              placeholder="Pega los codigos aqui..."
+              placeholder="Pega los códigos aquí..."
               className="w-full h-28 rounded-lg border border-border bg-[#2d2d2d] p-3 text-base text-white outline-none focus:border-[#25D366] resize-none font-mono"
             />
 
