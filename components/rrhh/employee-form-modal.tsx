@@ -423,7 +423,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved }: EmployeeFormMo
                 placeholder="001-010190-0001A"
                 className="border-border bg-input font-mono"
                 disabled={!isEditing}
-                maxLength={15}
+                maxLength={16}
               />
             </div>
           </div>
