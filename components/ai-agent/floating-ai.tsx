@@ -21,7 +21,7 @@ import { detectIntent } from './system-knowledge';
 import { transcribeAudio } from '@/lib/transcribe-client';
 import { useWakeWord } from '@/lib/use-wake-word';
 import { getEmpleadoByCodigo, getUserSchedule, saveUserSchedule, type UserSchedule, type Empleado } from '@/lib/firebase';
-import { getWeekNumber, getDayEndTime, getDayEndAdjusted, setStoredLunchTime, setLunchPromptWeek, scheduleTodayAlarms, getStoredLunchTime, setStoredSatExitTime, setStoredSatEatCompany, setStoredSatLunchTime, setSatPromptWeek, scheduleSaturdayAlarms } from '@/lib/alarm-engine';
+import { getWeekNumber, getDayEndTime, getDayEndAdjusted, setStoredLunchTime, setLunchPromptWeek, getLunchPromptWeek, scheduleTodayAlarms, getStoredLunchTime, setStoredSatExitTime, setStoredSatEatCompany, setStoredSatLunchTime, setSatPromptWeek, getSatPromptWeek, scheduleSaturdayAlarms, getStoredSatExitTime, getStoredSatEatCompany } from '@/lib/alarm-engine';
 
 declare global {
   interface Window {
@@ -62,6 +62,7 @@ export function FloatingAI() {
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const processingRef = useRef(false);
+  const sessionPromptShown = useRef(false);
   const [userCode, setUserCode] = useState<string | null>(null);
   const [empleado, setEmpleado] = useState<Empleado | null>(null);
   const [schedule, setSchedule] = useState<UserSchedule | null | undefined>(undefined);
@@ -256,13 +257,15 @@ export function FloatingAI() {
     if (!isChatOpen) return;
     if (!greetComplete) return;
     if (schedule === undefined) return;
+    if (sessionPromptShown.current) return;
     const day = new Date().getDay();
     const week = getWeekNumber();
     if (day === 0) return; // Sunday — never prompt
     if (day === 6) {
-      // Saturday: always ask (extra day, not everyone stays)
-      const storedSatWeek = schedule?.satWeek;
+      // Saturday
+      const storedSatWeek = schedule?.satWeek || getSatPromptWeek();
       if (storedSatWeek !== week && userCode) {
+        sessionPromptShown.current = true;
         setAwaitingSatResponse(true);
         const ask = lang === 'es'
           ? '🕐 Hoy es sábado (horas extras). ¿A qué hora piensas salir? ¿Y almuerzas en la empresa si te quedas después de medio día?'
@@ -275,9 +278,10 @@ export function FloatingAI() {
       return;
     }
     // Weekday (Monday-Friday): once per week
-    const storedWeek = schedule?.lunchWeek;
-    const storedLunch = schedule?.lunchTime;
+    const storedWeek = schedule?.lunchWeek || getLunchPromptWeek();
+    const storedLunch = schedule?.lunchTime || getStoredLunchTime();
     if ((!storedLunch || storedWeek !== week) && userCode) {
+      sessionPromptShown.current = true;
       setAwaitingLunchResponse(true);
       const ask = lang === 'es'
         ? '🕐 Antes de comenzar, ¿a qué hora almuerzas esta semana?'
@@ -429,6 +433,29 @@ export function FloatingAI() {
           setAwaitingSatResponse(false);
           return;
         }
+        // Recognize natural replies: already gave data, already in database, etc.
+        if (/ya\s*(te\s*)?(di|diste|hab[ií]a|está|tengo|sabes|conoces|registre|guardé)|en\s*tu\s*(base|sistema|bd)|ya\s*est[áa]|ya\s*lo\s*(d[ii]|tengo|sabes|registraste)/i.test(trimmed)) {
+          const existingExit = schedule?.satExitTime || getStoredSatExitTime();
+          const existingEat = schedule?.satEatCompany ?? getStoredSatEatCompany();
+          if (existingExit) {
+            const existConfirm = lang === 'es'
+              ? `✅ Claro, ya tengo tu sábado: salida a las ${existingExit}${existingEat ? ', almuerzas en la empresa.' : ', sin almuerzo.'}`
+              : `✅ Got it, already have your Saturday: exit at ${existingExit}${existingEat ? ', you eat at the company.' : ', no lunch.'}`;
+            addMessage('assistant', existConfirm);
+            setExpression('happy');
+            speak(existConfirm);
+          } else {
+            const ask = lang === 'es'
+              ? '🕐 No encuentro el dato guardado. ¿A qué hora sales hoy sábado?'
+              : '🕐 I can\'t find the saved data. What time do you leave today (Saturday)?';
+            addMessage('assistant', ask);
+            speak(ask);
+            setAwaitingSatResponse(true);
+          }
+          setIsLoading(false);
+          processingRef.current = false;
+          return;
+        }
         setAwaitingSatResponse(false);
       }
 
@@ -460,6 +487,29 @@ export function FloatingAI() {
           setIsLoading(false);
           processingRef.current = false;
           setAwaitingLunchResponse(false);
+          return;
+        }
+        // Recognize natural replies: already gave data, already in database, etc.
+        if (/ya\s*(te\s*)?(di|diste|hab[ií]a|está|tengo|sabes|conoces|registre|guardé)|en\s*tu\s*(base|sistema|bd)|ya\s*est[áa]|ya\s*lo\s*(d[ii]|tengo|sabes|registraste)/i.test(trimmed)) {
+          const existingLunch = schedule?.lunchTime || getStoredLunchTime();
+          const existingWeek = schedule?.lunchWeek || getLunchPromptWeek();
+          if (existingLunch && existingWeek === getWeekNumber()) {
+            const existConfirm = lang === 'es'
+              ? `✅ Cierto, ya tengo tu hora: ${existingLunch}.`
+              : `✅ Right, I already have your time: ${existingLunch}.`;
+            addMessage('assistant', existConfirm);
+            setExpression('happy');
+            speak(existConfirm);
+          } else {
+            const ask = lang === 'es'
+              ? '🕐 No encuentro el dato guardado. ¿Puedes decirme la hora de almuerzo (ej. 12:00)?'
+              : '🕐 I can\'t find the saved data. Can you tell me your lunch time (e.g. 12:00)?';
+            addMessage('assistant', ask);
+            speak(ask);
+            setAwaitingLunchResponse(true);
+          }
+          setIsLoading(false);
+          processingRef.current = false;
           return;
         }
         setAwaitingLunchResponse(false);
