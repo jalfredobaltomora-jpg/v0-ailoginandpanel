@@ -901,16 +901,17 @@ export function FloatingAI() {
             </div>
           )}
 
-          {/* Hidden Toggle */}
-          {!isVisible && (
-            <button
-              onClick={() => setIsVisible(true)}
-              className="fixed z-[60] bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-cyan-600/40 to-blue-600/40 border border-cyan-500/50 shadow-xl hover:shadow-2xl hover:scale-110 transition-all flex items-center justify-center text-cyan-400 animate-pulse"
-            >
-              <Sparkles className="w-6 h-6" />
-            </button>
-          )}
         </>
+      )}
+
+      {/* Hidden Toggle (always visible, outside isVisible block) */}
+      {!isVisible && (
+        <button
+          onClick={() => setIsVisible(true)}
+          className="fixed z-[60] bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-cyan-600/40 to-blue-600/40 border border-cyan-500/50 shadow-xl hover:shadow-2xl hover:scale-110 transition-all flex items-center justify-center text-cyan-400 animate-pulse"
+        >
+          <Sparkles className="w-6 h-6" />
+        </button>
       )}
 
       {/* Visibility Toggle in Chat */}
