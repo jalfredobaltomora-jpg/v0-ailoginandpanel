@@ -161,23 +161,7 @@ export async function askAI(
     ? [{ role: 'system' as const, content: systemPrompt }, ...history.slice(-6), userMsg]
     : [{ role: 'system' as const, content: systemPrompt }, userMsg];
 
-  // Try API route first (works on Vercel)
-  try {
-    const res = await fetch('/api/ai/jab-chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages,
-        context,
-      }),
-    });
-    if (res.ok) {
-      const data: AIResponse = await res.json();
-      if (data.content) return data;
-    }
-  } catch {}
-
-  // Fallback: call Groq directly from browser (works on GitHub Pages)
+  // Call Groq directly from browser (works on GitHub Pages static export)
   const groqContent = await callGroqDirect(messages);
   if (groqContent) return { content: groqContent };
 
