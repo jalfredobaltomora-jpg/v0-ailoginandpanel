@@ -601,10 +601,9 @@ export function FloatingAI() {
           {/* Chat Panel - Premium Design */}
           {isChatOpen && (
             <div
-              className="fixed z-[70] bottom-32 right-4 md:right-6 w-[calc(100vw-2rem)] md:w-96 max-h-[85vh] rounded-3xl shadow-2xl overflow-hidden"
+              className="fixed z-[70] bottom-32 right-4 md:right-6 w-[calc(100vw-2rem)] md:w-96 max-h-[85vh] bg-gradient-to-b from-[#0d1117] to-[#161b22] border border-cyan-500/20 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-gradient-to-b from-[#0d1117] to-[#161b22] border border-cyan-500/20 rounded-3xl flex flex-col h-full">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-b border-cyan-500/20 px-6 py-4">
                   <div className="flex items-center justify-between gap-4">
@@ -788,7 +787,6 @@ export function FloatingAI() {
                     </div>
                   </div>
                 </div>
-              </div>
             </div>
           )}
 
