@@ -501,9 +501,9 @@ function formatMonth(dateStr: string): string {
                     No hay registros QA OQL.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-lg border border-border">
+                  <div className="overflow-auto max-h-[600px] rounded-lg border border-border">
                     <table className="w-full text-sm">
-                      <thead>
+                      <thead className="sticky top-0 z-10">
                         <tr className="bg-primary/10 border-b border-border">
                           <th className="p-2 text-left font-medium text-primary">ITEM</th>
                           <th className="p-2 text-left font-medium text-primary">Date</th>
@@ -579,9 +579,9 @@ function formatMonth(dateStr: string): string {
                     No hay registros de In Line Defect.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-lg border border-border">
+                  <div className="overflow-auto max-h-[600px] rounded-lg border border-border">
                     <table className="w-full text-sm">
-                      <thead>
+                      <thead className="sticky top-0 z-10">
                         <tr className="bg-primary/10 border-b border-border">
                           <th className="p-2 text-left font-medium text-primary">ITEM</th>
                           <th className="p-2 text-left font-medium text-primary">Date</th>
