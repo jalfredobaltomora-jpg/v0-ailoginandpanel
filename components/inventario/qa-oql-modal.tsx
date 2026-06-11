@@ -67,13 +67,13 @@ export function QAOQLModal({ onClose, onSaved, record }: QAOQLModalProps) {
   const dateObj = useMemo(() => new Date(inspectionDate + 'T12:00:00'), [inspectionDate]);
   const week = useMemo(() => getISOWeekNumber(dateObj), [dateObj]);
   const visualApproved = useMemo(() => Math.max(0, visualSample - visualReject), [visualSample, visualReject]);
-  const oqlScorePercent = useMemo(() => visualSample > 0 ? visualReject / visualSample : 0, [visualReject, visualSample]);
+  const oqlScorePercent = useMemo(() => visualSample > 0 ? visualApproved / visualSample : 0, [visualApproved, visualSample]);
   const performanceOQL = useMemo(() => {
-    if (oqlScorePercent <= 0.03) return 'Excellent';
-    if (oqlScorePercent <= 0.05) return 'Good';
+    if (oqlScorePercent >= 0.97) return 'Excellent';
+    if (oqlScorePercent >= 0.95) return 'Good';
     return 'Very Bad';
   }, [oqlScorePercent]);
-  const passRateScorePercent = useMemo(() => visualSample > 0 ? visualApproved / visualSample : 0, [visualApproved, visualSample]);
+  const passRateScorePercent = useMemo(() => visualSample > 0 ? visualReject / visualSample : 0, [visualReject, visualSample]);
 
   const handleSave = async () => {
     if (!item || !factory || !buyer || !auditor) {
@@ -128,7 +128,7 @@ export function QAOQLModal({ onClose, onSaved, record }: QAOQLModalProps) {
       <Card className="w-full max-w-3xl border-primary/20 bg-card max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex-row items-center justify-between border-b border-border sticky top-0 bg-card z-10">
           <CardTitle className="flex items-center gap-2 text-primary text-base">
-            {isEditing ? 'Editar Registro' : 'QA - OQL % SAE - Indicator'}
+            Nuevo In Line
           </CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-5 w-5" /></Button>
         </CardHeader>
@@ -204,10 +204,10 @@ export function QAOQLModal({ onClose, onSaved, record }: QAOQLModalProps) {
 
             {/* Numeric fields */}
             <Field label="Visual Sample *" type="number" value={String(visualSample)} onChange={v => setVisualSample(Number(v) || 0)} />
+            <Field label="Visual Approved" value={String(visualApproved)} readOnly accent />
             <Field label="Visual Reject" type="number" value={String(visualReject)} onChange={v => setVisualReject(Number(v) || 0)} />
 
             {/* Auto-calculated */}
-            <Field label="Visual Approved" value={String(visualApproved)} readOnly accent />
             <Field label="OQL Score %" value={visualSample > 0 ? `${(oqlScorePercent * 100).toFixed(2)}%` : '0%'} readOnly accent />
             <Field label="Performance OQL" value={performanceOQL} readOnly accent highlight />
             <Field label="Pass Rate Score %" value={visualSample > 0 ? `${(passRateScorePercent * 100).toFixed(2)}%` : '0%'} readOnly accent />
