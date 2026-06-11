@@ -69,9 +69,26 @@ function computeWeek(dateStr: string): number {
   return 0;
 }
 
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${parseInt(m[3], 10)} ${MONTH_NAMES[parseInt(m[2], 10) - 1]}`;
+  return dateStr;
+}
+
+function formatMonth(dateStr: string): string {
+  if (!dateStr) return '-';
+  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[2]}. ${MONTH_NAMES[parseInt(m[2], 10) - 1]} ${m[1]}`;
+  return dateStr;
+}
+
 function getFieldValue(r: any, field: string): string {
-  if (field === 'week') return `#${computeWeek(r.inspectionDate)}`;
-  if (field === 'month') return r.month || 'N/A';
+  if (field === 'date') return formatDate(r.inspectionDate);
+  if (field === 'week') return `Week ${computeWeek(r.inspectionDate)}`;
+  if (field === 'month') return formatMonth(r.inspectionDate);
   if (field === 'factory') return r.factory || 'N/A';
   if (field === 'line') return r.line || 'N/A';
   if (field === 'po') return r.po || 'N/A';
@@ -250,7 +267,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     filteredDefect.forEach(r => {
       let groupKey: string;
       if (top3GroupBy === 'month') groupKey = r.month || 'N/A';
-      else if (top3GroupBy === 'week') groupKey = `#${computeWeek(r.inspectionDate) || 0}`;
+      else if (top3GroupBy === 'week') groupKey = `Week ${computeWeek(r.inspectionDate) || 0}`;
       else groupKey = String((r as any)[groupField] || 'N/A').trim();
       if (!groupKey) groupKey = 'N/A';
       if (!groups[groupKey]) groups[groupKey] = {};
@@ -536,7 +553,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
       const oqlPct = r.visualSample > 0 ? ((Math.max(0, r.visualSample - r.visualReject) / r.visualSample) * 100).toFixed(2) : '0.00';
       const oqlClass = r.performanceOQL === 'Very Bad' ? 'perf-vbad' : r.performanceOQL === 'Excellent' ? 'perf-excellent' : '';
       const row = [
-        r.item, r.inspectionDate, `#${computeWeek(r.inspectionDate)}`, r.month || '',
+        r.item, formatDate(r.inspectionDate), `Week ${computeWeek(r.inspectionDate)}`, formatMonth(r.inspectionDate),
         r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
         getAuditorName(r.auditor, empleados), r.style || '',
         r.visualSample, r.visualReject, r.visualApproved,
@@ -553,7 +570,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
   const generateDefectHTML = () => {
     const header = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Defecto', 'Total', 'C\u00f3digo Defecto', 'Descripci\u00f3n', 'CAT EN', 'ACR', 'Defect CAT EN', 'Descripci\u00f3n Defecto', 'CAT ES', 'ACR S', 'Defect CAT ES'];
     const rows = filteredDefect.map(r => [
-      r.item, r.inspectionDate, `#${computeWeek(r.inspectionDate)}`, r.month || '',
+      r.item, formatDate(r.inspectionDate), `Week ${computeWeek(r.inspectionDate)}`, formatMonth(r.inspectionDate),
       r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
       getAuditorName(r.auditor, empleados), r.style || '',
       r.defect || '', r.total, r.defectCode,
@@ -609,7 +626,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     filteredInline.forEach((r, idx) => {
       const rowNum = headerRow + 1 + idx;
       const values = [
-        r.item, r.inspectionDate, `#${computeWeek(r.inspectionDate)}`, r.month || '',
+        r.item, formatDate(r.inspectionDate), `Week ${computeWeek(r.inspectionDate)}`, formatMonth(r.inspectionDate),
         r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
         getAuditorName(r.auditor, empleados), r.style || '',
         r.visualSample, r.visualReject, r.visualApproved,
@@ -655,7 +672,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     filteredDefect.forEach((r, idx) => {
       const rowNum = headerRow + 1 + idx;
       const values = [
-        r.item, r.inspectionDate, `#${computeWeek(r.inspectionDate)}`, r.month || '',
+        r.item, formatDate(r.inspectionDate), `Week ${computeWeek(r.inspectionDate)}`, formatMonth(r.inspectionDate),
         r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
         getAuditorName(r.auditor, empleados), r.style || '',
         r.defect || '', r.total, r.defectCode,
@@ -963,9 +980,9 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                       {filteredInline.map(r => (
                         <tr key={r.id} className="border-b border-border hover:bg-muted/20">
                           <td className="p-2 font-medium">{r.item}</td>
-                          <td className="p-2 text-xs">{r.inspectionDate}</td>
-                          <td className="p-2 text-xs">#{computeWeek(r.inspectionDate)}</td>
-                          <td className="p-2 text-xs">{r.month || '-'}</td>
+                          <td className="p-2 text-xs">{formatDate(r.inspectionDate)}</td>
+                          <td className="p-2 text-xs">Week {computeWeek(r.inspectionDate)}</td>
+                          <td className="p-2 text-xs">{formatMonth(r.inspectionDate)}</td>
                           <td className="p-2 text-xs">{r.factory}</td>
                           <td className="p-2 text-xs">{r.line || '-'}</td>
                           <td className="p-2 text-xs">{r.po || '-'}</td>
@@ -1186,9 +1203,9 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                       {filteredDefect.map(r => (
                         <tr key={r.id} className="border-b border-border hover:bg-muted/20">
                           <td className="p-2 font-medium">{r.item}</td>
-                          <td className="p-2 text-xs">{r.inspectionDate}</td>
-                          <td className="p-2 text-xs">#{computeWeek(r.inspectionDate)}</td>
-                          <td className="p-2 text-xs">{r.month || '-'}</td>
+                          <td className="p-2 text-xs">{formatDate(r.inspectionDate)}</td>
+                          <td className="p-2 text-xs">Week {computeWeek(r.inspectionDate)}</td>
+                          <td className="p-2 text-xs">{formatMonth(r.inspectionDate)}</td>
                           <td className="p-2 text-xs">{r.factory}</td>
                           <td className="p-2 text-xs">{r.line || '-'}</td>
                           <td className="p-2 text-xs">{r.po || '-'}</td>

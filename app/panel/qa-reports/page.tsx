@@ -222,14 +222,30 @@ export default function QAReportsPage() {
     return 0;
   }
 
-  function getISOWeekNumber(d: Date): number {
-    if (isNaN(d.getTime())) return 0;
-    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    const dayNum = date.getUTCDay() || 7;
-    date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-    return Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  }
+function getISOWeekNumber(d: Date): number {
+  if (isNaN(d.getTime())) return 0;
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${parseInt(m[3], 10)} ${MONTH_NAMES[parseInt(m[2], 10) - 1]}`;
+  return dateStr;
+}
+
+function formatMonth(dateStr: string): string {
+  if (!dateStr) return '-';
+  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[2]}. ${MONTH_NAMES[parseInt(m[2], 10) - 1]} ${m[1]}`;
+  return dateStr;
+}
 
   const handleImportInline = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -514,9 +530,9 @@ export default function QAReportsPage() {
                         {qaOqlRecords.map(r => (
                           <tr key={r.id} className="border-b border-border hover:bg-muted/20">
                             <td className="p-2 font-medium">{r.item}</td>
-                            <td className="p-2 text-xs">{r.inspectionDate}</td>
-                            <td className="p-2 text-xs">#{computeWeek(r.inspectionDate)}</td>
-                            <td className="p-2 text-xs">{r.month || '-'}</td>
+                            <td className="p-2 text-xs">{formatDate(r.inspectionDate)}</td>
+                            <td className="p-2 text-xs">Week {computeWeek(r.inspectionDate)}</td>
+                            <td className="p-2 text-xs">{formatMonth(r.inspectionDate)}</td>
                             <td className="p-2 text-xs">{r.factory}</td>
                             <td className="p-2 text-xs">{r.line || '-'}</td>
                             <td className="p-2 text-xs">{r.po || '-'}</td>
@@ -596,9 +612,9 @@ export default function QAReportsPage() {
                         {inLineDefectRecords.map(r => (
                           <tr key={r.id} className="border-b border-border hover:bg-muted/20">
                             <td className="p-2 font-medium">{r.item}</td>
-                            <td className="p-2 text-xs">{r.inspectionDate}</td>
-                            <td className="p-2 text-xs">#{computeWeek(r.inspectionDate)}</td>
-                            <td className="p-2 text-xs">{r.month || '-'}</td>
+                            <td className="p-2 text-xs">{formatDate(r.inspectionDate)}</td>
+                            <td className="p-2 text-xs">Week {computeWeek(r.inspectionDate)}</td>
+                            <td className="p-2 text-xs">{formatMonth(r.inspectionDate)}</td>
                             <td className="p-2 text-xs">{r.factory}</td>
                             <td className="p-2 text-xs">{r.line || '-'}</td>
                             <td className="p-2 text-xs">{r.po || '-'}</td>
