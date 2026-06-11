@@ -79,9 +79,9 @@ export default function QAReportsPage() {
     let unsub3: () => void;
     let unsub4: () => void;
     import('@/lib/firebase').then(({ listenToQAOQLRecords, listenToQAOQLCatalog, listenToInLineDefectRecords, listenToQAOQLDefectCatalog, getEmpleadosActivos }) => {
-          unsub1 = listenToQAOQLRecords((data: any) => setQaDhuRecords(data.sort((a: any, b: any) => a.item?.localeCompare(b.item, undefined, { numeric: true }) || 0)));
+          unsub1 = listenToQAOQLRecords((data: any) => setQaDhuRecords(data.sort((a: any, b: any) => (a.inspectionDate || '').localeCompare(b.inspectionDate || ''))));
       unsub2 = listenToQAOQLCatalog((data: any) => setCatalogItems(data));
-      unsub3 = listenToInLineDefectRecords((data: any) => setInLineDefectRecords(data));
+      unsub3 = listenToInLineDefectRecords((data: any) => setInLineDefectRecords(data.sort((a: any, b: any) => (a.inspectionDate || '').localeCompare(b.inspectionDate || ''))));
       unsub4 = listenToQAOQLDefectCatalog((data: any) => setDefectCatalogItems(data));
       getEmpleadosActivos().then(setEmpleados);
     });
