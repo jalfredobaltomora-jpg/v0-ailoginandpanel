@@ -79,7 +79,7 @@ export default function QAReportsPage() {
     let unsub3: () => void;
     let unsub4: () => void;
     import('@/lib/firebase').then(({ listenToQAOQLRecords, listenToQAOQLCatalog, listenToInLineDefectRecords, listenToQAOQLDefectCatalog, getEmpleadosActivos }) => {
-      unsub1 = listenToQAOQLRecords((data: any) => setQaDhuRecords(data));
+          unsub1 = listenToQAOQLRecords((data: any) => setQaDhuRecords(data.sort((a: any, b: any) => a.item?.localeCompare(b.item, undefined, { numeric: true }) || 0)));
       unsub2 = listenToQAOQLCatalog((data: any) => setCatalogItems(data));
       unsub3 = listenToInLineDefectRecords((data: any) => setInLineDefectRecords(data));
       unsub4 = listenToQAOQLDefectCatalog((data: any) => setDefectCatalogItems(data));
@@ -527,11 +527,11 @@ export default function QAReportsPage() {
                             <td className="p-2 text-xs">{r.visualSample}</td>
                             <td className="p-2 text-xs">{r.visualReject}</td>
                             <td className="p-2 text-xs">{r.visualApproved}</td>
-                            <td className="p-2 text-xs">{(r.oqlScorePercent * 100).toFixed(2)}%</td>
+                            <td className="p-2 text-xs">{r.visualSample > 0 ? `${((r.visualReject / r.visualSample) * 100).toFixed(2)}%` : '0.00%'}</td>
                             <td className="p-2">
-                              <span className={`text-xs font-bold ${r.performanceOQL === 'Excellent' ? 'text-green-500' : r.performanceOQL === 'Good' ? 'text-yellow-500' : 'text-red-500'}`}>{r.performanceOQL}</span>
+                              <span className={`text-xs font-bold ${((r.visualReject / (r.visualSample || 1)) * 100) <= 3 ? 'text-green-500' : ((r.visualReject / (r.visualSample || 1)) * 100) <= 5 ? 'text-yellow-500' : 'text-red-500'}`}>{r.performanceOQL}</span>
                             </td>
-                            <td className="p-2 text-xs">{(r.passRateScorePercent * 100).toFixed(2)}%</td>
+                            <td className="p-2 text-xs">{r.visualSample > 0 ? `${((Math.max(0, r.visualSample - r.visualReject) / r.visualSample) * 100).toFixed(2)}%` : '0.00%'}</td>
                             {isAdmin && <td className="p-2 text-xs">{r.createdBy || '-'}</td>}
                             <td className="p-2 text-center">
                               <button onClick={() => handleEdit(r)} className="text-primary hover:text-primary/70 mr-2" title="Editar">

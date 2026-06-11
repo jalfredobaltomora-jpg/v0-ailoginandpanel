@@ -82,8 +82,8 @@ function getFieldValue(r: any, field: string): string {
 }
 
 function getMetricValue(r: any, metric: string): number {
-  if (metric === 'oqlPct') return r.oqlScorePercent != null ? r.oqlScorePercent * 100 : 0;
-  if (metric === 'passRate') return r.passRateScorePercent != null ? r.passRateScorePercent * 100 : 0;
+  if (metric === 'oqlPct') return r.visualSample > 0 ? (r.visualReject / r.visualSample) * 100 : 0;
+  if (metric === 'passRate') return r.visualSample > 0 ? (Math.max(0, r.visualSample - r.visualReject) / r.visualSample) * 100 : 0;
   if (metric === 'count') return 1;
   return r[metric] || 0;
 }
@@ -345,8 +345,8 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
       else if (valKey === 'sample') val = rec.visualSample || 0;
       else if (valKey === 'reject') val = rec.visualReject || 0;
       else if (valKey === 'approved') val = rec.visualApproved || 0;
-      else if (valKey === 'oqlPct') val = rec.oqlScorePercent != null ? rec.oqlScorePercent * 100 : 0;
-      else if (valKey === 'passRate') val = rec.passRateScorePercent != null ? rec.passRateScorePercent * 100 : 0;
+      else if (valKey === 'oqlPct') val = rec.visualSample > 0 ? (rec.visualReject / rec.visualSample) * 100 : 0;
+      else if (valKey === 'passRate') val = rec.visualSample > 0 ? (Math.max(0, rec.visualSample - rec.visualReject) / rec.visualSample) * 100 : 0;
       else if (valKey === 'total') val = rec.total || 0;
       cells[rv][cv].sum += val;
       cells[rv][cv].count++;
@@ -533,7 +533,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     if (isAdmin) header.push('Created By');
     const rows = filteredInline.map(r => {
       const perfClass = r.performanceOQL === 'Very Bad' ? 'perf-vbad' : r.performanceOQL === 'Excellent' ? 'perf-excellent' : 'perf-good';
-      const oqlPct = (r.oqlScorePercent * 100).toFixed(2);
+      const oqlPct = r.visualSample > 0 ? ((r.visualReject / r.visualSample) * 100).toFixed(2) : '0.00';
       const oqlClass = r.performanceOQL === 'Very Bad' ? 'perf-vbad' : r.performanceOQL === 'Excellent' ? 'perf-excellent' : '';
       const row = [
         r.item, r.inspectionDate, `#${computeWeek(r.inspectionDate)}`, r.month || '',
@@ -542,7 +542,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
         r.visualSample, r.visualReject, r.visualApproved,
         `<span class="${oqlClass}">${oqlPct}%</span>`,
         `<span class="${perfClass}">${r.performanceOQL}</span>`,
-        (r.passRateScorePercent * 100).toFixed(2) + '%',
+        (r.visualSample > 0 ? ((Math.max(0, r.visualSample - r.visualReject) / r.visualSample) * 100).toFixed(2) : '0.00') + '%',
       ];
       if (isAdmin) row.push(r.createdBy || '');
       return row;
@@ -613,9 +613,9 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
         r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
         getAuditorName(r.auditor, empleados), r.style || '',
         r.visualSample, r.visualReject, r.visualApproved,
-        (r.oqlScorePercent * 100).toFixed(2) + '%',
+        (r.visualSample > 0 ? ((r.visualReject / r.visualSample) * 100).toFixed(2) : '0.00') + '%',
         r.performanceOQL,
-        (r.passRateScorePercent * 100).toFixed(2) + '%'
+        (r.visualSample > 0 ? ((Math.max(0, r.visualSample - r.visualReject) / r.visualSample) * 100).toFixed(2) : '0.00') + '%'
       ];
       const row = ws.getRow(rowNum);
       values.forEach((v, ci) => {
@@ -976,11 +976,11 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                           <td className="p-2 text-xs">{r.visualSample}</td>
                           <td className="p-2 text-xs">{r.visualReject}</td>
                           <td className="p-2 text-xs">{r.visualApproved}</td>
-                          <td className="p-2 text-xs">{(r.oqlScorePercent * 100).toFixed(2)}%</td>
+                          <td className="p-2 text-xs">{r.visualSample > 0 ? `${((r.visualReject / r.visualSample) * 100).toFixed(2)}%` : '0.00%'}</td>
                           <td className="p-2">
                             <span className={`text-xs font-bold ${r.performanceOQL === 'Excellent' ? 'text-green-500' : r.performanceOQL === 'Good' ? 'text-yellow-500' : 'text-red-500'}`}>{r.performanceOQL}</span>
                           </td>
-                          <td className="p-2 text-xs">{(r.passRateScorePercent * 100).toFixed(2)}%</td>
+                          <td className="p-2 text-xs">{r.visualSample > 0 ? `${((Math.max(0, r.visualSample - r.visualReject) / r.visualSample) * 100).toFixed(2)}%` : '0.00%'}</td>
                         </tr>
                       ))}
                     </tbody>
