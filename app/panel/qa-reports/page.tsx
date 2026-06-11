@@ -66,7 +66,7 @@ export default function QAReportsPage() {
   const [defectCatalogSearch, setDefectCatalogSearch] = useState('');
   const [top3Factory, setTop3Factory] = useState('');
   const [top3Line, setTop3Line] = useState('');
-  const [top3Weeks, setTop3Weeks] = useState<number[]>([]);
+  const [top3Weeks, setTop3Weeks] = useState<string[]>([]);
   const [top3Result, setTop3Result] = useState<{ top3: any[]; inspectionQty: number; factory: string; line: string } | null>(null);
   const [top3Loading, setTop3Loading] = useState(false);
   const [empleados, setEmpleados] = useState<any[]>([]);
@@ -84,7 +84,7 @@ export default function QAReportsPage() {
     let unsub3: () => void;
     let unsub4: () => void;
     import('@/lib/firebase').then(({ listenToQAOQLRecords, listenToQAOQLCatalog, listenToInLineDefectRecords, listenToQAOQLDefectCatalog, getEmpleadosActivos }) => {
-          unsub1 = listenToQAOQLRecords((data: any) => setQaDhuRecords(data.sort((a: any, b: any) => (a.inspectionDate || '').localeCompare(b.inspectionDate || ''))));
+          unsub1 = listenToQAOQLRecords((data: any) => setQaDhuRecords(data.sort((a: any, b: any) => (a.item || '').localeCompare(b.item || ''))));
       unsub2 = listenToQAOQLCatalog((data: any) => setCatalogItems(data));
       unsub3 = listenToInLineDefectRecords((data: any) => setInLineDefectRecords(data.sort((a: any, b: any) => (a.inspectionDate || '').localeCompare(b.inspectionDate || ''))));
       unsub4 = listenToQAOQLDefectCatalog((data: any) => setDefectCatalogItems(data));
@@ -390,8 +390,8 @@ function formatMonth(dateStr: string): string {
       if (top3Factory && r.factory !== top3Factory) return false;
       if (top3Line && r.line !== top3Line) return false;
       if (top3Weeks.length > 0) {
-        const w = computeWeek(r.inspectionDate);
-        if (!top3Weeks.includes(w)) return false;
+        const wkKey = `${(r.inspectionDate || '').slice(0, 4)}-W${String(computeWeek(r.inspectionDate)).padStart(2, '0')}`;
+        if (!top3Weeks.includes(wkKey)) return false;
       }
       return true;
     });
@@ -401,8 +401,8 @@ function formatMonth(dateStr: string): string {
       if (top3Factory && r.factory !== top3Factory) return false;
       if (top3Line && r.line !== top3Line) return false;
       if (top3Weeks.length > 0) {
-        const w = computeWeek(r.inspectionDate);
-        if (!top3Weeks.includes(w)) return false;
+        const wkKey = `${(r.inspectionDate || '').slice(0, 4)}-W${String(computeWeek(r.inspectionDate)).padStart(2, '0')}`;
+        if (!top3Weeks.includes(wkKey)) return false;
       }
       return defectItems.has(r.item);
     });
@@ -721,7 +721,7 @@ function formatMonth(dateStr: string): string {
                           <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Line</label>
                           <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Line} onChange={e => { setTop3Line(e.target.value); setTop3Result(null); }}>
                             <option value="">General</option>
-                            {[...new Set(qaOqlRecords.filter(r => !top3Factory || r.factory === top3Factory).map(r => r.line).filter(Boolean))].sort().map(l => (
+                            {[...new Set(inLineDefectRecords.filter(r => !top3Factory || r.factory === top3Factory).map(r => r.line).filter(Boolean))].sort().map(l => (
                               <option key={l} value={l}>{l}</option>
                             ))}
                           </select>
@@ -729,12 +729,15 @@ function formatMonth(dateStr: string): string {
                         <div>
                           <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Week</label>
                           <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto rounded-lg border border-border bg-input p-2">
-                            {[...new Set(qaOqlRecords.map(r => computeWeek(r.inspectionDate)).filter(w => w > 0))].sort((a, b) => a - b).map(w => (
-                              <label key={w} className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition-colors ${top3Weeks.includes(w) ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
-                                <input type="checkbox" className="hidden" checked={top3Weeks.includes(w)} onChange={() => { setTop3Weeks(prev => prev.includes(w) ? prev.filter(x => x !== w) : [...prev, w]); setTop3Result(null); }} />
-                                Week {w}
-                              </label>
-                            ))}
+                            {[...new Set([...qaOqlRecords, ...inLineDefectRecords].map(r => { const y = (r.inspectionDate || '').slice(0, 4); const w = computeWeek(r.inspectionDate); return y && w > 0 ? `${y}-W${String(w).padStart(2, '0')}` : null; }).filter((k): k is string => k !== null))].sort().map(k => {
+                              const display = `W${k.slice(-2)} ${k.slice(0, 4)}`;
+                              return (
+                                <label key={k} className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition-colors ${top3Weeks.includes(k) ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
+                                  <input type="checkbox" className="hidden" checked={top3Weeks.includes(k)} onChange={() => { setTop3Weeks(prev => prev.includes(k) ? prev.filter(x => x !== k) : [...prev, k]); setTop3Result(null); }} />
+                                  {display}
+                                </label>
+                              );
+                            })}
                           </div>
                         </div>
                         <div className="flex items-end">

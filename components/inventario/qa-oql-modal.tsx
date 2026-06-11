@@ -60,7 +60,7 @@ export function QAOQLModal({ onClose, onSaved, record }: QAOQLModalProps) {
           if (n > maxNum) maxNum = n;
         }
       }
-      setItem(`#${String(maxNum + 1).padStart(3, '0')}`);
+      setItem(`#${String(maxNum + 1).padStart(2, '0')}`);
     });
   }, [isEditing]);
 
