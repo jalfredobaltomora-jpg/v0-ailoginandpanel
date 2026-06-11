@@ -503,8 +503,8 @@ function formatMonth(dateStr: string): string {
                 ) : (
                   <div className="overflow-auto max-h-[600px] rounded-lg border border-border">
                     <table className="w-full text-sm">
-                      <thead className="sticky top-0 z-10">
-                        <tr className="bg-primary/10 border-b border-border">
+                      <thead className="sticky top-0 z-10 bg-card shadow-sm">
+                        <tr className="border-b border-border">
                           <th className="p-2 text-left font-medium text-primary">ITEM</th>
                           <th className="p-2 text-left font-medium text-primary">Date</th>
                           <th className="p-2 text-left font-medium text-primary">Week</th>
@@ -581,8 +581,8 @@ function formatMonth(dateStr: string): string {
                 ) : (
                   <div className="overflow-auto max-h-[600px] rounded-lg border border-border">
                     <table className="w-full text-sm">
-                      <thead className="sticky top-0 z-10">
-                        <tr className="bg-primary/10 border-b border-border">
+                      <thead className="sticky top-0 z-10 bg-card shadow-sm">
+                        <tr className="border-b border-border">
                           <th className="p-2 text-left font-medium text-primary">ITEM</th>
                           <th className="p-2 text-left font-medium text-primary">Date</th>
                           <th className="p-2 text-left font-medium text-primary">Week</th>
