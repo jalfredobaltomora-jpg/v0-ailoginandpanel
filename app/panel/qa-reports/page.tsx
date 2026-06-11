@@ -66,7 +66,8 @@ export default function QAReportsPage() {
   const [defectCatalogSearch, setDefectCatalogSearch] = useState('');
   const [top3Factory, setTop3Factory] = useState('');
   const [top3Line, setTop3Line] = useState('');
-  const [top3Weeks, setTop3Weeks] = useState<string[]>([]);
+  const [top3DateFrom, setTop3DateFrom] = useState('');
+  const [top3DateTo, setTop3DateTo] = useState('');
   const [top3Result, setTop3Result] = useState<{ top3: any[]; inspectionQty: number; factory: string; line: string } | null>(null);
   const [top3Loading, setTop3Loading] = useState(false);
   const [empleados, setEmpleados] = useState<any[]>([]);
@@ -86,7 +87,7 @@ export default function QAReportsPage() {
     import('@/lib/firebase').then(({ listenToQAOQLRecords, listenToQAOQLCatalog, listenToInLineDefectRecords, listenToQAOQLDefectCatalog, getEmpleadosActivos }) => {
           unsub1 = listenToQAOQLRecords((data: any) => setQaDhuRecords(data.sort((a: any, b: any) => (a.item || '').localeCompare(b.item || ''))));
       unsub2 = listenToQAOQLCatalog((data: any) => setCatalogItems(data));
-      unsub3 = listenToInLineDefectRecords((data: any) => setInLineDefectRecords(data.sort((a: any, b: any) => (a.inspectionDate || '').localeCompare(b.inspectionDate || ''))));
+      unsub3 = listenToInLineDefectRecords((data: any) => setInLineDefectRecords(data.sort((a: any, b: any) => (a.item || '').localeCompare(b.item || ''))));
       unsub4 = listenToQAOQLDefectCatalog((data: any) => setDefectCatalogItems(data));
       getEmpleadosActivos().then(setEmpleados);
     });
@@ -389,10 +390,8 @@ function formatMonth(dateStr: string): string {
     const filteredDefects = inLineDefectRecords.filter(r => {
       if (top3Factory && r.factory !== top3Factory) return false;
       if (top3Line && r.line !== top3Line) return false;
-      if (top3Weeks.length > 0) {
-        const wkKey = `${(r.inspectionDate || '').slice(0, 4)}-W${String(computeWeek(r.inspectionDate)).padStart(2, '0')}`;
-        if (!top3Weeks.includes(wkKey)) return false;
-      }
+      if (top3DateFrom && r.inspectionDate < top3DateFrom) return false;
+      if (top3DateTo && r.inspectionDate > top3DateTo) return false;
       return true;
     });
     if (!filteredDefects.length) { setTop3Result(null); setTop3Loading(false); return; }
@@ -400,10 +399,8 @@ function formatMonth(dateStr: string): string {
     const matchingInline = qaOqlRecords.filter(r => {
       if (top3Factory && r.factory !== top3Factory) return false;
       if (top3Line && r.line !== top3Line) return false;
-      if (top3Weeks.length > 0) {
-        const wkKey = `${(r.inspectionDate || '').slice(0, 4)}-W${String(computeWeek(r.inspectionDate)).padStart(2, '0')}`;
-        if (!top3Weeks.includes(wkKey)) return false;
-      }
+      if (top3DateFrom && r.inspectionDate < top3DateFrom) return false;
+      if (top3DateTo && r.inspectionDate > top3DateTo) return false;
       return defectItems.has(r.item);
     });
     const inspectionQty = matchingInline.reduce((sum, r) => sum + (r.visualSample || 0), 0);
@@ -727,18 +724,12 @@ function formatMonth(dateStr: string): string {
                           </select>
                         </div>
                         <div>
-                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Week</label>
-                          <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto rounded-lg border border-border bg-input p-2">
-                            {[...new Set([...qaOqlRecords, ...inLineDefectRecords].map(r => { const y = (r.inspectionDate || '').slice(0, 4); const w = computeWeek(r.inspectionDate); return y && w > 0 ? `${y}-W${String(w).padStart(2, '0')}` : null; }).filter((k): k is string => k !== null))].sort().map(k => {
-                              const display = `W${k.slice(-2)} ${k.slice(0, 4)}`;
-                              return (
-                                <label key={k} className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition-colors ${top3Weeks.includes(k) ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
-                                  <input type="checkbox" className="hidden" checked={top3Weeks.includes(k)} onChange={() => { setTop3Weeks(prev => prev.includes(k) ? prev.filter(x => x !== k) : [...prev, k]); setTop3Result(null); }} />
-                                  {display}
-                                </label>
-                              );
-                            })}
-                          </div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Date From</label>
+                          <input type="date" className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3DateFrom} onChange={e => { setTop3DateFrom(e.target.value); setTop3Result(null); }} />
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Date To</label>
+                          <input type="date" className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3DateTo} onChange={e => { setTop3DateTo(e.target.value); setTop3Result(null); }} />
                         </div>
                         <div className="flex items-end">
                           <Button size="sm" className="h-9 bg-primary text-primary-foreground shadow-sm" onClick={handleGenerateTop3} disabled={top3Loading}>
@@ -749,37 +740,46 @@ function formatMonth(dateStr: string): string {
 
                       {top3Result && (
                         <div className="overflow-hidden rounded-lg border border-border">
-                          <table className="w-full text-sm">
+                          <table className="w-full text-xs">
+                            <colgroup>
+                              <col className="w-[18%]" />
+                              <col className="w-[18%]" />
+                              <col className="w-[8%]" />
+                              <col className="w-[26%]" />
+                              <col className="w-[10%]" />
+                              <col className="w-[10%]" />
+                              <col className="w-[10%]" />
+                            </colgroup>
                             <thead>
                               <tr className="bg-gradient-to-r from-primary/10 to-primary/5">
-                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-primary">Factory</th>
-                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-primary">Line</th>
-                                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-primary">Rank</th>
-                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-primary">Descripción</th>
-                                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-primary">Cant. Inspección</th>
-                                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-primary">Total Defecto</th>
-                                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-primary">% Defecto</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-primary">Factory</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-primary">Line</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wider text-primary">Rank</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-primary">Descripción</th>
+                                <th className="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-primary">Cant. Inspección</th>
+                                <th className="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-primary">Total Defecto</th>
+                                <th className="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-primary">% Defecto</th>
                               </tr>
                             </thead>
                             <tbody>
                               {top3Result.top3.map((d, i) => (
                                 <tr key={i} className={`border-t border-border transition-colors ${i % 2 === 0 ? 'bg-card' : 'bg-muted/20'} hover:bg-muted/40`}>
                                   {i === 0 && (
-                                    <td className="px-4 py-3 text-xs font-medium text-foreground" rowSpan={top3Result.top3.length}>{top3Result.factory}</td>
+                                    <td className="px-2 py-2 text-[11px] font-medium text-foreground" rowSpan={top3Result.top3.length}>{top3Result.factory}</td>
                                   )}
                                   {i === 0 && (
-                                    <td className="px-4 py-3 text-xs text-muted-foreground" rowSpan={top3Result.top3.length}>{top3Result.line}</td>
+                                    <td className="px-2 py-2 text-[11px] text-muted-foreground" rowSpan={top3Result.top3.length}>{top3Result.line}</td>
                                   )}
-                                  <td className="px-4 py-3 text-center">
-                                    <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white ${i === 0 ? 'bg-amber-500' : i === 1 ? 'bg-slate-400' : 'bg-amber-700'}`}>
+                                  <td className="px-2 py-2 text-center">
+                                    <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white ${i === 0 ? 'bg-amber-500' : i === 1 ? 'bg-slate-400' : 'bg-amber-700'}`}>
                                       {i + 1}
                                     </span>
                                   </td>
-                                  <td className="px-4 py-3 text-xs font-medium text-foreground">{d.description}</td>
-                                  <td className="px-4 py-3 text-right text-xs tabular-nums text-foreground">{top3Result.inspectionQty}</td>
-                                  <td className="px-4 py-3 text-right text-xs tabular-nums text-foreground">{d.total}</td>
-                                  <td className="px-4 py-3 text-right">
-                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${d.defectPct >= 5 ? 'bg-red-100 text-red-700' : d.defectPct >= 2 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                                  <td className="px-2 py-2 text-[11px] font-medium text-foreground truncate max-w-[160px]" title={d.description}>{d.description}</td>
+                                  <td className="px-2 py-2 text-right text-[11px] tabular-nums text-foreground">{top3Result.inspectionQty}</td>
+                                  <td className="px-2 py-2 text-right text-[11px] tabular-nums text-foreground">{d.total}</td>
+                                  <td className="px-2 py-2 text-right">
+                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${d.defectPct >= 5 ? 'bg-red-100 text-red-700' : d.defectPct >= 2 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
                                       {d.defectPct.toFixed(2)}%
                                     </span>
                                   </td>
