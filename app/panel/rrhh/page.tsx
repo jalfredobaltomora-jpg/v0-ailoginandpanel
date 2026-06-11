@@ -61,6 +61,7 @@ export default function RRHHPage() {
   const [isBirthdayModalOpen, setIsBirthdayModalOpen] = useState(false);
   const [infoEmpleado, setInfoEmpleado] = useState<Empleado | null>(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [marcasHoy, setMarcasHoy] = useState<Record<string, any>>({});
 
   useEffect(() => {
     const user = getStoredUser();
@@ -95,6 +96,15 @@ export default function RRHHPage() {
     return () => {
       if (unsubscribe) unsubscribe();
     };
+  }, [view]);
+
+  // Fetch today's attendance for catalog stats
+  useEffect(() => {
+    if (view !== 'catalogo') return;
+    const today = new Date().toISOString().split('T')[0];
+    import('@/lib/firebase').then(({ getMarcasDelDia }) => {
+      getMarcasDelDia(today).then(setMarcasHoy).catch(() => {});
+    });
   }, [view]);
 
   // Filter by active/inactive status and search term
@@ -352,6 +362,22 @@ export default function RRHHPage() {
               <p className="mb-4 text-sm text-muted-foreground">
                 Doble click para ver detalles del empleado
               </p>
+              {!showInactivos && (
+                <div className="mb-4 flex items-center gap-4 text-sm">
+                  <span className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/20 px-3 py-1.5">
+                    <Users className="h-4 w-4 text-primary" />
+                    Total: <strong className="text-primary">{filteredEmpleados.length}</strong>
+                  </span>
+                  <span className="flex items-center gap-1.5 rounded-lg border border-green-500/20 bg-green-500/10 px-3 py-1.5">
+                    <span className="h-2 w-2 rounded-full bg-green-500" />
+                    Presentes: <strong className="text-green-500">{filteredEmpleados.filter(e => marcasHoy[e.code]).length}</strong>
+                  </span>
+                  <span className="flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5">
+                    <span className="h-2 w-2 rounded-full bg-red-500" />
+                    Ausentes: <strong className="text-red-500">{filteredEmpleados.filter(e => !marcasHoy[e.code]).length}</strong>
+                  </span>
+                </div>
+              )}
               {loading ? (
                 <div className="py-12 text-center text-muted-foreground">Cargando...</div>
               ) : filteredEmpleados.length === 0 ? (
@@ -382,7 +408,11 @@ export default function RRHHPage() {
                           <span className="font-medium text-foreground truncate">
                             {emp.nombres} {emp.apellidos}
                           </span>
-                          {!emp.activo && (
+                          {emp.activo !== false ? (
+                            <span className="rounded bg-green-500/15 px-2 py-0.5 text-xs text-green-400">
+                              Activo
+                            </span>
+                          ) : (
                             <span className="rounded bg-red-500/20 px-2 py-0.5 text-xs text-red-400">
                               Inactivo
                             </span>
@@ -394,6 +424,11 @@ export default function RRHHPage() {
                           <span className="font-medium">Área:</span> {emp.area} | {' '}
                           <span className="font-medium">Edad:</span> {calcEdad(emp.fechaNac)}
                           {emp.renewalCount ? ` | Renov.: ${emp.renewalCount}` : ''}
+                        </div>
+                        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{emp.sexo === 'femenino' ? '♀' : '♂'} {emp.sexo}</span>
+                          <span className="text-border">|</span>
+                          <span>Hijos: {emp.hijos ?? 0}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
@@ -597,6 +632,7 @@ export default function RRHHPage() {
           empleado={isCreatingNew ? null : selectedEmpleado}
           onClose={handleCloseModal}
           onSaved={handleSaved}
+          currentUser={currentUser}
         />
       )}
 

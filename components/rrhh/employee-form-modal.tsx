@@ -19,14 +19,19 @@ import { PhotoCropper } from '@/components/rrhh/photo-cropper';
 import {
   saveEmpleado,
   updateEmpleado,
+  deleteEmpleado,
   getEmpleadoByCodigo,
   type Empleado,
+  type HistorialContractual,
+  type UsuarioIT,
 } from '@/lib/firebase';
+import { tienePermisoEnGrupo } from '@/lib/permisos';
 
 interface EmployeeFormModalProps {
   empleado: Empleado | null;
   onClose: () => void;
   onSaved: () => void;
+  currentUser?: UsuarioIT | null;
 }
 
 // Formatear cedula con letra opcional: 000-000000-0000X
@@ -69,7 +74,7 @@ function parseCedulaDate(cedula: string): string | null {
   return `${year}-${mm}-${dd}`;
 }
 
-export function EmployeeFormModal({ empleado, onClose, onSaved }: EmployeeFormModalProps) {
+export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: EmployeeFormModalProps) {
   const [isEditing, setIsEditing] = useState(!empleado);
   const [isRenewing, setIsRenewing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -279,16 +284,32 @@ export function EmployeeFormModal({ empleado, onClose, onSaved }: EmployeeFormMo
 
         if (isRenewing) {
           const currentDb = await getEmpleadoByCodigo(empleado.code);
-          saveData.firstHireDate = currentDb?.firstHireDate || empleado.fechaIng;
-          saveData.firstEmployeeCode = currentDb?.firstEmployeeCode || empleado.code;
+          const oldCode = currentDb?.firstEmployeeCode || empleado.code;
+          const oldHire = currentDb?.firstHireDate || empleado.fechaIng;
+          saveData.firstHireDate = oldHire;
+          saveData.firstEmployeeCode = oldCode;
           saveData.renewalCount = (currentDb?.renewalCount ?? 0) + 1;
+
+          const historialEntry: HistorialContractual = {
+            oldCode: empleado.code,
+            newCode: code,
+            oldFechaIng: empleado.fechaIng,
+            newFechaIng: formData.fechaIng,
+            timestamp: Date.now(),
+          };
+          const existing = currentDb?.historialContractual || empleado.historialContractual || [];
+          saveData.historialContractual = [...existing, historialEntry];
+
+          success = await updateEmpleado(code, saveData as Partial<Empleado>);
+          if (success && code !== empleado.code) {
+            await deleteEmpleado(empleado.code);
+          }
         } else {
           saveData.firstHireDate = empleado.firstHireDate;
           saveData.firstEmployeeCode = empleado.firstEmployeeCode;
           saveData.renewalCount = empleado.renewalCount ?? 0;
+          success = await updateEmpleado(code, saveData as Partial<Empleado>);
         }
-
-        success = await updateEmpleado(code, saveData as Partial<Empleado>);
       } else {
         const saveData = {
           ...formData,
@@ -760,6 +781,29 @@ export function EmployeeFormModal({ empleado, onClose, onSaved }: EmployeeFormMo
                         {formData.renewalCount ?? 0}
                       </span>
                     </div>
+                  </div>
+                </>
+              )}
+              {(formData.historialContractual && formData.historialContractual.length > 0 && currentUser && (currentUser.rol === 'admin' || currentUser.permisos?.itManager || tienePermisoEnGrupo(currentUser, 'rrhh_catalogo_'))) && (
+                <>
+                  <div className="col-span-2 border-t border-border/30 my-1 pt-2">
+                    <span className="text-xs font-semibold text-blue-500">Expediente de Renovaciones</span>
+                  </div>
+                  <div className="col-span-2 max-h-40 overflow-y-auto space-y-1">
+                    {[...formData.historialContractual].reverse().map((entry, i) => (
+                      <div key={i} className="rounded border border-border/30 bg-muted/10 p-2 text-xs">
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>{new Date(entry.timestamp).toLocaleDateString()}</span>
+                          <span className="text-primary font-medium">#{formData.historialContractual!.length - i}</span>
+                        </div>
+                        <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5">
+                          <span>Carné anterior: <span className="font-mono text-amber-500">{entry.oldCode}</span></span>
+                          <span>Carné nuevo: <span className="font-mono text-green-500">{entry.newCode}</span></span>
+                          <span>Ingreso anterior: <span className="text-amber-500">{entry.oldFechaIng}</span></span>
+                          <span>Nuevo ingreso: <span className="text-green-500">{entry.newFechaIng}</span></span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </>
               )}
