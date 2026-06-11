@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ScanLine, CalendarDays, CalendarRange, BarChart3, Database, LineChart, ClipboardList, BookOpen, Trash2, Pencil, Bug, Upload, Search, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -64,6 +64,10 @@ export default function QAReportsPage() {
   const [importingDefect, setImportingDefect] = useState(false);
   const [defectImportProgress, setDefectImportProgress] = useState('');
   const [defectCatalogSearch, setDefectCatalogSearch] = useState('');
+  const [top3Factory, setTop3Factory] = useState('');
+  const [top3Line, setTop3Line] = useState('');
+  const [top3RangeType, setTop3RangeType] = useState<'Weeks' | 'Months'>('Weeks');
+  const [top3RangeValue, setTop3RangeValue] = useState(4);
   const [empleados, setEmpleados] = useState<any[]>([]);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
 
@@ -377,6 +381,53 @@ function formatMonth(dateStr: string): string {
     setTimeout(() => setDefectImportProgress(''), 5000);
   };
 
+  const top3Data = useMemo(() => {
+    if (!inLineDefectRecords.length || !qaOqlRecords.length) return { top3: [], inspectionQty: 0 };
+    const now = new Date();
+    let cutoff: Date;
+    if (top3RangeType === 'Weeks') {
+      cutoff = new Date(now.getTime() - top3RangeValue * 7 * 24 * 60 * 60 * 1000);
+    } else {
+      cutoff = new Date(now.getFullYear(), now.getMonth() - top3RangeValue, 1);
+    }
+    const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+    const filteredDefects = inLineDefectRecords.filter(r => {
+      if (top3Factory && r.factory !== top3Factory) return false;
+      if (top3Line && r.line !== top3Line) return false;
+      return r.inspectionDate >= cutoffStr;
+    });
+    if (!filteredDefects.length) return { top3: [], inspectionQty: 0 };
+    const defectItems = new Set(filteredDefects.map(r => r.item));
+    const matchingInline = qaOqlRecords.filter(r => {
+      if (top3Factory && r.factory !== top3Factory) return false;
+      if (top3Line && r.line !== top3Line) return false;
+      if (r.inspectionDate < cutoffStr) return false;
+      return defectItems.has(r.item);
+    });
+    const inspectionQty = matchingInline.reduce((sum, r) => sum + (r.visualSample || 0), 0);
+    if (inspectionQty === 0) return { top3: [], inspectionQty: 0 };
+    const defectMap = new Map<string, { defectCode: string; total: number; defectDescription: string; catEnglish: string; acr: string; catEspanol: string; acrSpanish: string }>();
+    filteredDefects.forEach(r => {
+      const code = r.defectCode || 'Unknown';
+      if (!defectMap.has(code)) {
+        defectMap.set(code, {
+          defectCode: code,
+          total: 0,
+          defectDescription: r.defectDescription || '',
+          catEnglish: r.catEnglish || '',
+          acr: r.acr || '',
+          catEspanol: r.catEspanol || '',
+          acrSpanish: r.acrSpanish || '',
+        });
+      }
+      defectMap.get(code)!.total += r.total || 0;
+    });
+    const sorted = Array.from(defectMap.values())
+      .map(d => ({ ...d, defectPct: (d.total / inspectionQty) * 100 }))
+      .sort((a, b) => b.defectPct - a.defectPct);
+    return { top3: sorted.slice(0, 3), inspectionQty };
+  }, [inLineDefectRecords, qaOqlRecords, top3Factory, top3Line, top3RangeType, top3RangeValue]);
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       <div className="flex items-center justify-between border-b border-border bg-card/50 p-4">
@@ -580,7 +631,7 @@ function formatMonth(dateStr: string): string {
                   </div>
                 ) : (
                   <div className="overflow-auto max-h-[600px] rounded-lg border border-border">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm whitespace-nowrap">
                       <thead className="sticky top-0 z-10 bg-card shadow-sm">
                         <tr className="border-b border-border">
                           <th className="p-2 text-left font-medium text-primary">ITEM</th>
@@ -645,6 +696,82 @@ function formatMonth(dateStr: string): string {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                )}
+
+                {/* TOP 3 Defectos */}
+                {inLineDefectRecords.length > 0 && (
+                  <div className="mt-6 space-y-4 rounded-lg border border-border p-4">
+                    <h4 className="text-sm font-semibold text-foreground">TOP 3 Defectos</h4>
+                    <div className="flex flex-wrap items-end gap-3">
+                      <div>
+                        <label className="mb-1 block text-xs text-muted-foreground">Factory</label>
+                        <select className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground" value={top3Factory} onChange={e => setTop3Factory(e.target.value)}>
+                          <option value="">All</option>
+                          {[...new Set([...qaOqlRecords, ...inLineDefectRecords].map(r => r.factory).filter(Boolean))].map(f => (
+                            <option key={f} value={f}>{f}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-muted-foreground">Line</label>
+                        <select className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground" value={top3Line} onChange={e => setTop3Line(e.target.value)}>
+                          <option value="">General</option>
+                          {[...new Set([...qaOqlRecords, ...inLineDefectRecords].filter(r => !top3Factory || r.factory === top3Factory).map(r => r.line).filter(Boolean))].sort().map(l => (
+                            <option key={l} value={l}>{l}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-muted-foreground">Range Type</label>
+                        <select className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground" value={top3RangeType} onChange={e => setTop3RangeType(e.target.value as 'Weeks' | 'Months')}>
+                          <option value="Weeks">Weeks</option>
+                          <option value="Months">Months</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-muted-foreground">Range Value</label>
+                        <Input type="number" min={1} className="w-20 border-border bg-input" value={top3RangeValue} onChange={e => setTop3RangeValue(parseInt(e.target.value) || 1)} />
+                      </div>
+                    </div>
+                    {top3Data.top3.length === 0 ? (
+                      <div className="py-8 text-center text-muted-foreground">No hay datos de defectos en el rango seleccionado.</div>
+                    ) : (
+                      <div className="overflow-x-auto rounded-lg border border-border">
+                        <table className="w-full text-sm whitespace-nowrap">
+                          <thead className="bg-card">
+                            <tr className="border-b border-border">
+                              <th className="p-2 text-left font-medium text-primary">#</th>
+                              <th className="p-2 text-left font-medium text-primary">Código Defecto</th>
+                              <th className="p-2 text-left font-medium text-primary">Descripción</th>
+                              <th className="p-2 text-left font-medium text-primary">CAT EN</th>
+                              <th className="p-2 text-left font-medium text-primary">ACR</th>
+                              <th className="p-2 text-left font-medium text-primary">CAT ES</th>
+                              <th className="p-2 text-left font-medium text-primary">ACR S</th>
+                              <th className="p-2 text-left font-medium text-primary">Total Defecto</th>
+                              <th className="p-2 text-left font-medium text-primary">Cant. Inspección</th>
+                              <th className="p-2 text-left font-medium text-primary">% Defecto</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {top3Data.top3.map((d, i) => (
+                              <tr key={d.defectCode} className="border-b border-border hover:bg-muted/20">
+                                <td className="p-2 font-medium">{i + 1}</td>
+                                <td className="p-2 text-xs">{d.defectCode}</td>
+                                <td className="p-2 text-xs">{d.defectDescription || '-'}</td>
+                                <td className="p-2 text-xs">{d.catEnglish || '-'}</td>
+                                <td className="p-2 text-xs">{d.acr || '-'}</td>
+                                <td className="p-2 text-xs">{d.catEspanol || '-'}</td>
+                                <td className="p-2 text-xs">{d.acrSpanish || '-'}</td>
+                                <td className="p-2 text-xs">{d.total}</td>
+                                <td className="p-2 text-xs">{top3Data.inspectionQty}</td>
+                                <td className="p-2 text-xs">{d.defectPct.toFixed(2)}%</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
