@@ -827,7 +827,7 @@ function formatMonth(dateStr: string): string {
                           <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Línea</label>
                           <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Line} onChange={e => { setTop3Line(e.target.value); setTop3Result(null); }}>
                             <option value="">General</option>
-                            {[...new Set(inLineDefectRecords.filter(r => !top3Factory || r.factory === top3Factory).map(r => r.line).filter(Boolean))].sort().map(l => (
+                            {[...new Set(qaOqlRecords.filter(r => !top3Factory || r.factory === top3Factory).map(r => r.line).filter(Boolean))].sort().map(l => (
                               <option key={l} value={l}>{l}</option>
                             ))}
                           </select>
