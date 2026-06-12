@@ -67,11 +67,13 @@ export default function QAReportsPage() {
   const [defectCatalogSearch, setDefectCatalogSearch] = useState('');
   const [top3Factory, setTop3Factory] = useState('');
   const [top3Line, setTop3Line] = useState('');
+  const [top3Buyer, setTop3Buyer] = useState('');
+  const [top3Color, setTop3Color] = useState('');
   const [top3Year, setTop3Year] = useState('');
   const [top3Weeks, setTop3Weeks] = useState<number[]>([]);
   const [top3DateFrom, setTop3DateFrom] = useState('');
   const [top3DateTo, setTop3DateTo] = useState('');
-  const [top3Result, setTop3Result] = useState<{ top3: any[]; inspectionQty: number; factory: string; line: string } | null>(null);
+  const [top3Result, setTop3Result] = useState<{ top3: any[]; inspectionQty: number; factory: string; line: string; buyer: string; color: string } | null>(null);
   const [top3Loading, setTop3Loading] = useState(false);
   const [empleados, setEmpleados] = useState<any[]>([]);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
@@ -413,17 +415,32 @@ function formatMonth(dateStr: string): string {
     const filteredDefects = inLineDefectRecords.filter(r => {
       if (top3Factory && r.factory !== top3Factory) return false;
       if (top3Line && r.line !== top3Line) return false;
+      if (top3Buyer && r.buyer !== top3Buyer) return false;
+      if (top3Color && r.color !== top3Color) return false;
       if (top3Weeks.length > 0 && top3Year) {
         if (!top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
       }
       return true;
     });
     if (!filteredDefects.length) { setTop3Result(null); setTop3Loading(false); return; }
-    const defectItems = new Set(filteredDefects.map(r => r.item));
-    const matchingInline = qaOqlRecords.filter(r => {
+    const inlineFilters = (r: any) => {
       if (top3Factory && r.factory !== top3Factory) return false;
       if (top3Line && r.line !== top3Line) return false;
-      return defectItems.has(r.item);
+      if (top3Buyer && r.buyer !== top3Buyer) return false;
+      if (top3Color && r.color !== top3Color) return false;
+      return true;
+    };
+    const matchingInline = qaOqlRecords.filter(r => {
+      if (!inlineFilters(r)) return false;
+      return filteredDefects.some(d =>
+        d.item === r.item &&
+        d.inspectionDate === r.inspectionDate &&
+        d.factory === r.factory &&
+        d.line === r.line &&
+        d.po === r.po &&
+        d.color === r.color &&
+        d.buyer === r.buyer
+      );
     });
     const inspectionQty = matchingInline.reduce((sum, r) => sum + (r.visualSample || 0), 0);
     const defectMap = new Map<string, { description: string; total: number }>();
@@ -441,11 +458,14 @@ function formatMonth(dateStr: string): string {
       .map(d => ({ ...d, defectPct: (d.total / denom) * 100 }))
       .sort((a, b) => b.defectPct - a.defectPct)
       .slice(0, 3);
+    const topColor = filteredDefects.find(r => r.color)?.color || top3Color || '';
     setTop3Result({
       top3: sorted,
       inspectionQty: inspectionQty > 0 ? inspectionQty : totalDefects,
       factory: top3Factory || 'Sae-A Technotex SA',
       line: top3Line || 'Todas las líneas',
+      buyer: top3Buyer || 'Todos los compradores',
+      color: topColor,
     });
     setTop3Loading(false);
   };
@@ -832,6 +852,24 @@ function formatMonth(dateStr: string): string {
                             ))}
                           </select>
                         </div>
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Comprador</label>
+                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Buyer} onChange={e => { setTop3Buyer(e.target.value); setTop3Result(null); }}>
+                            <option value="">Todos</option>
+                            {[...new Set(qaOqlRecords.filter(r => !top3Factory || r.factory === top3Factory).map(r => r.buyer).filter(Boolean))].sort().map(b => (
+                              <option key={b} value={b}>{b}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Color</label>
+                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Color} onChange={e => { setTop3Color(e.target.value); setTop3Result(null); }}>
+                            <option value="">Todos</option>
+                            {[...new Set(qaOqlRecords.filter(r => !top3Factory || r.factory === top3Factory).map(r => r.color).filter(Boolean))].sort().map(c => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        </div>
                         <div className="min-w-[260px] max-w-[360px]">
                           <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Rango de Fechas</label>
                           <DateRangePicker dateFrom={top3DateFrom} dateTo={top3DateTo} onDateFromChange={setTop3DateFrom} onDateToChange={setTop3DateTo} />
@@ -851,6 +889,10 @@ function formatMonth(dateStr: string): string {
                       </div>
 
                       {top3Result && (
+                        <>
+                        {top3Result.color && (
+                          <p className="text-[11px] text-muted-foreground italic mb-1">🎨 Color: {top3Result.color}</p>
+                        )}
                         <div ref={top3TableRef} className="overflow-x-auto rounded-xl border border-border shadow-sm">
                           <table className="text-xs" style={{ width: 'max-content', minWidth: '100%', tableLayout: 'auto' }}>
                             <thead>
@@ -891,8 +933,6 @@ function formatMonth(dateStr: string): string {
                             </tbody>
                           </table>
                         </div>
-                      )}
-                      {top3Result && (
                         <div className="mt-3 flex flex-wrap items-center gap-2">
                           <Button size="sm" variant="default" className="bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm" onClick={handleExportExcel}>
                             📊 Excel
@@ -904,6 +944,7 @@ function formatMonth(dateStr: string): string {
                             🖨️ Imprimir
                           </Button>
                         </div>
+                        </>
                       )}
                     </div>
                   </div>
