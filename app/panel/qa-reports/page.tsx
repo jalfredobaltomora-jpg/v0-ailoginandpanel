@@ -80,6 +80,7 @@ export default function QAReportsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inlineFileInputRef = useRef<HTMLInputElement>(null);
   const defectFileInputRef = useRef<HTMLInputElement>(null);
+  const top3TableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (view !== 'dhu') return;
@@ -426,7 +427,6 @@ function formatMonth(dateStr: string): string {
       return defectItems.has(r.item);
     });
     const inspectionQty = matchingInline.reduce((sum, r) => sum + (r.visualSample || 0), 0);
-    if (inspectionQty === 0) { setTop3Result(null); setTop3Loading(false); return; }
     const defectMap = new Map<string, { description: string; total: number }>();
     filteredDefects.forEach(r => {
       const desc = r.defectDescription || r.defect || 'Desconocido';
@@ -435,18 +435,106 @@ function formatMonth(dateStr: string): string {
       }
       defectMap.get(desc)!.total += r.total || 0;
     });
+    const totalDefects = Array.from(defectMap.values()).reduce((s, d) => s + d.total, 0);
+    if (totalDefects === 0) { setTop3Result(null); setTop3Loading(false); return; }
+    const denom = inspectionQty > 0 ? inspectionQty : totalDefects;
     const sorted = Array.from(defectMap.values())
-      .map(d => ({ ...d, defectPct: (d.total / inspectionQty) * 100 }))
+      .map(d => ({ ...d, defectPct: (d.total / denom) * 100 }))
       .sort((a, b) => b.defectPct - a.defectPct)
       .slice(0, 3);
     setTop3Result({
       top3: sorted,
-      inspectionQty,
+      inspectionQty: inspectionQty > 0 ? inspectionQty : totalDefects,
       factory: top3Factory || 'Sae-A Technotex SA',
       line: top3Line || 'Todas las líneas',
     });
     setTop3Loading(false);
   };
+
+  const handleExportExcel = useCallback(async () => {
+    if (!top3Result) return;
+    const XLSX = await import('xlsx');
+    const wsData: any[][] = [
+      ['Fábrica', 'Línea', 'Rank', 'Descripción', 'Cant. Inspección', 'Total Defecto', '% Defecto'],
+    ];
+    top3Result.top3.forEach((d, i) => {
+      wsData.push([
+        i === 0 ? top3Result.factory : '',
+        i === 0 ? top3Result.line : '',
+        i + 1,
+        d.description,
+        i === 0 ? top3Result.inspectionQty : '',
+        d.total,
+        `${d.defectPct.toFixed(2)}%`,
+      ]);
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = wsData[0].map((_, idx) => {
+      const maxLen = wsData.reduce((a, r) => Math.max(a, String(r[idx] || '').length), 0);
+      return { wch: Math.max(maxLen + 3, 14) };
+    });
+    XLSX.utils.book_append_sheet(wb, ws, 'TOP 3 Defectos');
+    XLSX.writeFile(wb, `top3-defectos-${top3DateFrom || ''}.xlsx`);
+  }, [top3Result, top3DateFrom]);
+
+  const handleExportPDF = useCallback(async () => {
+    if (!top3TableRef.current || !top3Result) return;
+    const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+      import('html2canvas'),
+      import('jspdf'),
+    ]);
+    const canvas = await html2canvas(top3TableRef.current, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+    });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('l', 'mm', 'a4');
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = (canvas.height * pdfW) / canvas.width;
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
+    pdf.save(`top3-defectos-${top3DateFrom || ''}.pdf`);
+  }, [top3Result, top3DateFrom]);
+
+  const handlePrint = useCallback(() => {
+    if (!top3Result) return;
+    const printWin = window.open('', '_blank');
+    if (!printWin) return;
+    const rows = top3Result.top3.map((d, i) => `
+      <tr style="${i % 2 === 0 ? 'background:#f8f9fa' : 'background:#fff'}">
+        ${i === 0 ? `<td rowspan="${top3Result.top3.length}" style="border:1px solid #dee2e6;padding:6px;font-weight:600">${top3Result.factory}</td>` : ''}
+        ${i === 0 ? `<td rowspan="${top3Result.top3.length}" style="border:1px solid #dee2e6;padding:6px">${top3Result.line}</td>` : ''}
+        <td style="border:1px solid #dee2e6;padding:6px;text-align:center"><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:${i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : '#b45309'};color:#fff;font-weight:700;font-size:11px">${i + 1}</span></td>
+        <td style="border:1px solid #dee2e6;padding:6px;font-weight:500">${d.description}</td>
+        <td style="border:1px solid #dee2e6;padding:6px;text-align:right">${i === 0 ? top3Result.inspectionQty : ''}</td>
+        <td style="border:1px solid #dee2e6;padding:6px;text-align:right">${d.total}</td>
+        <td style="border:1px solid #dee2e6;padding:6px;text-align:right"><span style="display:inline-flex;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:600;background:${d.defectPct >= 5 ? '#fee2e2' : d.defectPct >= 2 ? '#fef3c7' : '#dcfce7'};color:${d.defectPct >= 5 ? '#b91c1c' : d.defectPct >= 2 ? '#92400e' : '#166534'}">${d.defectPct.toFixed(2)}%</span></td>
+      </tr>
+    `).join('');
+    printWin.document.write(`
+      <html><head><title>TOP 3 Defectos</title>
+      <style>
+        body { font-family:Arial,sans-serif; margin:20px; }
+        h2 { color:#1e293b; font-size:16px; margin-bottom:12px; }
+        table { border-collapse:collapse; width:100%; font-size:12px; }
+        th { background:linear-gradient(135deg,#e0e7ff,#dbeafe); border:1px solid #dee2e6; padding:8px; text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:#4338ca; font-weight:600; }
+        td { border:1px solid #dee2e6; padding:6px; }
+        .footer { margin-top:12px; font-size:10px; color:#64748b; }
+      </style></head>
+      <body>
+        <h2>📊 TOP 3 Defectos — ${top3Result.factory} / ${top3Result.line}</h2>
+        <table>
+          <thead><tr>
+            <th>Fábrica</th><th>Línea</th><th style="text-align:center">Rank</th><th>Descripción</th><th style="text-align:right">Cant. Inspección</th><th style="text-align:right">Total Defecto</th><th style="text-align:right">% Defecto</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="footer">Generado: ${new Date().toLocaleString('es-MX')} · Rango: ${top3DateFrom || '—'} → ${top3DateTo || '—'}</div>
+        <script>window.onload=function(){window.print();}<\/script>
+      </body></html>
+    `);
+    printWin.document.close();
+  }, [top3Result, top3DateFrom, top3DateTo]);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
@@ -764,47 +852,38 @@ function formatMonth(dateStr: string): string {
                       </div>
 
                       {top3Result && (
-                        <div className="overflow-hidden rounded-lg border border-border">
-                          <table className="w-full text-xs">
-                            <colgroup>
-                              <col className="w-[18%]" />
-                              <col className="w-[18%]" />
-                              <col className="w-[8%]" />
-                              <col className="w-[26%]" />
-                              <col className="w-[10%]" />
-                              <col className="w-[10%]" />
-                              <col className="w-[10%]" />
-                            </colgroup>
+                        <div ref={top3TableRef} className="overflow-hidden rounded-xl border border-border shadow-sm">
+                          <table className="w-full text-xs" style={{ tableLayout: 'auto' }}>
                             <thead>
-                              <tr className="bg-gradient-to-r from-primary/10 to-primary/5">
-                                <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-primary">Fábrica</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-primary">Línea</th>
-                                <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wider text-primary">Rank</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-primary">Descripción</th>
-                                <th className="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-primary">Cant. Inspección</th>
-                                <th className="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-primary">Total Defecto</th>
-                                <th className="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-primary">% Defecto</th>
+                              <tr className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600">
+                                <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-white">Fábrica</th>
+                                <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-white">Línea</th>
+                                <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white">Rank</th>
+                                <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-white">Descripción</th>
+                                <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-white">Cant. Inspección</th>
+                                <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-white">Total Defecto</th>
+                                <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-white">% Defecto</th>
                               </tr>
                             </thead>
                             <tbody>
                               {top3Result.top3.map((d, i) => (
-                                <tr key={i} className={`border-t border-border transition-colors ${i % 2 === 0 ? 'bg-card' : 'bg-muted/20'} hover:bg-muted/40`}>
+                                <tr key={i} className={`transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-indigo-50/60`}>
                                   {i === 0 && (
-                                    <td className="px-2 py-2 text-[11px] font-medium text-foreground" rowSpan={top3Result.top3.length}>{top3Result.factory}</td>
+                                    <td className="border-b border-slate-200 px-3 py-2.5 text-[12px] font-semibold text-slate-800" rowSpan={top3Result.top3.length}>{top3Result.factory}</td>
                                   )}
                                   {i === 0 && (
-                                    <td className="px-2 py-2 text-[11px] text-muted-foreground" rowSpan={top3Result.top3.length}>{top3Result.line}</td>
+                                    <td className="border-b border-slate-200 px-3 py-2.5 text-[12px] text-slate-600" rowSpan={top3Result.top3.length}>{top3Result.line}</td>
                                   )}
-                                  <td className="px-2 py-2 text-center">
-                                    <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white ${i === 0 ? 'bg-amber-500' : i === 1 ? 'bg-slate-400' : 'bg-amber-700'}`}>
+                                  <td className="border-b border-slate-200 px-3 py-2 text-center">
+                                    <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-sm ${i === 0 ? 'bg-gradient-to-br from-amber-400 to-amber-600' : i === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-500' : 'bg-gradient-to-br from-amber-600 to-amber-800'}`}>
                                       {i + 1}
                                     </span>
                                   </td>
-                                  <td className="px-2 py-2 text-[11px] font-medium text-foreground truncate max-w-[160px]" title={d.description}>{d.description}</td>
-                                  <td className="px-2 py-2 text-right text-[11px] tabular-nums text-foreground">{top3Result.inspectionQty}</td>
-                                  <td className="px-2 py-2 text-right text-[11px] tabular-nums text-foreground">{d.total}</td>
-                                  <td className="px-2 py-2 text-right">
-                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${d.defectPct >= 5 ? 'bg-red-100 text-red-700' : d.defectPct >= 2 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                                  <td className="border-b border-slate-200 px-3 py-2.5 text-[12px] font-medium text-slate-700 whitespace-nowrap" title={d.description}>{d.description}</td>
+                                  <td className="border-b border-slate-200 px-3 py-2.5 text-right text-[12px] tabular-nums font-semibold text-slate-800">{top3Result.inspectionQty}</td>
+                                  <td className="border-b border-slate-200 px-3 py-2.5 text-right text-[12px] tabular-nums font-semibold text-slate-800">{d.total}</td>
+                                  <td className="border-b border-slate-200 px-3 py-2.5 text-right">
+                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold shadow-sm ${d.defectPct >= 5 ? 'bg-red-100 text-red-700 ring-1 ring-red-300' : d.defectPct >= 2 ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-300' : 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300'}`}>
                                       {d.defectPct.toFixed(2)}%
                                     </span>
                                   </td>
@@ -812,6 +891,19 @@ function formatMonth(dateStr: string): string {
                               ))}
                             </tbody>
                           </table>
+                        </div>
+                      )}
+                      {top3Result && (
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <Button size="sm" variant="default" className="bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm" onClick={handleExportExcel}>
+                            📊 Excel
+                          </Button>
+                          <Button size="sm" variant="default" className="bg-red-600 text-white hover:bg-red-700 shadow-sm" onClick={handleExportPDF}>
+                            📄 PDF
+                          </Button>
+                          <Button size="sm" variant="outline" className="border-slate-300 shadow-sm" onClick={handlePrint}>
+                            🖨️ Imprimir
+                          </Button>
                         </div>
                       )}
                     </div>

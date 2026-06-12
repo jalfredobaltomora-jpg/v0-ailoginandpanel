@@ -223,7 +223,7 @@ export default function DateRangePicker({ dateFrom, dateTo, onDateFromChange, on
       </div>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 min-w-[680px] overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+        <div className="absolute left-0 z-50 mt-2 min-w-[680px] overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
           <div className="flex">
             <div className="w-40 shrink-0 border-r border-border bg-muted/30 p-3">
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Predefinidos</p>
