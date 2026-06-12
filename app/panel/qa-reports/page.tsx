@@ -851,22 +851,22 @@ function formatMonth(dateStr: string): string {
                       </div>
 
                       {top3Result && (
-                        <div ref={top3TableRef} className="overflow-hidden rounded-xl border border-border shadow-sm">
-                          <table className="w-full text-xs" style={{ tableLayout: 'auto' }}>
+                        <div ref={top3TableRef} className="overflow-x-auto rounded-xl border border-border shadow-sm">
+                          <table className="text-xs" style={{ width: 'max-content', minWidth: '100%', tableLayout: 'auto' }}>
                             <thead>
-                              <tr className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600">
+                              <tr className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 whitespace-nowrap">
                                 <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-white">Fábrica</th>
                                 <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-white">Línea</th>
                                 <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white">Rank</th>
                                 <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-white">Descripción</th>
-                                <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-white">Cant. Inspección</th>
-                                <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-white">Total Defecto</th>
+                                <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-white whitespace-normal">Cant.<br/>Inspección</th>
+                                <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-white whitespace-normal">Total<br/>Defecto</th>
                                 <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-white">% Defecto</th>
                               </tr>
                             </thead>
                             <tbody>
                               {top3Result.top3.map((d, i) => (
-                                <tr key={i} className={`transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-indigo-50/60`}>
+                                <tr key={i} className={`transition-colors whitespace-nowrap ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-indigo-50/60`}>
                                   {i === 0 && (
                                     <td className="border-b border-slate-200 px-3 py-2.5 text-[12px] font-semibold text-slate-800" rowSpan={top3Result.top3.length}>{top3Result.factory}</td>
                                   )}
@@ -878,7 +878,7 @@ function formatMonth(dateStr: string): string {
                                       {i + 1}
                                     </span>
                                   </td>
-                                  <td className="border-b border-slate-200 px-3 py-2.5 text-[12px] font-medium text-slate-700 whitespace-nowrap" title={d.description}>{d.description}</td>
+                                  <td className="border-b border-slate-200 px-3 py-2.5 text-[12px] font-medium text-slate-700" title={d.description}>{d.description}</td>
                                   <td className="border-b border-slate-200 px-3 py-2.5 text-right text-[12px] tabular-nums font-semibold text-slate-800">{top3Result.inspectionQty}</td>
                                   <td className="border-b border-slate-200 px-3 py-2.5 text-right text-[12px] tabular-nums font-semibold text-slate-800">{d.total}</td>
                                   <td className="border-b border-slate-200 px-3 py-2.5 text-right">
