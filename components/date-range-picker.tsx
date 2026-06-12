@@ -9,8 +9,8 @@ interface Props {
   onDateToChange: (val: string) => void;
 }
 
-const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const WEEKDAYS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
+const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 function daysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
@@ -131,7 +131,7 @@ export default function DateRangePicker({ dateFrom, dateTo, onDateFromChange, on
 
   const presets = [
     {
-      label: 'Last Month',
+      label: 'Último Mes',
       getRange: () => {
         const d = new Date();
         const m = d.getMonth();
@@ -142,7 +142,7 @@ export default function DateRangePicker({ dateFrom, dateTo, onDateFromChange, on
       },
     },
     {
-      label: 'Last 3 Months',
+      label: 'Últimos 3 Meses',
       getRange: () => {
         const d = new Date();
         const cm = d.getMonth();
@@ -156,7 +156,7 @@ export default function DateRangePicker({ dateFrom, dateTo, onDateFromChange, on
       },
     },
     {
-      label: 'Last 6 Months',
+      label: 'Últimos 6 Meses',
       getRange: () => {
         const d = new Date();
         const cm = d.getMonth();
@@ -170,7 +170,7 @@ export default function DateRangePicker({ dateFrom, dateTo, onDateFromChange, on
       },
     },
     {
-      label: 'Last 12 Months',
+      label: 'Últimos 12 Meses',
       getRange: () => {
         const d = new Date();
         const cm = d.getMonth();
@@ -182,14 +182,14 @@ export default function DateRangePicker({ dateFrom, dateTo, onDateFromChange, on
       },
     },
     {
-      label: 'Custom range',
+      label: 'Rango Personalizado',
       getRange: () => ({ from: '', to: '' }),
     },
   ];
 
   const applyPreset = useCallback((preset: typeof presets[number]) => {
     const { from, to } = preset.getRange();
-    if (preset.label === 'Custom range') {
+    if (preset.label === 'Rango Personalizado') {
       onDateFromChange('');
       onDateToChange('');
       setSelecting('from');
@@ -209,15 +209,15 @@ export default function DateRangePicker({ dateFrom, dateTo, onDateFromChange, on
       <div className="overflow-hidden rounded-lg border border-border cursor-pointer" onClick={() => setOpen(true)}>
         <div className="flex items-stretch">
           <div className="flex flex-1 flex-col gap-1 border-r border-border px-3 py-2">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Date From</label>
-            <div className="text-sm text-foreground">{dateFrom || 'Select date'}</div>
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Fecha Desde</label>
+            <div className="text-sm text-foreground">{dateFrom || 'Seleccionar fecha'}</div>
           </div>
           <div className="flex items-center px-2 text-muted-foreground/50">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
           </div>
           <div className="flex flex-1 flex-col gap-1 px-3 py-2">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Date To</label>
-            <div className="text-sm text-foreground">{dateTo || 'Select date'}</div>
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Fecha Hasta</label>
+            <div className="text-sm text-foreground">{dateTo || 'Seleccionar fecha'}</div>
           </div>
         </div>
       </div>
@@ -226,7 +226,7 @@ export default function DateRangePicker({ dateFrom, dateTo, onDateFromChange, on
         <div className="absolute right-0 z-50 mt-2 min-w-[680px] overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
           <div className="flex">
             <div className="w-40 shrink-0 border-r border-border bg-muted/30 p-3">
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Presets</p>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Predefinidos</p>
               <div className="flex flex-col gap-0.5">
                 {presets.map(p => (
                   <button key={p.label} type="button" onClick={() => applyPreset(p)}
@@ -238,7 +238,7 @@ export default function DateRangePicker({ dateFrom, dateTo, onDateFromChange, on
               </div>
               <div className="mt-3 border-t border-border pt-3">
                 <p className="text-[10px] text-muted-foreground">
-                  {selecting === 'from' ? 'Select start date' : 'Select end date'}
+                  {selecting === 'from' ? 'Seleccione fecha inicio' : 'Seleccione fecha fin'}
                 </p>
               </div>
             </div>
@@ -246,10 +246,10 @@ export default function DateRangePicker({ dateFrom, dateTo, onDateFromChange, on
             <div className="flex-1 p-4">
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={() => navigateYear(-1)} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted" title="Previous year">
+                  <button type="button" onClick={() => navigateYear(-1)} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted" title="Año anterior">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
                   </button>
-                  <button type="button" onClick={() => navigateMonth(-1)} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted" title="Previous month">
+                  <button type="button" onClick={() => navigateMonth(-1)} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted" title="Mes anterior">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                   </button>
                 </div>
@@ -258,10 +258,10 @@ export default function DateRangePicker({ dateFrom, dateTo, onDateFromChange, on
                   <span className="text-sm font-semibold text-foreground">{MONTHS[secondMonth]} {secondYear}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={() => navigateMonth(1)} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted" title="Next month">
+                  <button type="button" onClick={() => navigateMonth(1)} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted" title="Mes siguiente">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                   </button>
-                  <button type="button" onClick={() => navigateYear(1)} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted" title="Next year">
+                  <button type="button" onClick={() => navigateYear(1)} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted" title="Año siguiente">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
                   </button>
                 </div>

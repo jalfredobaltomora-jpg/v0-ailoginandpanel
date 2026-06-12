@@ -60,7 +60,7 @@ export function CodeExtractor() {
             />
 
             <Button onClick={processKohls} disabled={!kohlsInput.trim()} className="w-full bg-[#128C7E] text-white hover:bg-[#075e54]">
-              EXTRAER ULTIMOS 8
+              EXTRAER ÚLTIMOS 8
             </Button>
 
             {kohlsResult.length > 0 && (

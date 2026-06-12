@@ -259,7 +259,7 @@ function getISOWeekNumber(d: Date): number {
   return Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 }
 
-const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return '';
@@ -317,7 +317,7 @@ function formatMonth(dateStr: string): string {
         const visualReject = parseInt(String(row[12]).replace(/[^0-9.-]/g, '')) || 0;
         const visualApproved = Math.max(0, visualSample - visualReject);
         const oqlScorePct = visualSample > 0 ? visualReject / visualSample : 0;
-        const perf = oqlScorePct <= 0.03 ? 'Excellent' : oqlScorePct <= 0.05 ? 'Good' : 'Very Bad';
+        const perf = oqlScorePct <= 0.03 ? 'Excelente' : oqlScorePct <= 0.05 ? 'Bueno' : 'Muy Malo';
         const passRatePct = visualSample > 0 ? visualApproved / visualSample : 0;
         await saveQAOQLRecord({
           item, inspectionDate, week, month, factory, line, po, color, buyer,
@@ -429,7 +429,7 @@ function formatMonth(dateStr: string): string {
     if (inspectionQty === 0) { setTop3Result(null); setTop3Loading(false); return; }
     const defectMap = new Map<string, { description: string; total: number }>();
     filteredDefects.forEach(r => {
-      const desc = r.defectDescription || r.defect || 'Unknown';
+      const desc = r.defectDescription || r.defect || 'Desconocido';
       if (!defectMap.has(desc)) {
         defectMap.set(desc, { description: desc, total: 0 });
       }
@@ -461,7 +461,7 @@ function formatMonth(dateStr: string): string {
             {view === 'tiles' ? 'Regresar' : 'Volver'}
           </Button>
           <h2 className="text-xl font-bold">
-            <span className="text-primary">QA Reports</span>{' '}
+            <span className="text-primary">Reportes QA</span>{' '}
             <span className="text-foreground">(Panel)</span>
           </h2>
         </div>
@@ -475,23 +475,23 @@ function formatMonth(dateStr: string): string {
                 color="bg-gradient-to-br from-cyan-500 to-cyan-700" onClick={() => setView('extractor')} />
             )}
             {puedeVer(currentUser, 'qa_weekly') && (
-              <Tile title="Weekly Issues" subtitle="Issues Semanales" icon={<CalendarDays className="h-8 w-8" />}
+              <Tile title="Incidencias Semanales" subtitle="Issues Semanales" icon={<CalendarDays className="h-8 w-8" />}
                 color="bg-gradient-to-br from-amber-500 to-amber-700" onClick={() => setView('weekly')} />
             )}
             {puedeVer(currentUser, 'qa_monthly') && (
-              <Tile title="Monthly Issues" subtitle="Issues Mensuales" icon={<CalendarRange className="h-8 w-8" />}
+              <Tile title="Incidencias Mensuales" subtitle="Issues Mensuales" icon={<CalendarRange className="h-8 w-8" />}
                 color="bg-gradient-to-br from-blue-500 to-blue-700" onClick={() => setView('monthly')} />
             )}
             {puedeVer(currentUser, 'qa_registry') && (
-              <Tile title="Registro Weekly" subtitle="Historial Semanal" icon={<Database className="h-8 w-8" />}
+              <Tile title="Registro Semanal" subtitle="Historial Semanal" icon={<Database className="h-8 w-8" />}
                 color="bg-gradient-to-br from-purple-500 to-purple-700" onClick={() => setView('registry')} />
             )}
             {puedeVer(currentUser, 'qa_kpi') && (
-              <Tile title="KPI Reports" subtitle="Reportes KPI" icon={<BarChart3 className="h-8 w-8" />}
+              <Tile title="Reportes KPI" subtitle="Reportes KPI" icon={<BarChart3 className="h-8 w-8" />}
                 color="bg-gradient-to-br from-green-500 to-green-700" onClick={() => setView('kpi')} />
             )}
             {puedeVer(currentUser, 'qa_dhu') && (
-              <Tile title="QA - OQL % SAE" subtitle="Indicator" icon={<LineChart className="h-8 w-8" />}
+              <Tile title="QA - OQL % SAE" subtitle="Indicador" icon={<LineChart className="h-8 w-8" />}
                 color="bg-gradient-to-br from-rose-500 to-rose-700" onClick={() => setView('dhu')} />
             )}
           </div>
@@ -507,14 +507,14 @@ function formatMonth(dateStr: string): string {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-foreground">
-                {oqlTab === 'catalog' ? 'Catálogo de defectos' : 'QA - OQL % SAE - Indicator'}
+                {oqlTab === 'catalog' ? 'Catálogo de defectos' : 'QA - OQL % SAE - Indicador'}
               </h3>
               <div className="flex gap-2">
                 {(oqlTab === 'inline' || oqlTab === 'defect') && puedeVer(currentUser, 'qa_analytics') && (
                   <>
                     <Button size="sm" variant="outline" onClick={() => setAnalyticsOpen(true)}
                       className="border-primary/50 text-primary hover:bg-primary/10">
-                      <Activity className="mr-2 h-4 w-4" /> Analytics
+                      <Activity className="mr-2 h-4 w-4" /> Analíticos
                     </Button>
                   </>
                 )}
@@ -547,11 +547,11 @@ function formatMonth(dateStr: string): string {
             <div className="flex gap-4 border-b border-border">
               <button onClick={() => setDhuTab('inline')}
                 className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${oqlTab === 'inline' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
-                <ClipboardList className="h-4 w-4" /> IN LINE
+                <ClipboardList className="h-4 w-4" /> EN LÍNEA
               </button>
               <button onClick={() => setDhuTab('defect')}
                 className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${oqlTab === 'defect' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
-                <Bug className="h-4 w-4" /> In Line Defect
+                <Bug className="h-4 w-4" /> Defecto en Línea
               </button>
               <button onClick={() => setDhuTab('catalog')}
                 className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${oqlTab === 'catalog' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
@@ -577,22 +577,22 @@ function formatMonth(dateStr: string): string {
                       <thead className="sticky top-0 z-10 bg-card shadow-sm">
                         <tr className="border-b border-border">
                           <th className="p-2 text-left font-medium text-primary">ITEM</th>
-                          <th className="p-2 text-left font-medium text-primary">Date</th>
-                          <th className="p-2 text-left font-medium text-primary">Week</th>
-                          <th className="p-2 text-left font-medium text-primary">Month</th>
-                          <th className="p-2 text-left font-medium text-primary">Factory</th>
-                          <th className="p-2 text-left font-medium text-primary">Line</th>
+                          <th className="p-2 text-left font-medium text-primary">Fecha</th>
+                          <th className="p-2 text-left font-medium text-primary">Semana</th>
+                          <th className="p-2 text-left font-medium text-primary">Mes</th>
+                          <th className="p-2 text-left font-medium text-primary">Fábrica</th>
+                          <th className="p-2 text-left font-medium text-primary">Línea</th>
                           <th className="p-2 text-left font-medium text-primary">PO</th>
                           <th className="p-2 text-left font-medium text-primary">Color</th>
-                          <th className="p-2 text-left font-medium text-primary">Buyer</th>
+                          <th className="p-2 text-left font-medium text-primary">Comprador</th>
                           <th className="p-2 text-left font-medium text-primary">Auditor</th>
-                          <th className="p-2 text-left font-medium text-primary">Style</th>
-                          <th className="p-2 text-left font-medium text-primary">Sample</th>
-                          <th className="p-2 text-left font-medium text-primary">Reject</th>
-                          <th className="p-2 text-left font-medium text-primary">Approved</th>
+                          <th className="p-2 text-left font-medium text-primary">Estilo</th>
+                          <th className="p-2 text-left font-medium text-primary">Muestra</th>
+                          <th className="p-2 text-left font-medium text-primary">Rechazo</th>
+                          <th className="p-2 text-left font-medium text-primary">Aprobado</th>
                           <th className="p-2 text-left font-medium text-primary">OQL %</th>
-                          <th className="p-2 text-left font-medium text-primary">Performance</th>
-                           <th className="p-2 text-left font-medium text-primary">Pass Rate %</th>
+                          <th className="p-2 text-left font-medium text-primary">Rendimiento</th>
+                           <th className="p-2 text-left font-medium text-primary">% Aprobación</th>
                            {isAdmin && <th className="p-2 text-left font-medium text-primary">Creado por</th>}
                            <th className="p-2 text-center font-medium text-primary">Acciones</th>
                         </tr>
@@ -602,7 +602,7 @@ function formatMonth(dateStr: string): string {
                           <tr key={r.id} className="border-b border-border hover:bg-muted/20">
                             <td className="p-2 font-medium">{r.item}</td>
                             <td className="p-2 text-xs">{formatDate(r.inspectionDate)}</td>
-                            <td className="p-2 text-xs">Week {computeWeek(r.inspectionDate)}</td>
+                            <td className="p-2 text-xs">Semana {computeWeek(r.inspectionDate)}</td>
                             <td className="p-2 text-xs">{formatMonth(r.inspectionDate)}</td>
                             <td className="p-2 text-xs">{r.factory}</td>
                             <td className="p-2 text-xs">{r.line || '-'}</td>
@@ -647,7 +647,7 @@ function formatMonth(dateStr: string): string {
                 )}
                 {inLineDefectRecords.length === 0 ? (
                   <div className="py-12 text-center text-muted-foreground border rounded-lg border-border">
-                    No hay registros de In Line Defect.
+                    No hay registros de Defecto en Línea.
                   </div>
                 ) : (
                   <div className="overflow-auto max-h-[600px] rounded-lg border border-border">
@@ -655,16 +655,16 @@ function formatMonth(dateStr: string): string {
                       <thead className="sticky top-0 z-10 bg-card shadow-sm">
                         <tr className="border-b border-border">
                           <th className="p-2 text-left font-medium text-primary">ITEM</th>
-                          <th className="p-2 text-left font-medium text-primary">Date</th>
-                          <th className="p-2 text-left font-medium text-primary">Week</th>
-                          <th className="p-2 text-left font-medium text-primary">Month</th>
-                          <th className="p-2 text-left font-medium text-primary">Factory</th>
-                          <th className="p-2 text-left font-medium text-primary">Line</th>
+                          <th className="p-2 text-left font-medium text-primary">Fecha</th>
+                          <th className="p-2 text-left font-medium text-primary">Semana</th>
+                          <th className="p-2 text-left font-medium text-primary">Mes</th>
+                          <th className="p-2 text-left font-medium text-primary">Fábrica</th>
+                          <th className="p-2 text-left font-medium text-primary">Línea</th>
                           <th className="p-2 text-left font-medium text-primary">PO</th>
                           <th className="p-2 text-left font-medium text-primary">Color</th>
-                          <th className="p-2 text-left font-medium text-primary">Buyer</th>
+                          <th className="p-2 text-left font-medium text-primary">Comprador</th>
                           <th className="p-2 text-left font-medium text-primary">Auditor</th>
-                          <th className="p-2 text-left font-medium text-primary">Style</th>
+                          <th className="p-2 text-left font-medium text-primary">Estilo</th>
                           <th className="p-2 text-left font-medium text-primary">Defecto</th>
                           <th className="p-2 text-left font-medium text-primary">Total</th>
                           <th className="p-2 text-left font-medium text-primary">Código Defecto</th>
@@ -684,7 +684,7 @@ function formatMonth(dateStr: string): string {
                           <tr key={r.id} className="border-b border-border hover:bg-muted/20">
                             <td className="p-2 font-medium">{r.item}</td>
                             <td className="p-2 text-xs">{formatDate(r.inspectionDate)}</td>
-                            <td className="p-2 text-xs">Week {computeWeek(r.inspectionDate)}</td>
+                            <td className="p-2 text-xs">Semana {computeWeek(r.inspectionDate)}</td>
                             <td className="p-2 text-xs">{formatMonth(r.inspectionDate)}</td>
                             <td className="p-2 text-xs">{r.factory}</td>
                             <td className="p-2 text-xs">{r.line || '-'}</td>
@@ -728,16 +728,16 @@ function formatMonth(dateStr: string): string {
                     <div className="space-y-4 p-5">
                       <div className="flex flex-wrap items-end gap-4">
                         <div>
-                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Factory</label>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Fábrica</label>
                           <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Factory} onChange={e => { setTop3Factory(e.target.value); setTop3Result(null); }}>
-                            <option value="">All</option>
+                            <option value="">Todas</option>
                             {[...new Set([...qaOqlRecords, ...inLineDefectRecords].map(r => r.factory).filter(Boolean))].map(f => (
                               <option key={f} value={f}>{f}</option>
                             ))}
                           </select>
                         </div>
                         <div>
-                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Line</label>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Línea</label>
                           <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Line} onChange={e => { setTop3Line(e.target.value); setTop3Result(null); }}>
                             <option value="">General</option>
                             {[...new Set(inLineDefectRecords.filter(r => !top3Factory || r.factory === top3Factory).map(r => r.line).filter(Boolean))].sort().map(l => (
@@ -746,13 +746,13 @@ function formatMonth(dateStr: string): string {
                           </select>
                         </div>
                         <div className="min-w-[260px] max-w-[360px]">
-                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Date Range</label>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Rango de Fechas</label>
                           <DateRangePicker dateFrom={top3DateFrom} dateTo={top3DateTo} onDateFromChange={setTop3DateFrom} onDateToChange={setTop3DateTo} />
                         </div>
                         {top3DateFrom && top3DateTo && top3Weeks.length > 0 && (
                           <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
                             <p className="text-[10px] text-muted-foreground">
-                              📅 {top3Year} · {top3Weeks.length === 1 ? `Week ${top3Weeks[0]}` : `Week ${Math.min(...top3Weeks)} → Week ${Math.max(...top3Weeks)}`} ({top3Weeks.length} {top3Weeks.length === 1 ? 'week' : 'weeks'} selected)
+                              📅 {top3Year} · {top3Weeks.length === 1 ? `Semana ${top3Weeks[0]}` : `Semana ${Math.min(...top3Weeks)} → Semana ${Math.max(...top3Weeks)}`} ({top3Weeks.length} {top3Weeks.length === 1 ? 'semana' : 'semanas'} seleccionadas)
                             </p>
                           </div>
                         )}
@@ -777,8 +777,8 @@ function formatMonth(dateStr: string): string {
                             </colgroup>
                             <thead>
                               <tr className="bg-gradient-to-r from-primary/10 to-primary/5">
-                                <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-primary">Factory</th>
-                                <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-primary">Line</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-primary">Fábrica</th>
+                                <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-primary">Línea</th>
                                 <th className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wider text-primary">Rank</th>
                                 <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-primary">Descripción</th>
                                 <th className="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-primary">Cant. Inspección</th>

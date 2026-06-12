@@ -40,12 +40,12 @@ const X_AXIS_OPTIONS = [
   { value: 'week', label: 'Semana' }, { value: 'month', label: 'Mes' },
   { value: 'factory', label: 'F\u00e1brica' }, { value: 'line', label: 'L\u00ednea' },
   { value: 'po', label: 'PO' }, { value: 'color', label: 'Color' },
-  { value: 'buyer', label: 'Buyer' }, { value: 'auditor', label: 'Auditor' },
+  { value: 'buyer', label: 'Comprador' }, { value: 'auditor', label: 'Auditor' },
 ];
 const INLINE_METRIC_OPTIONS = [
-  { value: 'oqlPct', label: 'OQL %' }, { value: 'passRate', label: 'Pass Rate %' },
-  { value: 'sample', label: 'Sample' }, { value: 'reject', label: 'Reject' },
-  { value: 'approved', label: 'Approved' }, { value: 'count', label: 'Count' },
+  { value: 'oqlPct', label: 'OQL %' }, { value: 'passRate', label: '% Tasa Aprobación' },
+  { value: 'sample', label: 'Muestra' }, { value: 'reject', label: 'Rechazo' },
+  { value: 'approved', label: 'Aprobado' }, { value: 'count', label: 'Count' },
 ];
 const DEFECT_METRIC_OPTIONS = [
   { value: 'total', label: 'Total Defectos' }, { value: 'count', label: 'Count' },
@@ -69,7 +69,7 @@ function computeWeek(dateStr: string): number {
   return 0;
 }
 
-const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return '';
@@ -87,7 +87,7 @@ function formatMonth(dateStr: string): string {
 
 function getFieldValue(r: any, field: string): string {
   if (field === 'date') return formatDate(r.inspectionDate);
-  if (field === 'week') return `Week ${computeWeek(r.inspectionDate)}`;
+  if (field === 'week') return `Semana ${computeWeek(r.inspectionDate)}`;
   if (field === 'month') return formatMonth(r.inspectionDate);
   if (field === 'factory') return r.factory || 'N/A';
   if (field === 'line') return r.line || 'N/A';
@@ -240,11 +240,11 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     const totalApproved = filteredInline.reduce((s, r) => s + (r.visualApproved || 0), 0);
     const avgOQL = totalSample > 0 ? (totalReject / totalSample) * 100 : 0;
     const avgPassRate = totalSample > 0 ? (totalApproved / totalSample) * 100 : 0;
-    const perfCount = { Excellent: 0, Good: 0, 'Very Bad': 0 };
+    const perfCount = { Excelente: 0, Bueno: 0, 'Muy Malo': 0 };
     filteredInline.forEach(r => {
-      if (r.performanceOQL === 'Excellent') perfCount.Excellent++;
-      else if (r.performanceOQL === 'Good') perfCount.Good++;
-      else perfCount['Very Bad']++;
+      if (r.performanceOQL === 'Excellent') perfCount.Excelente++;
+      else if (r.performanceOQL === 'Good') perfCount.Bueno++;
+      else perfCount['Muy Malo']++;
     });
     return { totalSample, totalReject, totalApproved, avgOQL, avgPassRate, perfCount, count: filteredInline.length };
   }, [filteredInline]);
@@ -267,7 +267,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     filteredDefect.forEach(r => {
       let groupKey: string;
       if (top3GroupBy === 'month') groupKey = r.month || 'N/A';
-      else if (top3GroupBy === 'week') groupKey = `Week ${computeWeek(r.inspectionDate) || 0}`;
+      else if (top3GroupBy === 'week') groupKey = `Semana ${computeWeek(r.inspectionDate) || 0}`;
       else groupKey = String((r as any)[groupField] || 'N/A').trim();
       if (!groupKey) groupKey = 'N/A';
       if (!groups[groupKey]) groups[groupKey] = {};
@@ -546,14 +546,14 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
 
   // ─── HTML export functions ───
   const generateInlineHTML = () => {
-    const header = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Sample', 'Reject', 'Approved', 'OQL %', 'Performance', 'Pass Rate %'];
+    const header = ['ITEM', 'Fecha', 'Semana', 'Mes', 'Fábrica', 'Línea', 'PO', 'Color', 'Comprador', 'Auditor', 'Estilo', 'Muestra', 'Rechazo', 'Aprobado', 'OQL %', 'Rendimiento', '% Aprobación'];
     if (isAdmin) header.push('Created By');
     const rows = filteredInline.map(r => {
       const perfClass = r.performanceOQL === 'Very Bad' ? 'perf-vbad' : r.performanceOQL === 'Excellent' ? 'perf-excellent' : 'perf-good';
       const oqlPct = r.visualSample > 0 ? ((Math.max(0, r.visualSample - r.visualReject) / r.visualSample) * 100).toFixed(2) : '0.00';
       const oqlClass = r.performanceOQL === 'Very Bad' ? 'perf-vbad' : r.performanceOQL === 'Excellent' ? 'perf-excellent' : '';
       const row = [
-        r.item, formatDate(r.inspectionDate), `Week ${computeWeek(r.inspectionDate)}`, formatMonth(r.inspectionDate),
+        r.item, formatDate(r.inspectionDate), `Semana ${computeWeek(r.inspectionDate)}`, formatMonth(r.inspectionDate),
         r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
         getAuditorName(r.auditor, empleados), r.style || '',
         r.visualSample, r.visualReject, r.visualApproved,
@@ -568,9 +568,9 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
   };
 
   const generateDefectHTML = () => {
-    const header = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Defecto', 'Total', 'C\u00f3digo Defecto', 'Descripci\u00f3n', 'CAT EN', 'ACR', 'Defect CAT EN', 'Descripci\u00f3n Defecto', 'CAT ES', 'ACR S', 'Defect CAT ES'];
+    const header = ['ITEM', 'Fecha', 'Semana', 'Mes', 'Fábrica', 'Línea', 'PO', 'Color', 'Comprador', 'Auditor', 'Estilo', 'Defecto', 'Total', 'Código Defecto', 'Descripción', 'CAT EN', 'ACR', 'Defect CAT EN', 'Descripción Defecto', 'CAT ES', 'ACR S', 'Defect CAT ES'];
     const rows = filteredDefect.map(r => [
-      r.item, formatDate(r.inspectionDate), `Week ${computeWeek(r.inspectionDate)}`, formatMonth(r.inspectionDate),
+      r.item, formatDate(r.inspectionDate), `Semana ${computeWeek(r.inspectionDate)}`, formatMonth(r.inspectionDate),
       r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
       getAuditorName(r.auditor, empleados), r.style || '',
       r.defect || '', r.total, r.defectCode,
@@ -582,8 +582,8 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
   };
 
   // ─── Excel export with ExcelJS ───
-  const inlineHeader = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Sample', 'Reject', 'Approved', 'OQL %', 'Performance', 'Pass Rate %'];
-  const defectHeader = ['ITEM', 'Date', 'Week', 'Month', 'Factory', 'Line', 'PO', 'Color', 'Buyer', 'Auditor', 'Style', 'Defecto', 'Total', 'C\u00f3digo Defecto', 'Descripci\u00f3n', 'CAT EN', 'ACR', 'Defect CAT EN', 'Descripci\u00f3n Defecto', 'CAT ES', 'ACR S', 'Defect CAT ES'];
+  const inlineHeader = ['ITEM', 'Fecha', 'Semana', 'Mes', 'Fábrica', 'Línea', 'PO', 'Color', 'Comprador', 'Auditor', 'Estilo', 'Muestra', 'Rechazo', 'Aprobado', 'OQL %', 'Rendimiento', '% Aprobación'];
+  const defectHeader = ['ITEM', 'Fecha', 'Semana', 'Mes', 'Fábrica', 'Línea', 'PO', 'Color', 'Comprador', 'Auditor', 'Estilo', 'Defecto', 'Total', 'Código Defecto', 'Descripción', 'CAT EN', 'ACR', 'Defect CAT EN', 'Descripción Defecto', 'CAT ES', 'ACR S', 'Defect CAT ES'];
 
   const headerStyle = {
     fill: { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: 'FF1A56DB' } },
@@ -626,7 +626,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     filteredInline.forEach((r, idx) => {
       const rowNum = headerRow + 1 + idx;
       const values = [
-        r.item, formatDate(r.inspectionDate), `Week ${computeWeek(r.inspectionDate)}`, formatMonth(r.inspectionDate),
+        r.item, formatDate(r.inspectionDate), `Semana ${computeWeek(r.inspectionDate)}`, formatMonth(r.inspectionDate),
         r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
         getAuditorName(r.auditor, empleados), r.style || '',
         r.visualSample, r.visualReject, r.visualApproved,
@@ -672,7 +672,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
     filteredDefect.forEach((r, idx) => {
       const rowNum = headerRow + 1 + idx;
       const values = [
-        r.item, formatDate(r.inspectionDate), `Week ${computeWeek(r.inspectionDate)}`, formatMonth(r.inspectionDate),
+        r.item, formatDate(r.inspectionDate), `Semana ${computeWeek(r.inspectionDate)}`, formatMonth(r.inspectionDate),
         r.factory, r.line || '', r.po || '', r.color || '', r.buyer,
         getAuditorName(r.auditor, empleados), r.style || '',
         r.defect || '', r.total, r.defectCode,
@@ -710,11 +710,11 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
       workbook.created = new Date();
 
       if (type === 'inline' || type === 'both') {
-        const ws = workbook.addWorksheet('IN LINE', { views: [{ state: 'frozen', ySplit: 1 }] });
+        const ws = workbook.addWorksheet('EN LÍNEA', { views: [{ state: 'frozen', ySplit: 1 }] });
         buildInlineSheet(ws, 1);
       }
       if (type === 'defect' || type === 'both') {
-        const ws = workbook.addWorksheet('In Line Defect', { views: [{ state: 'frozen', ySplit: 1 }] });
+        const ws = workbook.addWorksheet('Defecto en Línea', { views: [{ state: 'frozen', ySplit: 1 }] });
         buildDefectSheet(ws, 1);
       }
 
@@ -733,13 +733,13 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
         const data = filteredInline.map(r => inlineHeader.map(h => (r as any)[h] || ''));
         const ws = XLSX.utils.aoa_to_sheet([inlineHeader, ...data]);
         ws['!cols'] = inlineHeader.map(() => ({ wch: 14 }));
-        XLSX.utils.book_append_sheet(wb, ws, 'IN LINE');
+        XLSX.utils.book_append_sheet(wb, ws, 'EN LÍNEA');
       }
       if (type === 'defect' || type === 'both') {
         const data = filteredDefect.map(r => defectHeader.map(h => (r as any)[h] || ''));
         const ws = XLSX.utils.aoa_to_sheet([defectHeader, ...data]);
         ws['!cols'] = defectHeader.map(() => ({ wch: 14 }));
-        XLSX.utils.book_append_sheet(wb, ws, 'In Line Defect');
+        XLSX.utils.book_append_sheet(wb, ws, 'Defecto en Línea');
       }
       const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -758,7 +758,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card p-4">
           <div className="flex items-center gap-3">
             <BarChart3 className="h-5 w-5 text-primary" />
-            <h3 className="text-lg font-bold text-foreground">Analytics Dashboard</h3>
+            <h3 className="text-lg font-bold text-foreground">Panel de Análisis</h3>
           </div>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={() => setExportOpen(true)} className="border-green-500 text-green-500 hover:bg-green-500/10">
@@ -776,7 +776,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">Month</label>
+                <label className="mb-1 block text-xs text-muted-foreground">Mes</label>
                 <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
                   className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground">
                   <option value="">Todos</option>
@@ -784,7 +784,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">Factory</label>
+                <label className="mb-1 block text-xs text-muted-foreground">Fábrica</label>
                 <select value={filterFactory} onChange={e => setFilterFactory(e.target.value)}
                   className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground">
                   <option value="">Todas</option>
@@ -792,7 +792,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">Line</label>
+                <label className="mb-1 block text-xs text-muted-foreground">Línea</label>
                 <select value={filterLine} onChange={e => setFilterLine(e.target.value)}
                   className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground">
                   <option value="">Todas</option>
@@ -816,7 +816,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">Buyer</label>
+                <label className="mb-1 block text-xs text-muted-foreground">Comprador</label>
                 <select value={filterBuyer} onChange={e => setFilterBuyer(e.target.value)}
                   className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground">
                   <option value="">Todos</option>
@@ -836,11 +836,11 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
           <div className="flex gap-4 border-b border-border">
             <button onClick={() => setTab('inline')}
               className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${tab === 'inline' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
-              IN LINE ({filteredInline.length})
+              EN LÍNEA ({filteredInline.length})
             </button>
             <button onClick={() => setTab('defect')}
               className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${tab === 'defect' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
-              In Line Defect ({filteredDefect.length})
+              Defecto en Línea ({filteredDefect.length})
             </button>
             <button onClick={() => setTab('pivot')}
               className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${tab === 'pivot' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
@@ -855,21 +855,21 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
               <div className="grid grid-cols-4 gap-4">
                 <div className="rounded-lg border border-border bg-card p-4 text-center">
                   <div className="text-2xl font-bold text-foreground">{inlineMetrics.count}</div>
-                  <div className="text-xs text-muted-foreground">Total Records</div>
+                  <div className="text-xs text-muted-foreground">Total Registros</div>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-4 text-center">
                   <div className="text-2xl font-bold text-foreground">{inlineMetrics.totalSample}</div>
-                  <div className="text-xs text-muted-foreground">Total Sample</div>
+                  <div className="text-xs text-muted-foreground">Total Muestras</div>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-4 text-center">
                   <div className={`text-2xl font-bold ${inlineMetrics.avgOQL <= 3 ? 'text-green-500' : inlineMetrics.avgOQL <= 5 ? 'text-yellow-500' : 'text-red-500'}`}>
                     {inlineMetrics.avgOQL.toFixed(2)}%
                   </div>
-                  <div className="text-xs text-muted-foreground">Avg OQL %</div>
+                  <div className="text-xs text-muted-foreground">Prom. OQL %</div>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-4 text-center">
                   <div className="text-2xl font-bold text-blue-500">{inlineMetrics.avgPassRate.toFixed(2)}%</div>
-                  <div className="text-xs text-muted-foreground">Avg Pass Rate</div>
+                  <div className="text-xs text-muted-foreground">Prom. Tasa de Aprobación</div>
                 </div>
               </div>
 
@@ -958,22 +958,22 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                     <thead>
                       <tr className="bg-primary/10 border-b border-border">
                         <th className="p-2 text-left font-medium text-primary">ITEM</th>
-                        <th className="p-2 text-left font-medium text-primary">Date</th>
-                        <th className="p-2 text-left font-medium text-primary">Week</th>
-                        <th className="p-2 text-left font-medium text-primary">Month</th>
-                        <th className="p-2 text-left font-medium text-primary">Factory</th>
-                        <th className="p-2 text-left font-medium text-primary">Line</th>
+                        <th className="p-2 text-left font-medium text-primary">Fecha</th>
+                        <th className="p-2 text-left font-medium text-primary">Semana</th>
+                        <th className="p-2 text-left font-medium text-primary">Mes</th>
+                        <th className="p-2 text-left font-medium text-primary">Fábrica</th>
+                        <th className="p-2 text-left font-medium text-primary">Línea</th>
                         <th className="p-2 text-left font-medium text-primary">PO</th>
                         <th className="p-2 text-left font-medium text-primary">Color</th>
-                        <th className="p-2 text-left font-medium text-primary">Buyer</th>
+                        <th className="p-2 text-left font-medium text-primary">Comprador</th>
                         <th className="p-2 text-left font-medium text-primary">Auditor</th>
-                        <th className="p-2 text-left font-medium text-primary">Style</th>
-                        <th className="p-2 text-left font-medium text-primary">Sample</th>
-                        <th className="p-2 text-left font-medium text-primary">Reject</th>
-                        <th className="p-2 text-left font-medium text-primary">Approved</th>
+                        <th className="p-2 text-left font-medium text-primary">Estilo</th>
+                        <th className="p-2 text-left font-medium text-primary">Muestra</th>
+                        <th className="p-2 text-left font-medium text-primary">Rechazo</th>
+                        <th className="p-2 text-left font-medium text-primary">Aprobado</th>
                         <th className="p-2 text-left font-medium text-primary">OQL %</th>
-                        <th className="p-2 text-left font-medium text-primary">Performance</th>
-                        <th className="p-2 text-left font-medium text-primary">Pass Rate %</th>
+                        <th className="p-2 text-left font-medium text-primary">Rendimiento</th>
+                        <th className="p-2 text-left font-medium text-primary">% Aprobación</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -981,7 +981,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                         <tr key={r.id} className="border-b border-border hover:bg-muted/20">
                           <td className="p-2 font-medium">{r.item}</td>
                           <td className="p-2 text-xs">{formatDate(r.inspectionDate)}</td>
-                          <td className="p-2 text-xs">Week {computeWeek(r.inspectionDate)}</td>
+                          <td className="p-2 text-xs">Semana {computeWeek(r.inspectionDate)}</td>
                           <td className="p-2 text-xs">{formatMonth(r.inspectionDate)}</td>
                           <td className="p-2 text-xs">{r.factory}</td>
                           <td className="p-2 text-xs">{r.line || '-'}</td>
@@ -1008,21 +1008,21 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
           )}
 
           {/* In Line Defect Dashboard */}
-          {tab === 'defect' && (
+            {tab === 'defect' && (
             <div className="space-y-4">
               {/* KPI Cards */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="rounded-lg border border-border bg-card p-4 text-center">
                   <div className="text-2xl font-bold text-foreground">{defectMetrics.count}</div>
-                  <div className="text-xs text-muted-foreground">Total Records</div>
+                  <div className="text-xs text-muted-foreground">Total Registros</div>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-4 text-center">
                   <div className="text-2xl font-bold text-foreground">{defectMetrics.totalDefect}</div>
-                  <div className="text-xs text-muted-foreground">Total Defects</div>
+                  <div className="text-xs text-muted-foreground">Total Defectos</div>
                 </div>
                 <div className="rounded-lg border border-border bg-card p-4 text-center">
                   <div className="text-2xl font-bold text-foreground">{defectMetrics.defectByCode.length}</div>
-                  <div className="text-xs text-muted-foreground">Unique Defect Codes</div>
+                  <div className="text-xs text-muted-foreground">Códigos Únicos de Defecto</div>
                 </div>
               </div>
 
@@ -1183,16 +1183,16 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                     <thead>
                       <tr className="bg-primary/10 border-b border-border">
                         <th className="p-2 text-left font-medium text-primary">ITEM</th>
-                        <th className="p-2 text-left font-medium text-primary">Date</th>
-                        <th className="p-2 text-left font-medium text-primary">Week</th>
-                        <th className="p-2 text-left font-medium text-primary">Month</th>
-                        <th className="p-2 text-left font-medium text-primary">Factory</th>
-                        <th className="p-2 text-left font-medium text-primary">Line</th>
+                        <th className="p-2 text-left font-medium text-primary">Fecha</th>
+                        <th className="p-2 text-left font-medium text-primary">Semana</th>
+                        <th className="p-2 text-left font-medium text-primary">Mes</th>
+                        <th className="p-2 text-left font-medium text-primary">Fábrica</th>
+                        <th className="p-2 text-left font-medium text-primary">Línea</th>
                         <th className="p-2 text-left font-medium text-primary">PO</th>
                         <th className="p-2 text-left font-medium text-primary">Color</th>
-                        <th className="p-2 text-left font-medium text-primary">Buyer</th>
+                        <th className="p-2 text-left font-medium text-primary">Comprador</th>
                         <th className="p-2 text-left font-medium text-primary">Auditor</th>
-                        <th className="p-2 text-left font-medium text-primary">Style</th>
+                        <th className="p-2 text-left font-medium text-primary">Estilo</th>
                         <th className="p-2 text-left font-medium text-primary">Defecto</th>
                         <th className="p-2 text-left font-medium text-primary">Total</th>
                         <th className="p-2 text-left font-medium text-primary">C\u00f3digo Defecto</th>
@@ -1204,7 +1204,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                         <tr key={r.id} className="border-b border-border hover:bg-muted/20">
                           <td className="p-2 font-medium">{r.item}</td>
                           <td className="p-2 text-xs">{formatDate(r.inspectionDate)}</td>
-                          <td className="p-2 text-xs">Week {computeWeek(r.inspectionDate)}</td>
+                          <td className="p-2 text-xs">Semana {computeWeek(r.inspectionDate)}</td>
                           <td className="p-2 text-xs">{formatMonth(r.inspectionDate)}</td>
                           <td className="p-2 text-xs">{r.factory}</td>
                           <td className="p-2 text-xs">{r.line || '-'}</td>
@@ -1243,8 +1243,8 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                       if (ds === 'inline') setPivotValue('sample');
                     }}
                       className="w-full rounded-lg border border-border bg-input px-2 py-2 text-xs text-foreground">
-                      <option value="inline">IN LINE</option>
-                      <option value="defect">In Line Defect</option>
+                      <option value="inline">EN LÍNEA</option>
+                      <option value="defect">Defecto en Línea</option>
                     </select>
                   </div>
                   <div>
@@ -1255,7 +1255,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                       <option value="line">L\u00ednea</option>
                       <option value="month">Mes</option>
                       <option value="week">Semana</option>
-                      <option value="buyer">Buyer</option>
+                      <option value="buyer">Comprador</option>
                       <option value="color">Color</option>
                       <option value="auditor">Auditor</option>
                       <option value="po">PO</option>
@@ -1269,7 +1269,7 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                       <option value="line">L\u00ednea</option>
                       <option value="month">Mes</option>
                       <option value="week">Semana</option>
-                      <option value="buyer">Buyer</option>
+                      <option value="buyer">Comprador</option>
                       <option value="color">Color</option>
                       <option value="auditor">Auditor</option>
                       <option value="po">PO</option>
@@ -1281,11 +1281,11 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
                       className="w-full rounded-lg border border-border bg-input px-2 py-2 text-xs text-foreground">
                       {pivotDataset === 'inline' ? (
                         <>
-                          <option value="sample">Sample</option>
-                          <option value="reject">Reject</option>
-                          <option value="approved">Approved</option>
+                          <option value="sample">Muestra</option>
+                          <option value="reject">Rechazo</option>
+                          <option value="approved">Aprobado</option>
                           <option value="oqlPct">OQL %</option>
-                          <option value="passRate">Pass Rate %</option>
+                          <option value="passRate">% Tasa Aprobación</option>
                           <option value="count">Count</option>
                         </>
                       ) : (
@@ -1367,10 +1367,10 @@ export function AnalyticsModal({ inlineRecords, defectRecords, empleados, defect
               <p className="mb-4 text-xs text-muted-foreground">\u00bfQu\u00e9 datos deseas exportar?</p>
               <div className="space-y-2">
                 <Button className="w-full justify-start" variant="outline" onClick={() => { exportStyledExcel('inline'); setExportOpen(false); }}>
-                  <FileDown className="mr-2 h-4 w-4 text-blue-500" /> Solo IN LINE ({filteredInline.length} registros)
+                  <FileDown className="mr-2 h-4 w-4 text-blue-500" /> Solo EN LÍNEA ({filteredInline.length} registros)
                 </Button>
                 <Button className="w-full justify-start" variant="outline" onClick={() => { exportStyledExcel('defect'); setExportOpen(false); }}>
-                  <FileDown className="mr-2 h-4 w-4 text-orange-500" /> Solo In Line Defect ({filteredDefect.length} registros)
+                  <FileDown className="mr-2 h-4 w-4 text-orange-500" /> Solo Defecto en Línea ({filteredDefect.length} registros)
                 </Button>
                 <Button className="w-full justify-start" variant="outline" onClick={() => { exportStyledExcel('both'); setExportOpen(false); }}>
                   <FileDown className="mr-2 h-4 w-4 text-green-500" /> Ambos (dos pesta\u00f1as)

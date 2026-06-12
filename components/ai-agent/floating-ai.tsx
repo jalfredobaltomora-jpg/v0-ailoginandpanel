@@ -70,6 +70,9 @@ export function FloatingAI() {
   const [greetComplete, setGreetComplete] = useState(false);
   const [awaitingLunchResponse, setAwaitingLunchResponse] = useState(false);
   const [awaitingSatResponse, setAwaitingSatResponse] = useState(false);
+  const buttonRef = useRef<HTMLDivElement>(null);
+  const [posOverrides, setPosOverrides] = useState<{ right?: number; bottom?: number }>({});
+  const posIndexRef = useRef(0);
 
   // ─── Setup ───
   useEffect(() => {
@@ -664,6 +667,67 @@ export function FloatingAI() {
     return () => el.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // ─── Overlap detection: move JAB to avoid blocking interactive elements ───
+  useEffect(() => {
+    const isInteractive = (el: Element): boolean => {
+      const tag = el.tagName?.toLowerCase();
+      const role = el.getAttribute?.('role');
+      const onclick = el.getAttribute?.('onclick');
+      return ['button', 'a', 'input', 'select', 'textarea'].includes(tag) ||
+             role === 'button' || role === 'link' || onclick !== null;
+    };
+
+    const check = () => {
+      const btn = buttonRef.current;
+      if (!btn || isChatOpen) return;
+      const rect = btn.getBoundingClientRect();
+      const origPE = btn.style.pointerEvents;
+      btn.style.pointerEvents = 'none';
+      let overlap = false;
+      try {
+        const pts: [number, number][] = [
+          [rect.left + rect.width / 2, rect.top + rect.height / 2],
+          [rect.left + 4, rect.top + 4],
+          [rect.right - 4, rect.top + 4],
+          [rect.left + 4, rect.bottom - 4],
+          [rect.right - 4, rect.bottom - 4],
+        ];
+        for (const [x, y] of pts) {
+          const el = document.elementFromPoint(x, y);
+          if (el && el !== btn && el !== document.body && el !== document.documentElement && isInteractive(el)) {
+            overlap = true;
+            break;
+          }
+        }
+      } finally {
+        btn.style.pointerEvents = origPE;
+      }
+
+      if (overlap && posIndexRef.current === 0) {
+        posIndexRef.current = 1;
+        setPosOverrides({ right: 5.5 });
+      } else if (overlap && posIndexRef.current === 1) {
+        posIndexRef.current = 2;
+        setPosOverrides({ right: 5.5, bottom: 5 });
+      } else if (!overlap && posIndexRef.current !== 0) {
+        posIndexRef.current = 0;
+        setPosOverrides({});
+      }
+    };
+
+    const t = setTimeout(check, 800);
+    const interval = setInterval(check, 2000);
+    const handler = () => requestAnimationFrame(check);
+    window.addEventListener('scroll', handler, { passive: true });
+    window.addEventListener('resize', handler, { passive: true });
+    return () => {
+      clearTimeout(t);
+      clearInterval(interval);
+      window.removeEventListener('scroll', handler);
+      window.removeEventListener('resize', handler);
+    };
+  }, [isMobile, isChatOpen]);
+
   if (pathname === '/') return null;
 
   return (
@@ -682,10 +746,11 @@ export function FloatingAI() {
         <>
           {/* JAB Robot - Floating Button */}
           <div
+            ref={buttonRef}
             className="fixed z-[60] cursor-pointer group"
             style={{
-              right: isMobile ? '1rem' : '2rem',
-              bottom: isMobile ? '1rem' : '2rem',
+              right: posOverrides.right !== undefined ? `${posOverrides.right}rem` : (isMobile ? '1rem' : '2rem'),
+              bottom: posOverrides.bottom !== undefined ? `${posOverrides.bottom}rem` : (isMobile ? '1rem' : '2rem'),
               filter: 'drop-shadow(0 8px 16px rgba(6, 182, 212, 0.3))',
             }}
             onClick={() => { unlockSpeech(); setIsChatOpen(!isChatOpen); }}

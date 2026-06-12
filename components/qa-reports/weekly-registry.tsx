@@ -436,16 +436,16 @@ export function WeeklyRegistry() {
                                   <table className="w-full text-xs">
                                     <thead>
                                       <tr className="bg-slate-800">
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-left text-white sticky top-0 bg-slate-800 z-10">Factory Buyer</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-cyan-300 sticky top-0 bg-slate-800 z-10">No. Audit</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-cyan-300 sticky top-0 bg-slate-800 z-10">No. Failure</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-muted-foreground sticky top-0 bg-slate-800 z-10">Fail Rate %</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-amber-300 sticky top-0 bg-slate-800 z-10">Meas Qty</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-amber-300 sticky top-0 bg-slate-800 z-10">Meas Def</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-amber-300 sticky top-0 bg-slate-800 z-10">Meas Rate %</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-violet-300 sticky top-0 bg-slate-800 z-10">Vis Qty</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-violet-300 sticky top-0 bg-slate-800 z-10">Vis Def</th>
-                                        <th className="border-b border-border px-2 py-1.5 text-center text-violet-300 sticky top-0 bg-slate-800 z-10">Vis Rate %</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-left text-white sticky top-0 bg-slate-800 z-10">Fábrica / Comprador</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-cyan-300 sticky top-0 bg-slate-800 z-10">No. Auditoría</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-cyan-300 sticky top-0 bg-slate-800 z-10">No. Fallos</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-muted-foreground sticky top-0 bg-slate-800 z-10">Tasa de Fallo %</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-amber-300 sticky top-0 bg-slate-800 z-10">Cant. Med.</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-amber-300 sticky top-0 bg-slate-800 z-10">Def. Med.</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-amber-300 sticky top-0 bg-slate-800 z-10">Tasa Med. %</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-violet-300 sticky top-0 bg-slate-800 z-10">Cant. Vis.</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-violet-300 sticky top-0 bg-slate-800 z-10">Def. Vis.</th>
+                                        <th className="border-b border-border px-2 py-1.5 text-center text-violet-300 sticky top-0 bg-slate-800 z-10">Tasa Vis. %</th>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -536,13 +536,13 @@ export function WeeklyRegistry() {
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="bg-slate-800">
-                              <th className="border border-border px-2 py-1.5 text-left text-white">Factory Buyer</th>
-                              <th className="border border-border px-2 py-1.5 text-cyan-300">No. Audit</th>
-                              <th className="border border-border px-2 py-1.5 text-cyan-300">No. Failure</th>
-                              <th className="border border-border px-2 py-1.5 text-amber-300">Meas Qty</th>
-                              <th className="border border-border px-2 py-1.5 text-amber-300">Meas Def</th>
-                              <th className="border border-border px-2 py-1.5 text-violet-300">Vis Qty</th>
-                              <th className="border border-border px-2 py-1.5 text-violet-300">Vis Def</th>
+                              <th className="border border-border px-2 py-1.5 text-left text-white">Fábrica / Comprador</th>
+                              <th className="border border-border px-2 py-1.5 text-cyan-300">No. Auditoría</th>
+                              <th className="border border-border px-2 py-1.5 text-cyan-300">No. Fallos</th>
+                              <th className="border border-border px-2 py-1.5 text-amber-300">Cant. Med.</th>
+                              <th className="border border-border px-2 py-1.5 text-amber-300">Def. Med.</th>
+                              <th className="border border-border px-2 py-1.5 text-violet-300">Cant. Vis.</th>
+                              <th className="border border-border px-2 py-1.5 text-violet-300">Def. Vis.</th>
                             </tr>
                           </thead>
                           <tbody>
