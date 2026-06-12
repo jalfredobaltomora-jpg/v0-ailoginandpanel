@@ -428,8 +428,6 @@ function formatMonth(dateStr: string): string {
     const inlineFilters = (r: any) => {
       if (top3Factory && r.factory !== top3Factory) return false;
       if (top3Line && r.line !== top3Line) return false;
-      if (top3Buyer && r.buyer !== top3Buyer) return false;
-      if (top3Color && r.color !== top3Color) return false;
       if (top3PO && r.po !== top3PO) return false;
       return true;
     };
