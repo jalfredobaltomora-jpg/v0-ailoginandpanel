@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ScanLine, CalendarDays, CalendarRange, BarChart3, Database, LineChart, ClipboardList, BookOpen, Trash2, Pencil, Bug, Upload, Search, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ const WeeklyRegistry = dynamic(() => import('@/components/qa-reports/weekly-regi
 const QAOQLModal = dynamic(() => import('@/components/inventario/qa-oql-modal').then(m => m.QAOQLModal), { ssr: false });
 const InLineDefectModal = dynamic(() => import('@/components/inventario/in-line-defect-modal').then(m => m.InLineDefectModal), { ssr: false });
 const AnalyticsModal = dynamic(() => import('@/components/inventario/analytics-modal').then(m => m.AnalyticsModal), { ssr: false });
+const DateRangePicker = dynamic(() => import('@/components/date-range-picker'), { ssr: false });
 
 interface TileProps {
   title: string;
@@ -66,6 +67,8 @@ export default function QAReportsPage() {
   const [defectCatalogSearch, setDefectCatalogSearch] = useState('');
   const [top3Factory, setTop3Factory] = useState('');
   const [top3Line, setTop3Line] = useState('');
+  const [top3Year, setTop3Year] = useState('');
+  const [top3Weeks, setTop3Weeks] = useState<number[]>([]);
   const [top3DateFrom, setTop3DateFrom] = useState('');
   const [top3DateTo, setTop3DateTo] = useState('');
   const [top3Result, setTop3Result] = useState<{ top3: any[]; inspectionQty: number; factory: string; line: string } | null>(null);
@@ -105,6 +108,25 @@ export default function QAReportsPage() {
     }
     setCurrentUser(user);
   }, [router]);
+
+  useEffect(() => {
+    if (!top3DateFrom || !top3DateTo) {
+      setTop3Weeks([]);
+      setTop3Year('');
+      return;
+    }
+    const weeks = new Set<number>();
+    let current = new Date(top3DateFrom + 'T12:00:00');
+    const end = new Date(top3DateTo + 'T12:00:00');
+    while (current <= end) {
+      const w = computeWeek(`${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`);
+      if (w > 0) weeks.add(w);
+      current.setDate(current.getDate() + 1);
+    }
+    setTop3Weeks(Array.from(weeks).sort());
+    setTop3Year(top3DateFrom.slice(0, 4));
+    setTop3Result(null);
+  }, [top3DateFrom, top3DateTo]);
 
   const handleEdit = (r: any) => {
     setEditingRecord(r);
@@ -390,8 +412,10 @@ function formatMonth(dateStr: string): string {
     const filteredDefects = inLineDefectRecords.filter(r => {
       if (top3Factory && r.factory !== top3Factory) return false;
       if (top3Line && r.line !== top3Line) return false;
-      if (top3DateFrom && r.inspectionDate < top3DateFrom) return false;
-      if (top3DateTo && r.inspectionDate > top3DateTo) return false;
+      if (top3Weeks.length > 0 && top3Year) {
+        const wkKey = `${(r.inspectionDate || '').slice(0, 4)}-W${String(computeWeek(r.inspectionDate)).padStart(2, '0')}`;
+        if (!top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
+      }
       return true;
     });
     if (!filteredDefects.length) { setTop3Result(null); setTop3Loading(false); return; }
@@ -399,8 +423,6 @@ function formatMonth(dateStr: string): string {
     const matchingInline = qaOqlRecords.filter(r => {
       if (top3Factory && r.factory !== top3Factory) return false;
       if (top3Line && r.line !== top3Line) return false;
-      if (top3DateFrom && r.inspectionDate < top3DateFrom) return false;
-      if (top3DateTo && r.inspectionDate > top3DateTo) return false;
       return defectItems.has(r.item);
     });
     const inspectionQty = matchingInline.reduce((sum, r) => sum + (r.visualSample || 0), 0);
@@ -723,42 +745,19 @@ function formatMonth(dateStr: string): string {
                             ))}
                           </select>
                         </div>
-                        <div className="overflow-hidden rounded-lg border border-border">
-                          <div className="flex items-stretch">
-                            <div className="flex flex-1 flex-col gap-1 border-r border-border px-3 py-2">
-                              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Date From</label>
-                              <input type="date" className="bg-transparent text-sm text-foreground outline-none [color-scheme:dark]" value={top3DateFrom} onChange={e => { setTop3DateFrom(e.target.value); setTop3Result(null); }} />
-                            </div>
-                            <div className="flex items-center px-2 text-muted-foreground/50">
-                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                            </div>
-                            <div className="flex flex-1 flex-col gap-1 px-3 py-2">
-                              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Date To</label>
-                              <input type="date" className="bg-transparent text-sm text-foreground outline-none [color-scheme:dark]" value={top3DateTo} onChange={e => { setTop3DateTo(e.target.value); setTop3Result(null); }} />
-                            </div>
-                          </div>
-                          {top3DateFrom && top3DateTo && (
-                            <div className="border-t border-border px-3 py-2">
-                              <div className="relative mb-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                                <div className="h-full rounded-full bg-primary/40" style={{ width: '100%' }} />
-                              </div>
-                              <p className="text-[10px] text-muted-foreground">
-                                {(top3DateFrom && top3DateTo) && (() => {
-                                  const fw = computeWeek(top3DateFrom);
-                                  const tw = computeWeek(top3DateTo);
-                                  const fy = top3DateFrom.slice(0, 4);
-                                  const ty = top3DateTo.slice(0, 4);
-                                  const fStr = `${top3DateFrom.slice(8, 10)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(top3DateFrom.slice(5, 7), 10) - 1]} ${fy}`;
-                                  const tStr = `${top3DateTo.slice(8, 10)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(top3DateTo.slice(5, 7), 10) - 1]} ${ty}`;
-                                  const weekText = fw === tw && fy === ty ? `Week ${fw}` : `Week ${fw} → Week ${tw}`;
-                                  return `📅 ${fStr} → ${tStr}  ·  ${weekText}`;
-                                })()}
-                              </p>
-                            </div>
-                          )}
+                        <div className="min-w-[260px] max-w-[360px]">
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Date Range</label>
+                          <DateRangePicker dateFrom={top3DateFrom} dateTo={top3DateTo} onDateFromChange={setTop3DateFrom} onDateToChange={setTop3DateTo} />
                         </div>
+                        {top3DateFrom && top3DateTo && top3Weeks.length > 0 && (
+                          <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+                            <p className="text-[10px] text-muted-foreground">
+                              📅 {top3Year} · {top3Weeks.length === 1 ? `Week ${top3Weeks[0]}` : `Week ${Math.min(...top3Weeks)} → Week ${Math.max(...top3Weeks)}`} ({top3Weeks.length} {top3Weeks.length === 1 ? 'week' : 'weeks'} selected)
+                            </p>
+                          </div>
+                        )}
                         <div className="flex items-end">
-                          <Button size="sm" className="h-9 bg-primary text-primary-foreground shadow-sm" onClick={handleGenerateTop3} disabled={top3Loading}>
+                          <Button size="sm" className="h-9 bg-primary text-primary-foreground shadow-sm" onClick={handleGenerateTop3} disabled={top3Loading || !top3DateFrom || !top3DateTo || top3Weeks.length === 0}>
                             {top3Loading ? 'Generando...' : 'Generar Tabla'}
                           </Button>
                         </div>
