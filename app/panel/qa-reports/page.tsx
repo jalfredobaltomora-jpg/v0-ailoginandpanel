@@ -407,14 +407,13 @@ function formatMonth(dateStr: string): string {
   };
 
   const handleGenerateTop3 = async () => {
-    if (!inLineDefectRecords.length || !qaOqlRecords.length) return;
+    if (!inLineDefectRecords.length) return;
     setTop3Loading(true);
     await new Promise(r => setTimeout(r, 200));
     const filteredDefects = inLineDefectRecords.filter(r => {
       if (top3Factory && r.factory !== top3Factory) return false;
       if (top3Line && r.line !== top3Line) return false;
       if (top3Weeks.length > 0 && top3Year) {
-        const wkKey = `${(r.inspectionDate || '').slice(0, 4)}-W${String(computeWeek(r.inspectionDate)).padStart(2, '0')}`;
         if (!top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
       }
       return true;
