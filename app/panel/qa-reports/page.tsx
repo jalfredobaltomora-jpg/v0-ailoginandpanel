@@ -723,13 +723,39 @@ function formatMonth(dateStr: string): string {
                             ))}
                           </select>
                         </div>
-                        <div>
-                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Date From</label>
-                          <input type="date" className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3DateFrom} onChange={e => { setTop3DateFrom(e.target.value); setTop3Result(null); }} />
-                        </div>
-                        <div>
-                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Date To</label>
-                          <input type="date" className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3DateTo} onChange={e => { setTop3DateTo(e.target.value); setTop3Result(null); }} />
+                        <div className="overflow-hidden rounded-lg border border-border">
+                          <div className="flex items-stretch">
+                            <div className="flex flex-1 flex-col gap-1 border-r border-border px-3 py-2">
+                              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Date From</label>
+                              <input type="date" className="bg-transparent text-sm text-foreground outline-none [color-scheme:dark]" value={top3DateFrom} onChange={e => { setTop3DateFrom(e.target.value); setTop3Result(null); }} />
+                            </div>
+                            <div className="flex items-center px-2 text-muted-foreground/50">
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                            </div>
+                            <div className="flex flex-1 flex-col gap-1 px-3 py-2">
+                              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Date To</label>
+                              <input type="date" className="bg-transparent text-sm text-foreground outline-none [color-scheme:dark]" value={top3DateTo} onChange={e => { setTop3DateTo(e.target.value); setTop3Result(null); }} />
+                            </div>
+                          </div>
+                          {top3DateFrom && top3DateTo && (
+                            <div className="border-t border-border px-3 py-2">
+                              <div className="relative mb-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                <div className="h-full rounded-full bg-primary/40" style={{ width: '100%' }} />
+                              </div>
+                              <p className="text-[10px] text-muted-foreground">
+                                {(top3DateFrom && top3DateTo) && (() => {
+                                  const fw = computeWeek(top3DateFrom);
+                                  const tw = computeWeek(top3DateTo);
+                                  const fy = top3DateFrom.slice(0, 4);
+                                  const ty = top3DateTo.slice(0, 4);
+                                  const fStr = `${top3DateFrom.slice(8, 10)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(top3DateFrom.slice(5, 7), 10) - 1]} ${fy}`;
+                                  const tStr = `${top3DateTo.slice(8, 10)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(top3DateTo.slice(5, 7), 10) - 1]} ${ty}`;
+                                  const weekText = fw === tw && fy === ty ? `Week ${fw}` : `Week ${fw} → Week ${tw}`;
+                                  return `📅 ${fStr} → ${tStr}  ·  ${weekText}`;
+                                })()}
+                              </p>
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-end">
                           <Button size="sm" className="h-9 bg-primary text-primary-foreground shadow-sm" onClick={handleGenerateTop3} disabled={top3Loading}>
