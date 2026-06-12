@@ -435,15 +435,10 @@ function formatMonth(dateStr: string): string {
     };
     const matchingInline = qaOqlRecords.filter(r => {
       if (!inlineFilters(r)) return false;
-      return filteredDefects.some(d =>
-        d.item === r.item &&
-        d.inspectionDate === r.inspectionDate &&
-        d.factory === r.factory &&
-        d.line === r.line &&
-        d.po === r.po &&
-        d.color === r.color &&
-        d.buyer === r.buyer
-      );
+      if (top3Weeks.length > 0 && top3Year) {
+        if (!top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
+      }
+      return true;
     });
     const inspectionQty = matchingInline.reduce((sum, r) => sum + (r.visualSample || 0), 0);
     const defectMap = new Map<string, { description: string; total: number }>();
