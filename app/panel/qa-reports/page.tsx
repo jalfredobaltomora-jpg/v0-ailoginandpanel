@@ -69,6 +69,7 @@ export default function QAReportsPage() {
   const [top3Line, setTop3Line] = useState('');
   const [top3Buyer, setTop3Buyer] = useState('');
   const [top3Color, setTop3Color] = useState('');
+  const [top3PO, setTop3PO] = useState('');
   const [top3Year, setTop3Year] = useState('');
   const [top3Weeks, setTop3Weeks] = useState<number[]>([]);
   const [top3DateFrom, setTop3DateFrom] = useState('');
@@ -417,6 +418,7 @@ function formatMonth(dateStr: string): string {
       if (top3Line && r.line !== top3Line) return false;
       if (top3Buyer && r.buyer !== top3Buyer) return false;
       if (top3Color && r.color !== top3Color) return false;
+      if (top3PO && r.po !== top3PO) return false;
       if (top3Weeks.length > 0 && top3Year) {
         if (!top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
       }
@@ -428,6 +430,7 @@ function formatMonth(dateStr: string): string {
       if (top3Line && r.line !== top3Line) return false;
       if (top3Buyer && r.buyer !== top3Buyer) return false;
       if (top3Color && r.color !== top3Color) return false;
+      if (top3PO && r.po !== top3PO) return false;
       return true;
     };
     const matchingInline = qaOqlRecords.filter(r => {
@@ -834,53 +837,85 @@ function formatMonth(dateStr: string): string {
                     </div>
                     <div className="space-y-4 p-5">
                       <div className="flex flex-wrap items-end gap-4">
-                        <div>
-                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Fábrica</label>
-                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Factory} onChange={e => { setTop3Factory(e.target.value); setTop3Result(null); }}>
-                            <option value="">Todas</option>
-                            {[...new Set([...qaOqlRecords, ...inLineDefectRecords].map(r => r.factory).filter(Boolean))].map(f => (
-                              <option key={f} value={f}>{f}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Línea</label>
-                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Line} onChange={e => { setTop3Line(e.target.value); setTop3Result(null); }}>
-                            <option value="">General</option>
-                            {[...new Set(qaOqlRecords.filter(r => !top3Factory || r.factory === top3Factory).map(r => r.line).filter(Boolean))].sort().map(l => (
-                              <option key={l} value={l}>{l}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Comprador</label>
-                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Buyer} onChange={e => { setTop3Buyer(e.target.value); setTop3Result(null); }}>
-                            <option value="">Todos</option>
-                            {[...new Set(qaOqlRecords.filter(r => !top3Factory || r.factory === top3Factory).map(r => r.buyer).filter(Boolean))].sort().map(b => (
-                              <option key={b} value={b}>{b}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Color</label>
-                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Color} onChange={e => { setTop3Color(e.target.value); setTop3Result(null); }}>
-                            <option value="">Todos</option>
-                            {[...new Set(qaOqlRecords.filter(r => !top3Factory || r.factory === top3Factory).map(r => r.color).filter(Boolean))].sort().map(c => (
-                              <option key={c} value={c}>{c}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="min-w-[260px] max-w-[360px]">
-                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Rango de Fechas</label>
-                          <DateRangePicker dateFrom={top3DateFrom} dateTo={top3DateTo} onDateFromChange={setTop3DateFrom} onDateToChange={setTop3DateTo} />
-                        </div>
                         {top3DateFrom && top3DateTo && top3Weeks.length > 0 && (
-                          <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+                          <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 self-center">
                             <p className="text-[10px] text-muted-foreground">
                               📅 {top3Year} · {top3Weeks.length === 1 ? `Semana ${top3Weeks[0]}` : `Semana ${Math.min(...top3Weeks)} → Semana ${Math.max(...top3Weeks)}`} ({top3Weeks.length} {top3Weeks.length === 1 ? 'semana' : 'semanas'} seleccionadas)
                             </p>
                           </div>
                         )}
+                        <div className="min-w-[260px] max-w-[360px]">
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">1. Rango de Fechas</label>
+                          <DateRangePicker dateFrom={top3DateFrom} dateTo={top3DateTo} onDateFromChange={setTop3DateFrom} onDateToChange={setTop3DateTo} />
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">2. Fábrica</label>
+                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Factory} onChange={e => { setTop3Factory(e.target.value); setTop3Line(''); setTop3Buyer(''); setTop3Color(''); setTop3PO(''); setTop3Result(null); }}>
+                            <option value="">Todas</option>
+                            {[...new Set(qaOqlRecords.filter(r => {
+                              if (top3Weeks.length > 0 && top3Year && !top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
+                              return true;
+                            }).map(r => r.factory).filter(Boolean))].sort().map(f => (
+                              <option key={f} value={f}>{f}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">3. Línea</label>
+                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Line} onChange={e => { setTop3Line(e.target.value); setTop3Buyer(''); setTop3Color(''); setTop3PO(''); setTop3Result(null); }}>
+                            <option value="">General</option>
+                            {[...new Set(qaOqlRecords.filter(r => {
+                              if (top3Factory && r.factory !== top3Factory) return false;
+                              if (top3Weeks.length > 0 && top3Year && !top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
+                              return true;
+                            }).map(r => r.line).filter(Boolean))].sort().map(l => (
+                              <option key={l} value={l}>{l}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">4. Comprador</label>
+                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Buyer} onChange={e => { setTop3Buyer(e.target.value); setTop3Result(null); }}>
+                            <option value="">Todos</option>
+                            {[...new Set(qaOqlRecords.filter(r => {
+                              if (top3Factory && r.factory !== top3Factory) return false;
+                              if (top3Line && r.line !== top3Line) return false;
+                              if (top3Weeks.length > 0 && top3Year && !top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
+                              return true;
+                            }).map(r => r.buyer).filter(Boolean))].sort().map(b => (
+                              <option key={b} value={b}>{b}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">5. Color</label>
+                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Color} onChange={e => { setTop3Color(e.target.value); setTop3PO(''); setTop3Result(null); }}>
+                            <option value="">Todos</option>
+                            {[...new Set(qaOqlRecords.filter(r => {
+                              if (top3Factory && r.factory !== top3Factory) return false;
+                              if (top3Line && r.line !== top3Line) return false;
+                              if (top3Weeks.length > 0 && top3Year && !top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
+                              return true;
+                            }).map(r => r.color).filter(Boolean))].sort().map(c => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">6. PO</label>
+                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3PO} onChange={e => { setTop3PO(e.target.value); setTop3Result(null); }}>
+                            <option value="">Todos</option>
+                            {[...new Set(qaOqlRecords.filter(r => {
+                              if (top3Factory && r.factory !== top3Factory) return false;
+                              if (top3Line && r.line !== top3Line) return false;
+                              if (top3Color && r.color !== top3Color) return false;
+                              if (top3Weeks.length > 0 && top3Year && !top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
+                              return true;
+                            }).map(r => r.po).filter(Boolean))].sort().map(p => (
+                              <option key={p} value={p}>{p}</option>
+                            ))}
+                          </select>
+                        </div>
                         <div className="flex items-end">
                           <Button size="sm" className="h-9 bg-primary text-primary-foreground shadow-sm" onClick={handleGenerateTop3} disabled={top3Loading || !top3DateFrom || !top3DateTo || top3Weeks.length === 0}>
                             {top3Loading ? 'Generando...' : 'Generar Tabla'}
