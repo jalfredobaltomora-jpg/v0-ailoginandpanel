@@ -74,7 +74,7 @@ export default function QAReportsPage() {
   const [top3Weeks, setTop3Weeks] = useState<number[]>([]);
   const [top3DateFrom, setTop3DateFrom] = useState('');
   const [top3DateTo, setTop3DateTo] = useState('');
-  const [top3Result, setTop3Result] = useState<{ top3: any[]; inspectionQty: number; factory: string; line: string; buyer: string; color: string } | null>(null);
+  const [top3Result, setTop3Result] = useState<{ top3: any[]; inspectionQty: number; factory: string; line: string; buyer: string; color: string; dateFrom: string; dateTo: string; weeks: number[]; po: string } | null>(null);
   const [top3Loading, setTop3Loading] = useState(false);
   const [empleados, setEmpleados] = useState<any[]>([]);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
@@ -455,6 +455,12 @@ function formatMonth(dateStr: string): string {
       .sort((a, b) => b.defectPct - a.defectPct)
       .slice(0, 3);
     const topColor = filteredDefects.find(r => r.color)?.color || top3Color || '';
+    function formatDateTitle(d: string) {
+      const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return d;
+      const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      return `${parseInt(m[3], 10)}/ ${months[parseInt(m[2], 10) - 1]}/ ${m[1]}`;
+    }
     setTop3Result({
       top3: sorted,
       inspectionQty: inspectionQty > 0 ? inspectionQty : totalDefects,
@@ -462,6 +468,10 @@ function formatMonth(dateStr: string): string {
       line: top3Line || 'Todas las líneas',
       buyer: top3Buyer || 'Todos los compradores',
       color: topColor,
+      dateFrom: top3DateFrom ? formatDateTitle(top3DateFrom) : '',
+      dateTo: top3DateTo ? formatDateTitle(top3DateTo) : '',
+      weeks: top3Weeks,
+      po: top3PO || '',
     });
     setTop3Loading(false);
   };
@@ -472,14 +482,42 @@ function formatMonth(dateStr: string): string {
     const wb = new ExcelJS.default.Workbook();
     const ws = wb.addWorksheet('TOP 3 Defectos');
     ws.columns = [
-      { header: 'Fábrica', key: 'factory', width: 22 },
-      { header: 'Línea', key: 'line', width: 16 },
-      { header: 'Rank', key: 'rank', width: 8 },
-      { header: 'Descripción', key: 'desc', width: 36 },
-      { header: 'Cant. Inspección', key: 'qty', width: 18 },
-      { header: 'Total Defecto', key: 'total', width: 16 },
-      { header: '% Defecto', key: 'pct', width: 14 },
+      { key: 'a', width: 22 },
+      { key: 'b', width: 16 },
+      { key: 'c', width: 8 },
+      { key: 'd', width: 36 },
+      { key: 'e', width: 18 },
+      { key: 'f', width: 16 },
+      { key: 'g', width: 14 },
     ];
+    const titleRow = ws.addRow(['TOP3 de Defectos']);
+    ws.mergeCells(`A${titleRow.number}:G${titleRow.number}`);
+    titleRow.getCell(1).font = { bold: true, size: 14, color: { argb: '4338CA' } };
+    titleRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    titleRow.height = 28;
+    if (top3Result.dateFrom && top3Result.dateTo) {
+      const dateRow = ws.addRow([`${top3Result.dateFrom} — ${top3Result.dateTo}`]);
+      ws.mergeCells(`A${dateRow.number}:G${dateRow.number}`);
+      dateRow.getCell(1).font = { size: 10, color: { argb: '64748B' } };
+      dateRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    }
+    if (top3Result.weeks.length > 0) {
+      const weekLabel = `Semana ${top3Result.weeks[0]}${top3Result.weeks.length > 1 ? ` - Semana ${top3Result.weeks[top3Result.weeks.length - 1]}` : ''}`;
+      const weekRow = ws.addRow([weekLabel]);
+      ws.mergeCells(`A${weekRow.number}:G${weekRow.number}`);
+      weekRow.getCell(1).font = { size: 10, color: { argb: '6366F1' }, bold: true };
+      weekRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    }
+    const metaParts: string[] = [];
+    if (top3Result.color) metaParts.push(`Color: ${top3Result.color}`);
+    if (top3Result.po) metaParts.push(`PO: ${top3Result.po}`);
+    if (metaParts.length > 0) {
+      const metaRow = ws.addRow([metaParts.join('  |  ')]);
+      ws.mergeCells(`A${metaRow.number}:G${metaRow.number}`);
+      metaRow.getCell(1).font = { size: 10, color: { argb: '475569' } };
+      metaRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    }
+    const blankRow = ws.addRow([]);
     const headerRow = ws.addRow(['Fábrica', 'Línea', 'Rank', 'Descripción', 'Cant. Inspección', 'Total Defecto', '% Defecto']);
     headerRow.eachCell((cell) => {
       cell.font = { bold: true, color: { argb: 'FFFFFF' }, size: 10 };
@@ -487,9 +525,10 @@ function formatMonth(dateStr: string): string {
       cell.alignment = { horizontal: 'center', vertical: 'middle' };
       cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
     });
+    const dataStartRow = headerRow.number + 1;
     top3Result.top3.forEach((d, i) => {
       const row = ws.addRow([
-        top3Result.factory, top3Result.line, i + 1, d.description,
+        i === 0 ? top3Result.factory : '', i === 0 ? top3Result.line : '', i + 1, d.description,
         top3Result.inspectionQty, d.total, `${d.defectPct.toFixed(2)}%`,
       ]);
       row.eachCell((cell, colIdx) => {
@@ -511,13 +550,20 @@ function formatMonth(dateStr: string): string {
       row.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: pctBg } };
       row.height = 22;
     });
+    const endRow = dataStartRow + top3Result.top3.length - 1;
+    if (top3Result.top3.length > 1) {
+      ws.mergeCells(`A${dataStartRow}:A${endRow}`);
+      ws.mergeCells(`B${dataStartRow}:B${endRow}`);
+      ws.getCell(`A${dataStartRow}`).alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getCell(`B${dataStartRow}`).alignment = { horizontal: 'center', vertical: 'middle' };
+    }
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = `top3-defectos-${top3DateFrom || ''}.xlsx`;
     a.click(); URL.revokeObjectURL(url);
-  }, [top3Result, top3DateFrom]);
+  }, [top3Result, top3DateFrom, top3DateTo]);
 
   const handleExportPDF = useCallback(async () => {
     if (!top3TableRef.current || !top3Result) return;
@@ -952,9 +998,21 @@ function formatMonth(dateStr: string): string {
 
                       {top3Result && (
                         <>
-                        {top3Result.color && (
-                          <p className="text-[11px] text-muted-foreground italic mb-1">🎨 Color: {top3Result.color}</p>
-                        )}
+                        <div className="mb-4 text-center">
+                          <h3 className="text-lg font-extrabold text-indigo-700 tracking-tight">TOP3 de Defectos</h3>
+                          {top3Result.dateFrom && top3Result.dateTo && (
+                            <p className="text-[12px] text-slate-500 font-medium mt-0.5">{top3Result.dateFrom} — {top3Result.dateTo}</p>
+                          )}
+                          {top3Result.weeks.length > 0 && (
+                            <p className="text-[11px] text-indigo-500 font-semibold mt-0.5">
+                              Semana {top3Result.weeks[0]}{top3Result.weeks.length > 1 ? ` - Semana ${top3Result.weeks[top3Result.weeks.length - 1]}` : ''}
+                            </p>
+                          )}
+                          <div className="flex justify-center gap-4 mt-1">
+                            {top3Result.color && <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{backgroundColor: top3Result.color === 'Ebony' ? '#1a1a2e' : '#6366f1'}}></span>Color: {top3Result.color}</span>}
+                            {top3Result.po && <span className="text-[11px] font-medium text-slate-600">PO: {top3Result.po}</span>}
+                          </div>
+                        </div>
                         <div ref={top3TableRef} className="overflow-x-auto rounded-xl border border-border shadow-sm">
                           <table className="text-xs" style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
                             <colgroup>
