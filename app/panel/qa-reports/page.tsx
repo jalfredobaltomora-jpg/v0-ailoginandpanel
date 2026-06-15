@@ -454,7 +454,8 @@ function formatMonth(dateStr: string): string {
       .map(d => ({ ...d, defectPct: (d.total / denom) * 100 }))
       .sort((a, b) => b.defectPct - a.defectPct)
       .slice(0, 3);
-    const topColor = filteredDefects.find(r => r.color)?.color || top3Color || '';
+    const allColors = [...new Set(filteredDefects.map(r => r.color).filter(Boolean))];
+    const allPOs = [...new Set(filteredDefects.map(r => r.po).filter(Boolean))];
     function formatDateTitle(d: string) {
       const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (!m) return d;
@@ -467,11 +468,11 @@ function formatMonth(dateStr: string): string {
       factory: top3Factory || 'Sae-A Technotex SA',
       line: top3Line || 'Todas las líneas',
       buyer: top3Buyer || 'Todos los compradores',
-      color: topColor,
+      color: allColors.length > 0 ? allColors.join(', ') : (top3Color || ''),
       dateFrom: top3DateFrom ? formatDateTitle(top3DateFrom) : '',
       dateTo: top3DateTo ? formatDateTitle(top3DateTo) : '',
       weeks: top3Weeks,
-      po: top3PO || '',
+      po: allPOs.length > 0 ? allPOs.join(', ') : (top3PO || ''),
     });
     setTop3Loading(false);
   };
@@ -509,8 +510,8 @@ function formatMonth(dateStr: string): string {
       weekRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
     }
     const metaParts: string[] = [];
-    if (top3Result.color) metaParts.push(`Color: ${top3Result.color}`);
-    if (top3Result.po) metaParts.push(`PO: ${top3Result.po}`);
+    if (top3Result.color) metaParts.push(`Colores: ${top3Result.color}`);
+    if (top3Result.po) metaParts.push(`POs: ${top3Result.po}`);
     if (metaParts.length > 0) {
       const metaRow = ws.addRow([metaParts.join('  |  ')]);
       ws.mergeCells(`A${metaRow.number}:G${metaRow.number}`);
@@ -622,8 +623,8 @@ function formatMonth(dateStr: string): string {
       ? `Semana ${top3Result.weeks[0]}${top3Result.weeks.length > 1 ? ` - Semana ${top3Result.weeks[top3Result.weeks.length - 1]}` : ''}`
       : '';
     const metaParts: string[] = [];
-    if (top3Result.color) metaParts.push(`Color: ${top3Result.color}`);
-    if (top3Result.po) metaParts.push(`PO: ${top3Result.po}`);
+    if (top3Result.color) metaParts.push(`Colores: ${top3Result.color}`);
+    if (top3Result.po) metaParts.push(`POs: ${top3Result.po}`);
     printWin.document.write(`
       <html><head><title>TOP 3 Defectos</title>
       <style>
@@ -657,7 +658,7 @@ function formatMonth(dateStr: string): string {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-      <div className="flex items-center justify-between border-b border-border bg-card/50 p-4">
+      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-card/50 p-4 shadow-sm">
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
@@ -712,7 +713,8 @@ function formatMonth(dateStr: string): string {
 
         {view === 'dhu' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="sticky top-[57px] z-20 bg-background pb-2">
+            <div className="flex items-center justify-between pt-2">
               <h3 className="text-lg font-bold text-foreground">
                 {oqlTab === 'catalog' ? 'Catálogo de defectos' : 'QA - OQL % SAE - Indicador'}
               </h3>
@@ -764,6 +766,7 @@ function formatMonth(dateStr: string): string {
                 className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${oqlTab === 'catalog' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
                 <BookOpen className="h-4 w-4" /> Catálogo de defectos
               </button>
+            </div>
             </div>
 
             {/* IN LINE Tab */}
@@ -857,7 +860,7 @@ function formatMonth(dateStr: string): string {
                     No hay registros de Defecto en Línea.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-lg border border-border">
+                  <div className="overflow-auto max-h-[580px] rounded-lg border border-border">
                     <table className="w-full text-sm whitespace-nowrap">
                       <thead className="sticky top-0 z-10 bg-card shadow-sm">
                         <tr className="border-b border-border">
@@ -1033,9 +1036,9 @@ function formatMonth(dateStr: string): string {
                               Semana {top3Result.weeks[0]}{top3Result.weeks.length > 1 ? ` - Semana ${top3Result.weeks[top3Result.weeks.length - 1]}` : ''}
                             </p>
                           )}
-                          <div className="flex justify-center gap-4 mt-1">
-                            {top3Result.color && <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{backgroundColor: top3Result.color === 'Ebony' ? '#1a1a2e' : '#6366f1'}}></span>Color: {top3Result.color}</span>}
-                            {top3Result.po && <span className="text-[11px] font-medium text-slate-600">PO: {top3Result.po}</span>}
+                          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1">
+                            {top3Result.color && <span className="text-[11px] font-medium text-slate-600">Colores: {top3Result.color}</span>}
+                            {top3Result.po && <span className="text-[11px] font-medium text-slate-600">POs: {top3Result.po}</span>}
                           </div>
                         </div>
                         <div className="overflow-x-auto rounded-xl border border-border shadow-sm">
