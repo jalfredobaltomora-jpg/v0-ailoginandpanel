@@ -419,8 +419,8 @@ function formatMonth(dateStr: string): string {
       if (top3Buyer && r.buyer !== top3Buyer) return false;
       if (top3Color && r.color !== top3Color) return false;
       if (top3PO && r.po !== top3PO) return false;
-      if (top3Weeks.length > 0 && top3Year) {
-        if (!top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
+      if (top3DateFrom && top3DateTo) {
+        if (r.inspectionDate < top3DateFrom || r.inspectionDate > top3DateTo) return false;
       }
       return true;
     });
@@ -433,12 +433,12 @@ function formatMonth(dateStr: string): string {
     };
     const matchingInline = qaOqlRecords.filter(r => {
       if (!inlineFilters(r)) return false;
-      if (top3Weeks.length > 0 && top3Year) {
-        if (!top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
+      if (top3DateFrom && top3DateTo) {
+        if (r.inspectionDate < top3DateFrom || r.inspectionDate > top3DateTo) return false;
       }
       return true;
     });
-    const inspectionQty = matchingInline.reduce((sum, r) => sum + (r.visualSample || 0), 0);
+    const inspectionQty = matchingInline.reduce((sum, r) => sum + (Number(r.visualSample) || 0), 0);
     const defectMap = new Map<string, { description: string; total: number }>();
     filteredDefects.forEach(r => {
       const desc = r.defectDescription || r.defect || 'Desconocido';
@@ -468,47 +468,81 @@ function formatMonth(dateStr: string): string {
 
   const handleExportExcel = useCallback(async () => {
     if (!top3Result) return;
-    const XLSX = await import('xlsx');
-    const wsData: any[][] = [
-      ['Fábrica', 'Línea', 'Rank', 'Descripción', 'Cant. Inspección', 'Total Defecto', '% Defecto'],
+    const ExcelJS = await import('exceljs');
+    const wb = new ExcelJS.default.Workbook();
+    const ws = wb.addWorksheet('TOP 3 Defectos');
+    ws.columns = [
+      { header: 'Fábrica', key: 'factory', width: 22 },
+      { header: 'Línea', key: 'line', width: 16 },
+      { header: 'Rank', key: 'rank', width: 8 },
+      { header: 'Descripción', key: 'desc', width: 36 },
+      { header: 'Cant. Inspección', key: 'qty', width: 18 },
+      { header: 'Total Defecto', key: 'total', width: 16 },
+      { header: '% Defecto', key: 'pct', width: 14 },
     ];
+    const headerRow = ws.addRow(['Fábrica', 'Línea', 'Rank', 'Descripción', 'Cant. Inspección', 'Total Defecto', '% Defecto']);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFF' }, size: 10 };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '4338CA' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    });
     top3Result.top3.forEach((d, i) => {
-      wsData.push([
-        i === 0 ? top3Result.factory : '',
-        i === 0 ? top3Result.line : '',
-        i + 1,
-        d.description,
-        i === 0 ? top3Result.inspectionQty : '',
-        d.total,
-        `${d.defectPct.toFixed(2)}%`,
+      const row = ws.addRow([
+        top3Result.factory, top3Result.line, i + 1, d.description,
+        top3Result.inspectionQty, d.total, `${d.defectPct.toFixed(2)}%`,
       ]);
+      row.eachCell((cell, colIdx) => {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        if (colIdx === 4) cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        if (colIdx === 7) cell.alignment = { horizontal: 'right', vertical: 'middle' };
+      });
+      row.getCell(3).font = { bold: true, size: 11, color: { argb: 'FFFFFF' } };
+      const rankColors = ['F59E0B', '94A3B8', 'B45309'];
+      row.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rankColors[i] } };
+      row.getCell(4).font = { bold: true, size: 10 };
+      row.getCell(5).font = { bold: true, size: 10, color: { argb: '4338CA' } };
+      row.getCell(6).font = { bold: true, size: 10 };
+      const pct = d.defectPct;
+      const pctColor = pct >= 5 ? 'B91C1C' : pct >= 2 ? '92400E' : '166534';
+      const pctBg = pct >= 5 ? 'FEE2E2' : pct >= 2 ? 'FEF3C7' : 'DCFCE7';
+      row.getCell(7).font = { bold: true, size: 10, color: { argb: pctColor } };
+      row.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: pctBg } };
+      row.height = 22;
     });
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = wsData[0].map((_, idx) => {
-      const maxLen = wsData.reduce((a, r) => Math.max(a, String(r[idx] || '').length), 0);
-      return { wch: Math.max(maxLen + 3, 14) };
-    });
-    XLSX.utils.book_append_sheet(wb, ws, 'TOP 3 Defectos');
-    XLSX.writeFile(wb, `top3-defectos-${top3DateFrom || ''}.xlsx`);
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `top3-defectos-${top3DateFrom || ''}.xlsx`;
+    a.click(); URL.revokeObjectURL(url);
   }, [top3Result, top3DateFrom]);
 
   const handleExportPDF = useCallback(async () => {
     if (!top3TableRef.current || !top3Result) return;
-    const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-      import('html2canvas'),
-      import('jspdf'),
-    ]);
-    const canvas = await html2canvas(top3TableRef.current, {
-      scale: 2,
-      backgroundColor: '#ffffff',
-    });
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('l', 'mm', 'a4');
-    const pdfW = pdf.internal.pageSize.getWidth();
-    const pdfH = (canvas.height * pdfW) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
-    pdf.save(`top3-defectos-${top3DateFrom || ''}.pdf`);
+    try {
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
+      const el = top3TableRef.current;
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        allowTaint: false,
+        useCORS: true,
+        logging: false,
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('l', 'mm', 'a4');
+      const pdfW = pdf.internal.pageSize.getWidth() - 10;
+      const pdfH = (canvas.height * pdfW) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 5, 5, pdfW, pdfH);
+      pdf.save(`top3-defectos-${top3DateFrom || ''}.pdf`);
+    } catch (err) {
+      console.error('PDF export error:', err);
+    }
   }, [top3Result, top3DateFrom]);
 
   const handlePrint = useCallback(() => {
@@ -517,30 +551,30 @@ function formatMonth(dateStr: string): string {
     if (!printWin) return;
     const rows = top3Result.top3.map((d, i) => `
       <tr style="${i % 2 === 0 ? 'background:#f8f9fa' : 'background:#fff'}">
-        ${i === 0 ? `<td rowspan="${top3Result.top3.length}" style="border:1px solid #dee2e6;padding:6px;font-weight:600">${top3Result.factory}</td>` : ''}
-        ${i === 0 ? `<td rowspan="${top3Result.top3.length}" style="border:1px solid #dee2e6;padding:6px">${top3Result.line}</td>` : ''}
+        ${i === 0 ? `<td rowspan="${top3Result.top3.length}" style="border:1px solid #dee2e6;padding:6px;font-weight:600;text-align:center">${top3Result.factory}</td>` : ''}
+        ${i === 0 ? `<td rowspan="${top3Result.top3.length}" style="border:1px solid #dee2e6;padding:6px;text-align:center">${top3Result.line}</td>` : ''}
         <td style="border:1px solid #dee2e6;padding:6px;text-align:center"><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:${i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : '#b45309'};color:#fff;font-weight:700;font-size:11px">${i + 1}</span></td>
-        <td style="border:1px solid #dee2e6;padding:6px;font-weight:500">${d.description}</td>
-        <td style="border:1px solid #dee2e6;padding:6px;text-align:right">${i === 0 ? top3Result.inspectionQty : ''}</td>
-        <td style="border:1px solid #dee2e6;padding:6px;text-align:right">${d.total}</td>
-        <td style="border:1px solid #dee2e6;padding:6px;text-align:right"><span style="display:inline-flex;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:600;background:${d.defectPct >= 5 ? '#fee2e2' : d.defectPct >= 2 ? '#fef3c7' : '#dcfce7'};color:${d.defectPct >= 5 ? '#b91c1c' : d.defectPct >= 2 ? '#92400e' : '#166534'}">${d.defectPct.toFixed(2)}%</span></td>
+        <td style="border:1px solid #dee2e6;padding:6px;font-weight:500;text-align:center">${d.description}</td>
+        <td style="border:1px solid #dee2e6;padding:6px;text-align:center">${top3Result.inspectionQty}</td>
+        <td style="border:1px solid #dee2e6;padding:6px;text-align:center">${d.total}</td>
+        <td style="border:1px solid #dee2e6;padding:6px;text-align:center"><span style="display:inline-flex;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:600;background:${d.defectPct >= 5 ? '#fee2e2' : d.defectPct >= 2 ? '#fef3c7' : '#dcfce7'};color:${d.defectPct >= 5 ? '#b91c1c' : d.defectPct >= 2 ? '#92400e' : '#166534'}">${d.defectPct.toFixed(2)}%</span></td>
       </tr>
     `).join('');
     printWin.document.write(`
       <html><head><title>TOP 3 Defectos</title>
       <style>
         body { font-family:Arial,sans-serif; margin:20px; }
-        h2 { color:#1e293b; font-size:16px; margin-bottom:12px; }
-        table { border-collapse:collapse; width:100%; font-size:12px; }
-        th { background:linear-gradient(135deg,#e0e7ff,#dbeafe); border:1px solid #dee2e6; padding:8px; text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:#4338ca; font-weight:600; }
-        td { border:1px solid #dee2e6; padding:6px; }
-        .footer { margin-top:12px; font-size:10px; color:#64748b; }
+        h2 { color:#1e293b; font-size:16px; margin-bottom:12px; text-align:center; }
+        table { border-collapse:collapse; width:100%; font-size:12px; table-layout:fixed; }
+        th { background:#4338ca; border:1px solid #dee2e6; padding:8px; text-align:center; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:#fff; font-weight:700; }
+        td { border:1px solid #dee2e6; padding:6px; text-align:center; }
+        .footer { margin-top:12px; font-size:10px; color:#64748b; text-align:center; }
       </style></head>
       <body>
-        <h2>📊 TOP 3 Defectos — ${top3Result.factory} / ${top3Result.line}</h2>
+        <h2>TOP 3 Defectos — ${top3Result.factory} / ${top3Result.line}</h2>
         <table>
           <thead><tr>
-            <th>Fábrica</th><th>Línea</th><th style="text-align:center">Rank</th><th>Descripción</th><th style="text-align:right">Cant. Inspección</th><th style="text-align:right">Total Defecto</th><th style="text-align:right">% Defecto</th>
+            <th>Fábrica</th><th>Línea</th><th>Rank</th><th>Descripción</th><th>Cant. Inspección</th><th>Total Defecto</th><th>% Defecto</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -922,36 +956,45 @@ function formatMonth(dateStr: string): string {
                           <p className="text-[11px] text-muted-foreground italic mb-1">🎨 Color: {top3Result.color}</p>
                         )}
                         <div ref={top3TableRef} className="overflow-x-auto rounded-xl border border-border shadow-sm">
-                          <table className="text-xs" style={{ width: 'max-content', minWidth: '100%', tableLayout: 'auto' }}>
+                          <table className="text-xs" style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
+                            <colgroup>
+                              <col style={{ width: 'auto' }} />
+                              <col style={{ width: 'auto' }} />
+                              <col style={{ width: '50px' }} />
+                              <col style={{ width: 'auto' }} />
+                              <col style={{ width: '110px' }} />
+                              <col style={{ width: '110px' }} />
+                              <col style={{ width: '100px' }} />
+                            </colgroup>
                             <thead>
                               <tr className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 whitespace-nowrap">
-                                <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-white">Fábrica</th>
-                                <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-white">Línea</th>
+                                <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white">Fábrica</th>
+                                <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white">Línea</th>
                                 <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white">Rank</th>
-                                <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-white">Descripción</th>
-                                <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-white whitespace-normal">Cant.<br/>Inspección</th>
-                                <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-white whitespace-normal">Total<br/>Defecto</th>
-                                <th className="px-3 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-white">% Defecto</th>
+                                <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white">Descripción</th>
+                                <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white whitespace-normal">Cant.<br/>Inspección</th>
+                                <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white whitespace-normal">Total<br/>Defecto</th>
+                                <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white">% Defecto</th>
                               </tr>
                             </thead>
                             <tbody>
                               {top3Result.top3.map((d, i) => (
                                 <tr key={i} className={`transition-colors whitespace-nowrap ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-indigo-50/60`}>
                                   {i === 0 && (
-                                    <td className="border-b border-slate-200 px-3 py-2.5 text-[12px] font-semibold text-slate-800" rowSpan={top3Result.top3.length}>{top3Result.factory}</td>
+                                    <td className="border-b border-slate-200 px-3 py-2.5 text-[12px] font-semibold text-slate-800 text-center" rowSpan={top3Result.top3.length}>{top3Result.factory}</td>
                                   )}
                                   {i === 0 && (
-                                    <td className="border-b border-slate-200 px-3 py-2.5 text-[12px] text-slate-600" rowSpan={top3Result.top3.length}>{top3Result.line}</td>
+                                    <td className="border-b border-slate-200 px-3 py-2.5 text-[12px] text-slate-600 text-center" rowSpan={top3Result.top3.length}>{top3Result.line}</td>
                                   )}
                                   <td className="border-b border-slate-200 px-3 py-2 text-center">
                                     <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-sm ${i === 0 ? 'bg-gradient-to-br from-amber-400 to-amber-600' : i === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-500' : 'bg-gradient-to-br from-amber-600 to-amber-800'}`}>
                                       {i + 1}
                                     </span>
                                   </td>
-                                  <td className="border-b border-slate-200 px-3 py-2.5 text-[12px] font-medium text-slate-700" title={d.description}>{d.description}</td>
-                                  <td className="border-b border-slate-200 px-3 py-2.5 text-right text-[12px] tabular-nums font-semibold text-slate-800">{top3Result.inspectionQty}</td>
-                                  <td className="border-b border-slate-200 px-3 py-2.5 text-right text-[12px] tabular-nums font-semibold text-slate-800">{d.total}</td>
-                                  <td className="border-b border-slate-200 px-3 py-2.5 text-right">
+                                  <td className="border-b border-slate-200 px-3 py-2.5 text-[12px] font-medium text-slate-700 text-center" title={d.description}>{d.description}</td>
+                                  <td className="border-b border-slate-200 px-3 py-2.5 text-center text-[12px] tabular-nums font-semibold text-slate-800">{top3Result.inspectionQty}</td>
+                                  <td className="border-b border-slate-200 px-3 py-2.5 text-center text-[12px] tabular-nums font-semibold text-slate-800">{d.total}</td>
+                                  <td className="border-b border-slate-200 px-3 py-2.5 text-center">
                                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold shadow-sm ${d.defectPct >= 5 ? 'bg-red-100 text-red-700 ring-1 ring-red-300' : d.defectPct >= 2 ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-300' : 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300'}`}>
                                       {d.defectPct.toFixed(2)}%
                                     </span>
