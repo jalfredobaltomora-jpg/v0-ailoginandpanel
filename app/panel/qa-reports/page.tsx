@@ -574,7 +574,7 @@ function formatMonth(dateStr: string): string {
         import('jspdf'),
       ]);
       const el = top3TableRef.current;
-      const inner = el.querySelector<HTMLElement>('.overflow-x-auto');
+      const inner = el.querySelector<HTMLElement>('.overflow-auto, .overflow-x-auto');
       if (inner) { inner.style.overflow = 'visible'; inner.style.maxHeight = 'none'; }
       const canvas = await html2canvas(el, {
         scale: 2,
@@ -1041,7 +1041,7 @@ function formatMonth(dateStr: string): string {
                             {top3Result.po && <span className="text-[11px] font-medium text-slate-600">POs: {top3Result.po}</span>}
                           </div>
                         </div>
-                        <div className="overflow-x-auto rounded-xl border border-border shadow-sm">
+                        <div className="overflow-auto max-h-[200px] rounded-xl border border-border shadow-sm">
                           <table className="text-xs" style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
                             <colgroup>
                               <col style={{ width: 'auto' }} />
