@@ -459,7 +459,7 @@ function formatMonth(dateStr: string): string {
       const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (!m) return d;
       const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-      return `${parseInt(m[3], 10)}/ ${months[parseInt(m[2], 10) - 1]}/ ${m[1]}`;
+      return `${m[3]}/ ${months[parseInt(m[2], 10) - 1]}/ ${m[1]}`;
     }
     setTop3Result({
       top3: sorted,
@@ -606,18 +606,36 @@ function formatMonth(dateStr: string): string {
         <td style="border:1px solid #dee2e6;padding:6px;text-align:center"><span style="display:inline-flex;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:600;background:${d.defectPct >= 5 ? '#fee2e2' : d.defectPct >= 2 ? '#fef3c7' : '#dcfce7'};color:${d.defectPct >= 5 ? '#b91c1c' : d.defectPct >= 2 ? '#92400e' : '#166534'}">${d.defectPct.toFixed(2)}%</span></td>
       </tr>
     `).join('');
+    function fmtMonth(d: string) {
+      const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return d;
+      const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      return `${parseInt(m[3], 10)}/ ${months[parseInt(m[2], 10) - 1]}/ ${m[1]}`;
+    }
+    const weekLabel = top3Result.weeks.length > 0
+      ? `Semana ${top3Result.weeks[0]}${top3Result.weeks.length > 1 ? ` - Semana ${top3Result.weeks[top3Result.weeks.length - 1]}` : ''}`
+      : '';
+    const metaParts: string[] = [];
+    if (top3Result.color) metaParts.push(`Color: ${top3Result.color}`);
+    if (top3Result.po) metaParts.push(`PO: ${top3Result.po}`);
     printWin.document.write(`
       <html><head><title>TOP 3 Defectos</title>
       <style>
         body { font-family:Arial,sans-serif; margin:20px; }
-        h2 { color:#1e293b; font-size:16px; margin-bottom:12px; text-align:center; }
-        table { border-collapse:collapse; width:100%; font-size:12px; table-layout:fixed; }
+        .title { color:#4338ca; font-size:18px; font-weight:800; text-align:center; margin-bottom:4px; }
+        .sub { color:#64748b; font-size:12px; text-align:center; margin:2px 0; }
+        .week { color:#6366f1; font-size:11px; text-align:center; margin:2px 0; font-weight:600; }
+        .meta { color:#475569; font-size:11px; text-align:center; margin:2px 0; }
+        table { border-collapse:collapse; width:100%; font-size:12px; table-layout:fixed; margin-top:10px; }
         th { background:#4338ca; border:1px solid #dee2e6; padding:8px; text-align:center; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:#fff; font-weight:700; }
         td { border:1px solid #dee2e6; padding:6px; text-align:center; }
         .footer { margin-top:12px; font-size:10px; color:#64748b; text-align:center; }
       </style></head>
       <body>
-        <h2>TOP 3 Defectos — ${top3Result.factory} / ${top3Result.line}</h2>
+        <div class="title">TOP3 de Defectos</div>
+        ${top3Result.dateFrom && top3Result.dateTo ? `<div class="sub">${top3Result.dateFrom} — ${top3Result.dateTo}</div>` : ''}
+        ${weekLabel ? `<div class="week">${weekLabel}</div>` : ''}
+        ${metaParts.length > 0 ? `<div class="meta">${metaParts.join('  |  ')}</div>` : ''}
         <table>
           <thead><tr>
             <th>Fábrica</th><th>Línea</th><th>Rank</th><th>Descripción</th><th>Cant. Inspección</th><th>Total Defecto</th><th>% Defecto</th>
