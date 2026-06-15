@@ -536,8 +536,6 @@ function formatMonth(dateStr: string): string {
       row.eachCell((cell, colIdx) => {
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-        if (colIdx === 4) cell.alignment = { horizontal: 'left', vertical: 'middle' };
-        if (colIdx === 7) cell.alignment = { horizontal: 'right', vertical: 'middle' };
       });
       row.getCell(3).font = { bold: true, size: 11, color: { argb: 'FFFFFF' } };
       const rankColors = ['F59E0B', '94A3B8', 'B45309'];
@@ -660,7 +658,6 @@ function formatMonth(dateStr: string): string {
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
-        <div class="footer">Generado: ${new Date().toLocaleString('es-MX')} · Rango: ${top3DateFrom || '—'} → ${top3DateTo || '—'}</div>
         <script>window.onload=function(){window.print();}<\/script>
       </body></html>
     `);
@@ -1035,63 +1032,63 @@ function formatMonth(dateStr: string): string {
                       </div>
 
                         {top3Result && (
-                        <div ref={top3TableRef} className="overflow-auto max-h-[240px] space-y-3">
+                        <div ref={top3TableRef} className="overflow-auto max-h-[240px] space-y-1.5">
                         <div className="text-center">
-                          <h3 className="text-lg font-extrabold text-indigo-700 tracking-tight">TOP3 de Defectos</h3>
+                          <h3 className="text-base font-extrabold text-indigo-700 tracking-tight">TOP3 de Defectos</h3>
                           {top3Result.dateFrom && top3Result.dateTo && (
-                            <p className="text-[12px] text-slate-500 font-medium mt-0.5">{top3Result.dateFrom} — {top3Result.dateTo}</p>
+                            <p className="text-[11px] text-slate-500 font-medium">{top3Result.dateFrom} — {top3Result.dateTo}</p>
                           )}
                           {top3Result.weeks.length > 0 && (
-                            <p className="text-[11px] text-indigo-500 font-semibold mt-0.5">
+                            <p className="text-[10px] text-indigo-500 font-semibold">
                               Semana {top3Result.weeks[0]}{top3Result.weeks.length > 1 ? ` - Semana ${top3Result.weeks[top3Result.weeks.length - 1]}` : ''}
                             </p>
                           )}
-                          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1">
-                            {top3Result.color && <span className="text-[11px] font-medium text-slate-600">Colores: {top3Result.color}</span>}
-                            {top3Result.po && <span className="text-[11px] font-medium text-slate-600">POs: {top3Result.po}</span>}
+                          <div className="flex flex-wrap justify-center gap-x-3 gap-y-0.5">
+                            {top3Result.color && <span className="text-[10px] font-medium text-slate-600">Colores: {top3Result.color}</span>}
+                            {top3Result.po && <span className="text-[10px] font-medium text-slate-600">POs: {top3Result.po}</span>}
                           </div>
                         </div>
-                        <div className="overflow-x-auto rounded-xl border border-border shadow-sm">
-                          <table className="text-xs" style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
+                        <div className="overflow-x-auto rounded-lg border border-border shadow-sm">
+                          <table className="text-xs w-full" style={{ tableLayout: 'fixed' }}>
                             <colgroup>
-                              <col style={{ width: 'auto' }} />
-                              <col style={{ width: 'auto' }} />
-                              <col style={{ width: '50px' }} />
-                              <col style={{ width: 'auto' }} />
-                              <col style={{ width: '110px' }} />
-                              <col style={{ width: '110px' }} />
-                              <col style={{ width: '100px' }} />
+                              <col style={{ width: '90px' }} />
+                              <col style={{ width: '55px' }} />
+                              <col style={{ width: '40px' }} />
+                              <col style={{ width: '160px' }} />
+                              <col style={{ width: '70px' }} />
+                              <col style={{ width: '65px' }} />
+                              <col style={{ width: '65px' }} />
                             </colgroup>
                             <thead>
                               <tr className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 whitespace-nowrap">
-                                <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white">Fábrica</th>
-                                <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white">Línea</th>
-                                <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white">Rank</th>
-                                <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white">Descripción</th>
-                                <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white whitespace-normal">Cant.<br/>Inspección</th>
-                                <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white whitespace-normal">Total<br/>Defecto</th>
-                                <th className="px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-white">% Defecto</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white">Fábrica</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white">Línea</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white">Rank</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white">Descripción</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white whitespace-normal">Cant.<br/>Inspección</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white whitespace-normal">Total<br/>Defecto</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white">% Defecto</th>
                               </tr>
                             </thead>
                             <tbody>
                               {top3Result.top3.map((d, i) => (
                                 <tr key={i} className={`transition-colors whitespace-nowrap ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-indigo-50/60`}>
                                   {i === 0 && (
-                                    <td className="border-b border-slate-200 px-3 py-2.5 text-[12px] font-semibold text-slate-800 text-center" rowSpan={top3Result.top3.length}>{top3Result.factory}</td>
+                                    <td className="border-b border-slate-200 px-2 py-2 text-[11px] font-semibold text-slate-800 text-center truncate" rowSpan={top3Result.top3.length} title={top3Result.factory}>{top3Result.factory}</td>
                                   )}
                                   {i === 0 && (
-                                    <td className="border-b border-slate-200 px-3 py-2.5 text-[12px] text-slate-600 text-center" rowSpan={top3Result.top3.length}>{top3Result.line}</td>
+                                    <td className="border-b border-slate-200 px-2 py-2 text-[11px] text-slate-600 text-center" rowSpan={top3Result.top3.length}>{top3Result.line}</td>
                                   )}
-                                  <td className="border-b border-slate-200 px-3 py-2 text-center">
-                                    <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-sm ${i === 0 ? 'bg-gradient-to-br from-amber-400 to-amber-600' : i === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-500' : 'bg-gradient-to-br from-amber-600 to-amber-800'}`}>
+                                  <td className="border-b border-slate-200 px-2 py-2 text-center">
+                                    <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-sm ${i === 0 ? 'bg-gradient-to-br from-amber-400 to-amber-600' : i === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-500' : 'bg-gradient-to-br from-amber-600 to-amber-800'}`}>
                                       {i + 1}
                                     </span>
                                   </td>
-                                  <td className="border-b border-slate-200 px-3 py-2.5 text-[12px] font-medium text-slate-700 text-center" title={d.description}>{d.description}</td>
-                                  <td className="border-b border-slate-200 px-3 py-2.5 text-center text-[12px] tabular-nums font-semibold text-slate-800">{top3Result.inspectionQty}</td>
-                                  <td className="border-b border-slate-200 px-3 py-2.5 text-center text-[12px] tabular-nums font-semibold text-slate-800">{d.total}</td>
-                                  <td className="border-b border-slate-200 px-3 py-2.5 text-center">
-                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold shadow-sm ${d.defectPct >= 5 ? 'bg-red-100 text-red-700 ring-1 ring-red-300' : d.defectPct >= 2 ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-300' : 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300'}`}>
+                                  <td className="border-b border-slate-200 px-2 py-2 text-[11px] font-medium text-slate-700 text-center truncate" title={d.description}>{d.description}</td>
+                                  <td className="border-b border-slate-200 px-2 py-2 text-center text-[11px] tabular-nums font-semibold text-slate-800">{top3Result.inspectionQty}</td>
+                                  <td className="border-b border-slate-200 px-2 py-2 text-center text-[11px] tabular-nums font-semibold text-slate-800">{d.total}</td>
+                                  <td className="border-b border-slate-200 px-2 py-2 text-center">
+                                    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold shadow-sm ${d.defectPct >= 5 ? 'bg-red-100 text-red-700 ring-1 ring-red-300' : d.defectPct >= 2 ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-300' : 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300'}`}>
                                       {d.defectPct.toFixed(2)}%
                                     </span>
                                   </td>
