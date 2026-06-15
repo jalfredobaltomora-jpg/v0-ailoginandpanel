@@ -569,45 +569,6 @@ function formatMonth(dateStr: string): string {
     }
   }, [top3Result, top3DateFrom, top3DateTo]);
 
-  const handleExportPDF = useCallback(async () => {
-    if (!top3TableRef.current || !top3Result) return;
-    try {
-      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf'),
-      ]);
-      const el = top3TableRef.current;
-      const origOverflow = el.style.overflow;
-      const origMaxH = el.style.maxHeight;
-      el.style.overflow = 'visible';
-      el.style.maxHeight = 'none';
-      const inner = el.querySelector<HTMLElement>('.overflow-x-auto');
-      if (inner) { inner.style.overflow = 'visible'; inner.style.maxHeight = 'none'; }
-      void el.offsetHeight;
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-        allowTaint: false,
-        useCORS: true,
-        logging: false,
-        width: el.scrollWidth,
-        height: el.scrollHeight,
-      });
-      if (inner) { inner.style.overflow = ''; inner.style.maxHeight = ''; }
-      el.style.overflow = origOverflow;
-      el.style.maxHeight = origMaxH;
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('l', 'mm', 'a4');
-      const pdfW = pdf.internal.pageSize.getWidth() - 10;
-      const pdfH = (canvas.height * pdfW) / canvas.width;
-      pdf.addImage(imgData, 'PNG', 5, 5, pdfW, pdfH);
-      pdf.save(`top3-defectos-${top3DateFrom || ''}.pdf`);
-    } catch (err) {
-      console.error('PDF export error:', err);
-      alert('Error al exportar PDF. Ver consola para detalles.');
-    }
-  }, [top3Result, top3DateFrom, top3DateTo]);
-
   const handlePrint = useCallback(() => {
     if (!top3Result) return;
     const printWin = window.open('', '_blank');
@@ -1092,9 +1053,6 @@ function formatMonth(dateStr: string): string {
                         <div className="flex flex-wrap items-center gap-2">
                           <Button size="sm" variant="default" className="bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm" onClick={handleExportExcel}>
                             📊 Excel
-                          </Button>
-                          <Button size="sm" variant="default" className="bg-red-600 text-white hover:bg-red-700 shadow-sm" onClick={handleExportPDF}>
-                            📄 PDF
                           </Button>
                           <Button size="sm" variant="outline" className="border-slate-300 shadow-sm" onClick={handlePrint}>
                             🖨️ Imprimir
