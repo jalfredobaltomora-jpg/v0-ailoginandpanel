@@ -573,13 +573,18 @@ function formatMonth(dateStr: string): string {
         import('jspdf'),
       ]);
       const el = top3TableRef.current;
+      const inner = el.querySelector<HTMLElement>('.overflow-x-auto');
+      if (inner) { inner.style.overflow = 'visible'; inner.style.maxHeight = 'none'; }
       const canvas = await html2canvas(el, {
         scale: 2,
         backgroundColor: '#ffffff',
         allowTaint: false,
         useCORS: true,
         logging: false,
+        width: el.scrollWidth,
+        height: el.scrollHeight,
       });
+      if (inner) { inner.style.overflow = ''; inner.style.maxHeight = ''; }
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('l', 'mm', 'a4');
       const pdfW = pdf.internal.pageSize.getWidth() - 10;
@@ -588,6 +593,7 @@ function formatMonth(dateStr: string): string {
       pdf.save(`top3-defectos-${top3DateFrom || ''}.pdf`);
     } catch (err) {
       console.error('PDF export error:', err);
+      alert('Error al exportar PDF. Ver consola para detalles.');
     }
   }, [top3Result, top3DateFrom]);
 
@@ -773,7 +779,7 @@ function formatMonth(dateStr: string): string {
                     No hay registros QA OQL.
                   </div>
                 ) : (
-                  <div className="overflow-auto max-h-[600px] rounded-lg border border-border">
+                  <div className="overflow-x-auto rounded-lg border border-border">
                     <table className="w-full text-sm">
                       <thead className="sticky top-0 z-10 bg-card shadow-sm">
                         <tr className="border-b border-border">
@@ -851,7 +857,7 @@ function formatMonth(dateStr: string): string {
                     No hay registros de Defecto en Línea.
                   </div>
                 ) : (
-                  <div className="overflow-auto max-h-[600px] rounded-lg border border-border">
+                  <div className="overflow-x-auto rounded-lg border border-border">
                     <table className="w-full text-sm whitespace-nowrap">
                       <thead className="sticky top-0 z-10 bg-card shadow-sm">
                         <tr className="border-b border-border">
@@ -1016,6 +1022,7 @@ function formatMonth(dateStr: string): string {
 
                       {top3Result && (
                         <>
+                        <div ref={top3TableRef}>
                         <div className="mb-4 text-center">
                           <h3 className="text-lg font-extrabold text-indigo-700 tracking-tight">TOP3 de Defectos</h3>
                           {top3Result.dateFrom && top3Result.dateTo && (
@@ -1031,7 +1038,7 @@ function formatMonth(dateStr: string): string {
                             {top3Result.po && <span className="text-[11px] font-medium text-slate-600">PO: {top3Result.po}</span>}
                           </div>
                         </div>
-                        <div ref={top3TableRef} className="overflow-x-auto rounded-xl border border-border shadow-sm">
+                        <div className="overflow-x-auto rounded-xl border border-border shadow-sm">
                           <table className="text-xs" style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
                             <colgroup>
                               <col style={{ width: 'auto' }} />
@@ -1079,6 +1086,7 @@ function formatMonth(dateStr: string): string {
                               ))}
                             </tbody>
                           </table>
+                        </div>
                         </div>
                         <div className="mt-3 flex flex-wrap items-center gap-2">
                           <Button size="sm" variant="default" className="bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm" onClick={handleExportExcel}>
