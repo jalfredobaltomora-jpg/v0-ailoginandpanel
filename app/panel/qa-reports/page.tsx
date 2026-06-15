@@ -479,6 +479,7 @@ function formatMonth(dateStr: string): string {
 
   const handleExportExcel = useCallback(async () => {
     if (!top3Result) return;
+    try {
     const ExcelJS = await import('exceljs');
     const wb = new ExcelJS.default.Workbook();
     const ws = wb.addWorksheet('TOP 3 Defectos');
@@ -564,6 +565,10 @@ function formatMonth(dateStr: string): string {
     const a = document.createElement('a');
     a.href = url; a.download = `top3-defectos-${top3DateFrom || ''}.xlsx`;
     a.click(); URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Excel export error:', err);
+      alert('Error al exportar Excel. Ver consola para detalles.');
+    }
   }, [top3Result, top3DateFrom, top3DateTo]);
 
   const handleExportPDF = useCallback(async () => {
