@@ -583,6 +583,7 @@ function formatMonth(dateStr: string): string {
       el.style.maxHeight = 'none';
       const inner = el.querySelector<HTMLElement>('.overflow-x-auto');
       if (inner) { inner.style.overflow = 'visible'; inner.style.maxHeight = 'none'; }
+      void el.offsetHeight;
       const canvas = await html2canvas(el, {
         scale: 2,
         backgroundColor: '#ffffff',
@@ -605,7 +606,7 @@ function formatMonth(dateStr: string): string {
       console.error('PDF export error:', err);
       alert('Error al exportar PDF. Ver consola para detalles.');
     }
-  }, [top3Result, top3DateFrom]);
+  }, [top3Result, top3DateFrom, top3DateTo]);
 
   const handlePrint = useCallback(() => {
     if (!top3Result) return;
@@ -1048,17 +1049,8 @@ function formatMonth(dateStr: string): string {
                             {top3Result.po && <span className="text-[10px] font-medium text-slate-600">POs: {top3Result.po}</span>}
                           </div>
                         </div>
-                        <div className="overflow-x-auto rounded-lg border border-border shadow-sm">
-                          <table className="text-xs w-full" style={{ tableLayout: 'fixed' }}>
-                            <colgroup>
-                              <col style={{ width: '90px' }} />
-                              <col style={{ width: '55px' }} />
-                              <col style={{ width: '40px' }} />
-                              <col style={{ width: '160px' }} />
-                              <col style={{ width: '70px' }} />
-                              <col style={{ width: '65px' }} />
-                              <col style={{ width: '65px' }} />
-                            </colgroup>
+                         <div className="overflow-x-auto rounded-lg border border-border shadow-sm">
+                          <table className="text-xs w-full">
                             <thead>
                               <tr className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 whitespace-nowrap">
                                 <th className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white">Fábrica</th>
@@ -1074,7 +1066,7 @@ function formatMonth(dateStr: string): string {
                               {top3Result.top3.map((d, i) => (
                                 <tr key={i} className={`transition-colors whitespace-nowrap ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-indigo-50/60`}>
                                   {i === 0 && (
-                                    <td className="border-b border-slate-200 px-2 py-2 text-[11px] font-semibold text-slate-800 text-center truncate" rowSpan={top3Result.top3.length} title={top3Result.factory}>{top3Result.factory}</td>
+                                    <td className="border-b border-slate-200 px-2 py-2 text-[11px] font-semibold text-slate-800 text-center" rowSpan={top3Result.top3.length}>{top3Result.factory}</td>
                                   )}
                                   {i === 0 && (
                                     <td className="border-b border-slate-200 px-2 py-2 text-[11px] text-slate-600 text-center" rowSpan={top3Result.top3.length}>{top3Result.line}</td>
@@ -1084,7 +1076,7 @@ function formatMonth(dateStr: string): string {
                                       {i + 1}
                                     </span>
                                   </td>
-                                  <td className="border-b border-slate-200 px-2 py-2 text-[11px] font-medium text-slate-700 text-center truncate" title={d.description}>{d.description}</td>
+                                    <td className="border-b border-slate-200 px-2 py-2 text-[11px] font-medium text-slate-700 text-center">{d.description}</td>
                                   <td className="border-b border-slate-200 px-2 py-2 text-center text-[11px] tabular-nums font-semibold text-slate-800">{top3Result.inspectionQty}</td>
                                   <td className="border-b border-slate-200 px-2 py-2 text-center text-[11px] tabular-nums font-semibold text-slate-800">{d.total}</td>
                                   <td className="border-b border-slate-200 px-2 py-2 text-center">
