@@ -574,7 +574,11 @@ function formatMonth(dateStr: string): string {
         import('jspdf'),
       ]);
       const el = top3TableRef.current;
-      const inner = el.querySelector<HTMLElement>('.overflow-auto, .overflow-x-auto');
+      const origOverflow = el.style.overflow;
+      const origMaxH = el.style.maxHeight;
+      el.style.overflow = 'visible';
+      el.style.maxHeight = 'none';
+      const inner = el.querySelector<HTMLElement>('.overflow-x-auto');
       if (inner) { inner.style.overflow = 'visible'; inner.style.maxHeight = 'none'; }
       const canvas = await html2canvas(el, {
         scale: 2,
@@ -586,6 +590,8 @@ function formatMonth(dateStr: string): string {
         height: el.scrollHeight,
       });
       if (inner) { inner.style.overflow = ''; inner.style.maxHeight = ''; }
+      el.style.overflow = origOverflow;
+      el.style.maxHeight = origMaxH;
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('l', 'mm', 'a4');
       const pdfW = pdf.internal.pageSize.getWidth() - 10;
@@ -860,7 +866,7 @@ function formatMonth(dateStr: string): string {
                     No hay registros de Defecto en Línea.
                   </div>
                 ) : (
-                  <div className="overflow-auto max-h-[580px] rounded-lg border border-border">
+                  <div className="overflow-auto max-h-[320px] rounded-lg border border-border">
                     <table className="w-full text-sm whitespace-nowrap">
                       <thead className="sticky top-0 z-10 bg-card shadow-sm">
                         <tr className="border-b border-border">
@@ -1023,10 +1029,9 @@ function formatMonth(dateStr: string): string {
                         </div>
                       </div>
 
-                      {top3Result && (
-                        <>
-                        <div ref={top3TableRef}>
-                        <div className="mb-4 text-center">
+                        {top3Result && (
+                        <div ref={top3TableRef} className="overflow-auto max-h-[240px] space-y-3">
+                        <div className="text-center">
                           <h3 className="text-lg font-extrabold text-indigo-700 tracking-tight">TOP3 de Defectos</h3>
                           {top3Result.dateFrom && top3Result.dateTo && (
                             <p className="text-[12px] text-slate-500 font-medium mt-0.5">{top3Result.dateFrom} — {top3Result.dateTo}</p>
@@ -1041,7 +1046,7 @@ function formatMonth(dateStr: string): string {
                             {top3Result.po && <span className="text-[11px] font-medium text-slate-600">POs: {top3Result.po}</span>}
                           </div>
                         </div>
-                        <div className="overflow-auto max-h-[200px] rounded-xl border border-border shadow-sm">
+                        <div className="overflow-x-auto rounded-xl border border-border shadow-sm">
                           <table className="text-xs" style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}>
                             <colgroup>
                               <col style={{ width: 'auto' }} />
@@ -1090,8 +1095,7 @@ function formatMonth(dateStr: string): string {
                             </tbody>
                           </table>
                         </div>
-                        </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Button size="sm" variant="default" className="bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm" onClick={handleExportExcel}>
                             📊 Excel
                           </Button>
@@ -1102,7 +1106,7 @@ function formatMonth(dateStr: string): string {
                             🖨️ Imprimir
                           </Button>
                         </div>
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>
