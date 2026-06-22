@@ -61,6 +61,7 @@ export default function RRHHPage() {
   const [isBirthdayModalOpen, setIsBirthdayModalOpen] = useState(false);
   const [infoEmpleado, setInfoEmpleado] = useState<Empleado | null>(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [marcasHoy, setMarcasHoy] = useState<Record<string, any>>({});
 
   useEffect(() => {
     const user = getStoredUser();
@@ -95,6 +96,15 @@ export default function RRHHPage() {
     return () => {
       if (unsubscribe) unsubscribe();
     };
+  }, [view]);
+
+  // Fetch today's attendance for catalog stats
+  useEffect(() => {
+    if (view !== 'catalogo') return;
+    const today = new Date().toISOString().split('T')[0];
+    import('@/lib/firebase').then(({ getMarcasDelDia }) => {
+      getMarcasDelDia(today).then(setMarcasHoy).catch(() => {});
+    });
   }, [view]);
 
   // Filter by active/inactive status and search term
@@ -225,7 +235,7 @@ export default function RRHHPage() {
   const handleSaved = () => {};
 
   const handleDelete = async (emp: Empleado) => {
-    if (confirm(`Esta seguro de eliminar a ${emp.nombres} ${emp.apellidos} (${emp.code})?`)) {
+    if (confirm(`Está seguro de eliminar a ${emp.nombres} ${emp.apellidos} (${emp.code})?`)) {
       const { deleteEmpleado } = await import('@/lib/firebase');
       await deleteEmpleado(emp.code);
     }
@@ -265,7 +275,7 @@ export default function RRHHPage() {
             )}
             {puedeVer(currentUser, 'rrhh_cumpleanieros') && (
               <Tile
-                title="Cumpleaneros"
+                title="Cumpleañeros"
                 subtitle="Este mes"
                 icon={<Cake className="h-8 w-8" />}
                 color="bg-gradient-to-br from-pink-500 to-pink-700"
@@ -352,6 +362,22 @@ export default function RRHHPage() {
               <p className="mb-4 text-sm text-muted-foreground">
                 Doble click para ver detalles del empleado
               </p>
+              {!showInactivos && (
+                <div className="mb-4 flex items-center gap-4 text-sm">
+                  <span className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/20 px-3 py-1.5">
+                    <Users className="h-4 w-4 text-primary" />
+                    Total: <strong className="text-primary">{filteredEmpleados.length}</strong>
+                  </span>
+                  <span className="flex items-center gap-1.5 rounded-lg border border-green-500/20 bg-green-500/10 px-3 py-1.5">
+                    <span className="h-2 w-2 rounded-full bg-green-500" />
+                    Presentes: <strong className="text-green-500">{filteredEmpleados.filter(e => marcasHoy[e.code]).length}</strong>
+                  </span>
+                  <span className="flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5">
+                    <span className="h-2 w-2 rounded-full bg-red-500" />
+                    Ausentes: <strong className="text-red-500">{filteredEmpleados.filter(e => !marcasHoy[e.code]).length}</strong>
+                  </span>
+                </div>
+              )}
               {loading ? (
                 <div className="py-12 text-center text-muted-foreground">Cargando...</div>
               ) : filteredEmpleados.length === 0 ? (
@@ -382,18 +408,27 @@ export default function RRHHPage() {
                           <span className="font-medium text-foreground truncate">
                             {emp.nombres} {emp.apellidos}
                           </span>
-                          {!emp.activo && (
+                          {emp.activo !== false ? (
+                            <span className="rounded bg-green-500/15 px-2 py-0.5 text-xs text-green-400">
+                              Activo
+                            </span>
+                          ) : (
                             <span className="rounded bg-red-500/20 px-2 py-0.5 text-xs text-red-400">
                               Inactivo
                             </span>
                           )}
                         </div>
                         <div className="mt-1 text-xs text-muted-foreground">
-                          <span className="font-medium">Cedula:</span> {emp.cedula} | {' '}
+                          <span className="font-medium">Cédula:</span> {emp.cedula} | {' '}
                           <span className="font-medium">Cargo:</span> {emp.cargo} | {' '}
-                          <span className="font-medium">Area:</span> {emp.area} | {' '}
+                          <span className="font-medium">Área:</span> {emp.area} | {' '}
                           <span className="font-medium">Edad:</span> {calcEdad(emp.fechaNac)}
                           {emp.renewalCount ? ` | Renov.: ${emp.renewalCount}` : ''}
+                        </div>
+                        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{emp.sexo === 'femenino' ? '♀' : '♂'} {emp.sexo}</span>
+                          <span className="text-border">|</span>
+                          <span>Hijos: {emp.hijos ?? 0}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
@@ -426,12 +461,12 @@ export default function RRHHPage() {
 
         {view === 'cumpleaneros' && (
           <div className="mx-auto max-w-4xl space-y-8">
-            {/* Section: Cumpleaneros del Mes */}
+            {/* Section: Cumpleañeros del Mes */}
             <Card className="border-pink-500/30 bg-card/95">
               <CardHeader className="border-b border-border">
                 <CardTitle className="flex items-center gap-2 text-pink-500">
                   <Cake className="h-5 w-5" />
-                  Cumpleaneros del Mes
+                  Cumpleañeros del Mes
                   <span className="ml-2 rounded-full bg-pink-500/20 px-3 py-0.5 text-sm font-bold">
                     {new Date().toLocaleDateString('es-ES', { month: 'long' })}
                   </span>
@@ -440,7 +475,7 @@ export default function RRHHPage() {
               <CardContent className="p-6">
                 <p className="mb-6 text-sm text-muted-foreground flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-amber-500" />
-                  Click para crear una tarjeta de cumpleanos personalizada
+                  Click para crear una tarjeta de cumpleaños personalizada
                 </p>
                 
                 {loading ? (
@@ -448,7 +483,7 @@ export default function RRHHPage() {
                 ) : getBirthdayEmpleados().length === 0 ? (
                   <div className="py-8 text-center text-muted-foreground">
                     <Gift className="mx-auto h-10 w-10 mb-3 opacity-50" />
-                    No hay cumpleaneros este mes
+                    No hay cumpleañeros este mes
                   </div>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2">
@@ -500,7 +535,7 @@ export default function RRHHPage() {
                                 {formatBirthdayDate(emp.fechaNac)}
                               </span>
                               <span className="text-xs text-muted-foreground">
-                                ({calcEdad(emp.fechaNac)} anos)
+                                ({calcEdad(emp.fechaNac)} años)
                               </span>
                             </div>
                           </div>
@@ -518,18 +553,18 @@ export default function RRHHPage() {
               </CardContent>
             </Card>
 
-            {/* Section: Todos los Cumpleaneros */}
+            {/* Section: Todos los Cumpleañeros */}
             <Card className="border-primary/20 bg-card/95">
               <CardHeader className="border-b border-border">
                 <CardTitle className="flex items-center gap-2 text-primary">
                   <CalendarDays className="h-5 w-5" />
-                  Todos los Cumpleaneros del Ano
+                  Todos los Cumpleañeros del Año
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
                 <p className="mb-6 text-sm text-muted-foreground flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-primary" />
-                  Click para ver informacion del trabajador
+                  Click para ver información del trabajador
                 </p>
                 
                 {loading ? (
@@ -564,7 +599,7 @@ export default function RRHHPage() {
                             }`}>
                               {formatBirthdayDate(emp.fechaNac)}
                             </span>
-                            <span>{calcEdad(emp.fechaNac)} anos</span>
+                            <span>{calcEdad(emp.fechaNac)} años</span>
                             <span>{emp.cargo}</span>
                           </div>
                         </div>
@@ -597,6 +632,7 @@ export default function RRHHPage() {
           empleado={isCreatingNew ? null : selectedEmpleado}
           onClose={handleCloseModal}
           onSaved={handleSaved}
+          currentUser={currentUser}
         />
       )}
 

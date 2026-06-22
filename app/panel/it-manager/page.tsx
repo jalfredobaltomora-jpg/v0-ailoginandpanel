@@ -119,7 +119,7 @@ export default function ITManagerPage() {
 
           <Tile
             title="IDE Visual"
-            subtitle="Editor de codigo"
+            subtitle="Editor de código"
             icon={<Code2 className="h-10 w-10" />}
             color="bg-gradient-to-br from-[oklch(0.55_0.2_280)] to-[oklch(0.4_0.15_280)]"
             onClick={() => router.push('/panel/it-manager/ide')}

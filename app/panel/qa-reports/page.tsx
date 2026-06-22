@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ScanLine, CalendarDays, CalendarRange, BarChart3, Database, LineChart, ClipboardList, BookOpen, Trash2, Pencil, Bug, Upload, Search, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ const WeeklyRegistry = dynamic(() => import('@/components/qa-reports/weekly-regi
 const QAOQLModal = dynamic(() => import('@/components/inventario/qa-oql-modal').then(m => m.QAOQLModal), { ssr: false });
 const InLineDefectModal = dynamic(() => import('@/components/inventario/in-line-defect-modal').then(m => m.InLineDefectModal), { ssr: false });
 const AnalyticsModal = dynamic(() => import('@/components/inventario/analytics-modal').then(m => m.AnalyticsModal), { ssr: false });
+const DateRangePicker = dynamic(() => import('@/components/date-range-picker'), { ssr: false });
 
 interface TileProps {
   title: string;
@@ -64,6 +65,17 @@ export default function QAReportsPage() {
   const [importingDefect, setImportingDefect] = useState(false);
   const [defectImportProgress, setDefectImportProgress] = useState('');
   const [defectCatalogSearch, setDefectCatalogSearch] = useState('');
+  const [top3Factory, setTop3Factory] = useState('');
+  const [top3Line, setTop3Line] = useState('');
+  const [top3Buyer, setTop3Buyer] = useState('');
+  const [top3Color, setTop3Color] = useState('');
+  const [top3PO, setTop3PO] = useState('');
+  const [top3Year, setTop3Year] = useState('');
+  const [top3Weeks, setTop3Weeks] = useState<number[]>([]);
+  const [top3DateFrom, setTop3DateFrom] = useState('');
+  const [top3DateTo, setTop3DateTo] = useState('');
+  const [top3Result, setTop3Result] = useState<{ top3: any[]; inspectionQty: number; factory: string; line: string; buyer: string; color: string; dateFrom: string; dateTo: string; weeks: number[]; po: string } | null>(null);
+  const [top3Loading, setTop3Loading] = useState(false);
   const [empleados, setEmpleados] = useState<any[]>([]);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
 
@@ -71,6 +83,7 @@ export default function QAReportsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inlineFileInputRef = useRef<HTMLInputElement>(null);
   const defectFileInputRef = useRef<HTMLInputElement>(null);
+  const top3TableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (view !== 'dhu') return;
@@ -79,9 +92,9 @@ export default function QAReportsPage() {
     let unsub3: () => void;
     let unsub4: () => void;
     import('@/lib/firebase').then(({ listenToQAOQLRecords, listenToQAOQLCatalog, listenToInLineDefectRecords, listenToQAOQLDefectCatalog, getEmpleadosActivos }) => {
-      unsub1 = listenToQAOQLRecords((data: any) => setQaDhuRecords(data));
+          unsub1 = listenToQAOQLRecords((data: any) => setQaDhuRecords(data.sort((a: any, b: any) => (a.item || '').localeCompare(b.item || ''))));
       unsub2 = listenToQAOQLCatalog((data: any) => setCatalogItems(data));
-      unsub3 = listenToInLineDefectRecords((data: any) => setInLineDefectRecords(data));
+      unsub3 = listenToInLineDefectRecords((data: any) => setInLineDefectRecords(data.sort((a: any, b: any) => (a.item || '').localeCompare(b.item || ''))));
       unsub4 = listenToQAOQLDefectCatalog((data: any) => setDefectCatalogItems(data));
       getEmpleadosActivos().then(setEmpleados);
     });
@@ -99,6 +112,25 @@ export default function QAReportsPage() {
     }
     setCurrentUser(user);
   }, [router]);
+
+  useEffect(() => {
+    if (!top3DateFrom || !top3DateTo) {
+      setTop3Weeks([]);
+      setTop3Year('');
+      return;
+    }
+    const weeks = new Set<number>();
+    let current = new Date(top3DateFrom + 'T12:00:00');
+    const end = new Date(top3DateTo + 'T12:00:00');
+    while (current <= end) {
+      const w = computeWeek(`${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`);
+      if (w > 0) weeks.add(w);
+      current.setDate(current.getDate() + 1);
+    }
+    setTop3Weeks(Array.from(weeks).sort());
+    setTop3Year(top3DateFrom.slice(0, 4));
+    setTop3Result(null);
+  }, [top3DateFrom, top3DateTo]);
 
   const handleEdit = (r: any) => {
     setEditingRecord(r);
@@ -222,14 +254,30 @@ export default function QAReportsPage() {
     return 0;
   }
 
-  function getISOWeekNumber(d: Date): number {
-    if (isNaN(d.getTime())) return 0;
-    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    const dayNum = date.getUTCDay() || 7;
-    date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-    return Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  }
+function getISOWeekNumber(d: Date): number {
+  if (isNaN(d.getTime())) return 0;
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${parseInt(m[3], 10)} ${MONTH_NAMES[parseInt(m[2], 10) - 1]}`;
+  return dateStr;
+}
+
+function formatMonth(dateStr: string): string {
+  if (!dateStr) return '-';
+  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[2]}. ${MONTH_NAMES[parseInt(m[2], 10) - 1]} ${m[1]}`;
+  return dateStr;
+}
 
   const handleImportInline = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -273,7 +321,7 @@ export default function QAReportsPage() {
         const visualReject = parseInt(String(row[12]).replace(/[^0-9.-]/g, '')) || 0;
         const visualApproved = Math.max(0, visualSample - visualReject);
         const oqlScorePct = visualSample > 0 ? visualReject / visualSample : 0;
-        const perf = oqlScorePct <= 0.03 ? 'Excellent' : oqlScorePct <= 0.05 ? 'Good' : 'Very Bad';
+        const perf = oqlScorePct <= 0.03 ? 'Excelente' : oqlScorePct <= 0.05 ? 'Bueno' : 'Muy Malo';
         const passRatePct = visualSample > 0 ? visualApproved / visualSample : 0;
         await saveQAOQLRecord({
           item, inspectionDate, week, month, factory, line, po, color, buyer,
@@ -361,9 +409,226 @@ export default function QAReportsPage() {
     setTimeout(() => setDefectImportProgress(''), 5000);
   };
 
+  const handleGenerateTop3 = async () => {
+    if (!inLineDefectRecords.length) return;
+    setTop3Loading(true);
+    await new Promise(r => setTimeout(r, 200));
+    const filteredDefects = inLineDefectRecords.filter(r => {
+      if (top3Factory && r.factory !== top3Factory) return false;
+      if (top3Line && r.line !== top3Line) return false;
+      if (top3Buyer && r.buyer !== top3Buyer) return false;
+      if (top3Color && r.color !== top3Color) return false;
+      if (top3PO && r.po !== top3PO) return false;
+      if (top3DateFrom && top3DateTo) {
+        if (r.inspectionDate < top3DateFrom || r.inspectionDate > top3DateTo) return false;
+      }
+      return true;
+    });
+    if (!filteredDefects.length) { setTop3Result(null); setTop3Loading(false); return; }
+    const inlineFilters = (r: any) => {
+      if (top3Factory && r.factory !== top3Factory) return false;
+      if (top3Line && r.line !== top3Line) return false;
+      if (top3PO && r.po !== top3PO) return false;
+      return true;
+    };
+    const matchingInline = qaOqlRecords.filter(r => {
+      if (!inlineFilters(r)) return false;
+      if (top3DateFrom && top3DateTo) {
+        if (r.inspectionDate < top3DateFrom || r.inspectionDate > top3DateTo) return false;
+      }
+      return true;
+    });
+    const inspectionQty = matchingInline.reduce((sum, r) => sum + (Number(r.visualSample) || 0), 0);
+    const defectMap = new Map<string, { description: string; total: number }>();
+    filteredDefects.forEach(r => {
+      const desc = r.defectDescription || r.defect || 'Desconocido';
+      if (!defectMap.has(desc)) {
+        defectMap.set(desc, { description: desc, total: 0 });
+      }
+      defectMap.get(desc)!.total += r.total || 0;
+    });
+    const totalDefects = Array.from(defectMap.values()).reduce((s, d) => s + d.total, 0);
+    if (totalDefects === 0) { setTop3Result(null); setTop3Loading(false); return; }
+    const denom = inspectionQty > 0 ? inspectionQty : totalDefects;
+    const sorted = Array.from(defectMap.values())
+      .map(d => ({ ...d, defectPct: (d.total / denom) * 100 }))
+      .sort((a, b) => b.defectPct - a.defectPct)
+      .slice(0, 3);
+    const allColors = [...new Set(filteredDefects.map(r => r.color).filter(Boolean))];
+    const allPOs = [...new Set(filteredDefects.map(r => r.po).filter(Boolean))];
+    function formatDateTitle(d: string) {
+      const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return d;
+      const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      return `${m[3]}/ ${months[parseInt(m[2], 10) - 1]}/ ${m[1]}`;
+    }
+    setTop3Result({
+      top3: sorted,
+      inspectionQty: inspectionQty > 0 ? inspectionQty : totalDefects,
+      factory: top3Factory || 'Sae-A Technotex SA',
+      line: top3Line || 'Todas las líneas',
+      buyer: top3Buyer || 'Todos los compradores',
+      color: allColors.length > 0 ? allColors.join(', ') : (top3Color || ''),
+      dateFrom: top3DateFrom ? formatDateTitle(top3DateFrom) : '',
+      dateTo: top3DateTo ? formatDateTitle(top3DateTo) : '',
+      weeks: top3Weeks,
+      po: allPOs.length > 0 ? allPOs.join(', ') : (top3PO || ''),
+    });
+    setTop3Loading(false);
+  };
+
+  const handleExportExcel = useCallback(async () => {
+    if (!top3Result) return;
+    try {
+    const ExcelJS = await import('exceljs');
+    const wb = new ExcelJS.default.Workbook();
+    const ws = wb.addWorksheet('TOP 3 Defectos');
+    ws.columns = [
+      { key: 'a', width: 22 },
+      { key: 'b', width: 16 },
+      { key: 'c', width: 8 },
+      { key: 'd', width: 36 },
+      { key: 'e', width: 18 },
+      { key: 'f', width: 16 },
+      { key: 'g', width: 14 },
+    ];
+    const titleRow = ws.addRow(['TOP3 de Defectos']);
+    ws.mergeCells(`A${titleRow.number}:G${titleRow.number}`);
+    titleRow.getCell(1).font = { bold: true, size: 14, color: { argb: '4338CA' } };
+    titleRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    titleRow.height = 28;
+    if (top3Result.dateFrom && top3Result.dateTo) {
+      const dateRow = ws.addRow([`${top3Result.dateFrom} — ${top3Result.dateTo}`]);
+      ws.mergeCells(`A${dateRow.number}:G${dateRow.number}`);
+      dateRow.getCell(1).font = { size: 10, color: { argb: '64748B' } };
+      dateRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    }
+    if (top3Result.weeks.length > 0) {
+      const weekLabel = `Semana ${top3Result.weeks[0]}${top3Result.weeks.length > 1 ? ` - Semana ${top3Result.weeks[top3Result.weeks.length - 1]}` : ''}`;
+      const weekRow = ws.addRow([weekLabel]);
+      ws.mergeCells(`A${weekRow.number}:G${weekRow.number}`);
+      weekRow.getCell(1).font = { size: 10, color: { argb: '6366F1' }, bold: true };
+      weekRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    }
+    const metaParts: string[] = [];
+    if (top3Result.color) metaParts.push(`Colores: ${top3Result.color}`);
+    if (top3Result.po) metaParts.push(`POs: ${top3Result.po}`);
+    if (metaParts.length > 0) {
+      const metaRow = ws.addRow([metaParts.join('  |  ')]);
+      ws.mergeCells(`A${metaRow.number}:G${metaRow.number}`);
+      metaRow.getCell(1).font = { size: 10, color: { argb: '475569' } };
+      metaRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    }
+    const blankRow = ws.addRow([]);
+    const headerRow = ws.addRow(['Fábrica', 'Línea', 'Rank', 'Descripción', 'Cant. Inspección', 'Total Defecto', '% Defecto']);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFF' }, size: 10 };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '4338CA' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    });
+    const dataStartRow = headerRow.number + 1;
+    top3Result.top3.forEach((d, i) => {
+      const row = ws.addRow([
+        i === 0 ? top3Result.factory : '', i === 0 ? top3Result.line : '', i + 1, d.description,
+        top3Result.inspectionQty, d.total, `${d.defectPct.toFixed(2)}%`,
+      ]);
+      row.eachCell((cell, colIdx) => {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+      });
+      row.getCell(3).font = { bold: true, size: 11, color: { argb: 'FFFFFF' } };
+      const rankColors = ['F59E0B', '94A3B8', 'B45309'];
+      row.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rankColors[i] } };
+      row.getCell(4).font = { bold: true, size: 10 };
+      row.getCell(5).font = { bold: true, size: 10, color: { argb: '4338CA' } };
+      row.getCell(6).font = { bold: true, size: 10 };
+      const pct = d.defectPct;
+      const pctColor = pct >= 5 ? 'B91C1C' : pct >= 2 ? '92400E' : '166534';
+      const pctBg = pct >= 5 ? 'FEE2E2' : pct >= 2 ? 'FEF3C7' : 'DCFCE7';
+      row.getCell(7).font = { bold: true, size: 10, color: { argb: pctColor } };
+      row.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: pctBg } };
+      row.height = 22;
+    });
+    const endRow = dataStartRow + top3Result.top3.length - 1;
+    if (top3Result.top3.length > 1) {
+      ws.mergeCells(`A${dataStartRow}:A${endRow}`);
+      ws.mergeCells(`B${dataStartRow}:B${endRow}`);
+      ws.getCell(`A${dataStartRow}`).alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getCell(`B${dataStartRow}`).alignment = { horizontal: 'center', vertical: 'middle' };
+    }
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `top3-defectos-${top3DateFrom || ''}.xlsx`;
+    a.click(); URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Excel export error:', err);
+      alert('Error al exportar Excel. Ver consola para detalles.');
+    }
+  }, [top3Result, top3DateFrom, top3DateTo]);
+
+  const handlePrint = useCallback(() => {
+    if (!top3Result) return;
+    const printWin = window.open('', '_blank');
+    if (!printWin) return;
+    const rows = top3Result.top3.map((d, i) => `
+      <tr style="${i % 2 === 0 ? 'background:#f8f9fa' : 'background:#fff'}">
+        ${i === 0 ? `<td rowspan="${top3Result.top3.length}" style="border:1px solid #dee2e6;padding:6px;font-weight:600;text-align:center">${top3Result.factory}</td>` : ''}
+        ${i === 0 ? `<td rowspan="${top3Result.top3.length}" style="border:1px solid #dee2e6;padding:6px;text-align:center">${top3Result.line}</td>` : ''}
+        <td style="border:1px solid #dee2e6;padding:6px;text-align:center"><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:${i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : '#b45309'};color:#fff;font-weight:700;font-size:11px">${i + 1}</span></td>
+        <td style="border:1px solid #dee2e6;padding:6px;font-weight:500;text-align:center">${d.description}</td>
+        <td style="border:1px solid #dee2e6;padding:6px;text-align:center">${top3Result.inspectionQty}</td>
+        <td style="border:1px solid #dee2e6;padding:6px;text-align:center">${d.total}</td>
+        <td style="border:1px solid #dee2e6;padding:6px;text-align:center"><span style="display:inline-flex;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:600;background:${d.defectPct >= 5 ? '#fee2e2' : d.defectPct >= 2 ? '#fef3c7' : '#dcfce7'};color:${d.defectPct >= 5 ? '#b91c1c' : d.defectPct >= 2 ? '#92400e' : '#166534'}">${d.defectPct.toFixed(2)}%</span></td>
+      </tr>
+    `).join('');
+    function fmtMonth(d: string) {
+      const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return d;
+      const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      return `${parseInt(m[3], 10)}/ ${months[parseInt(m[2], 10) - 1]}/ ${m[1]}`;
+    }
+    const weekLabel = top3Result.weeks.length > 0
+      ? `Semana ${top3Result.weeks[0]}${top3Result.weeks.length > 1 ? ` - Semana ${top3Result.weeks[top3Result.weeks.length - 1]}` : ''}`
+      : '';
+    const metaParts: string[] = [];
+    if (top3Result.color) metaParts.push(`Colores: ${top3Result.color}`);
+    if (top3Result.po) metaParts.push(`POs: ${top3Result.po}`);
+    printWin.document.write(`
+      <html><head><title>TOP 3 Defectos</title>
+      <style>
+        body { font-family:Arial,sans-serif; margin:20px; }
+        .title { color:#4338ca; font-size:18px; font-weight:800; text-align:center; margin-bottom:4px; }
+        .sub { color:#64748b; font-size:12px; text-align:center; margin:2px 0; }
+        .week { color:#6366f1; font-size:11px; text-align:center; margin:2px 0; font-weight:600; }
+        .meta { color:#475569; font-size:11px; text-align:center; margin:2px 0; }
+        table { border-collapse:collapse; width:100%; font-size:12px; table-layout:fixed; margin-top:10px; }
+        th { background:#4338ca; border:1px solid #dee2e6; padding:8px; text-align:center; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:#fff; font-weight:700; }
+        td { border:1px solid #dee2e6; padding:6px; text-align:center; }
+        .footer { margin-top:12px; font-size:10px; color:#64748b; text-align:center; }
+      </style></head>
+      <body>
+        <div class="title">TOP3 de Defectos</div>
+        ${top3Result.dateFrom && top3Result.dateTo ? `<div class="sub">${top3Result.dateFrom} — ${top3Result.dateTo}</div>` : ''}
+        ${weekLabel ? `<div class="week">${weekLabel}</div>` : ''}
+        ${metaParts.length > 0 ? `<div class="meta">${metaParts.join('  |  ')}</div>` : ''}
+        <table>
+          <thead><tr>
+            <th>Fábrica</th><th>Línea</th><th>Rank</th><th>Descripción</th><th>Cant. Inspección</th><th>Total Defecto</th><th>% Defecto</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <script>window.onload=function(){window.print();}<\/script>
+      </body></html>
+    `);
+    printWin.document.close();
+  }, [top3Result, top3DateFrom, top3DateTo]);
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-      <div className="flex items-center justify-between border-b border-border bg-card/50 p-4">
+    <main className={`${view === 'dhu' ? 'h-dvh flex flex-col overflow-hidden' : 'min-h-screen'} bg-gradient-to-br from-background via-background to-secondary/20`}>
+      <div className={`${view === 'dhu' ? '' : 'sticky top-0 z-30'} flex items-center justify-between border-b border-border bg-card p-4 shadow-sm`}>
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
@@ -374,37 +639,37 @@ export default function QAReportsPage() {
             {view === 'tiles' ? 'Regresar' : 'Volver'}
           </Button>
           <h2 className="text-xl font-bold">
-            <span className="text-primary">QA Reports</span>{' '}
+            <span className="text-primary">Reportes QA</span>{' '}
             <span className="text-foreground">(Panel)</span>
           </h2>
         </div>
       </div>
 
-      <div className="p-8">
+      <div className={`${view === 'dhu' ? 'flex-1 overflow-hidden' : ''} p-8 bg-background`}>
         {view === 'tiles' && (
           <div className="flex flex-wrap justify-center gap-6">
             {puedeVer(currentUser, 'qa_extractor') && (
-              <Tile title="Extractor" subtitle="Codigo de Caja" icon={<ScanLine className="h-8 w-8" />}
+              <Tile title="Extractor" subtitle="Código de Caja" icon={<ScanLine className="h-8 w-8" />}
                 color="bg-gradient-to-br from-cyan-500 to-cyan-700" onClick={() => setView('extractor')} />
             )}
             {puedeVer(currentUser, 'qa_weekly') && (
-              <Tile title="Weekly Issues" subtitle="Issues Semanales" icon={<CalendarDays className="h-8 w-8" />}
+              <Tile title="Incidencias Semanales" subtitle="Issues Semanales" icon={<CalendarDays className="h-8 w-8" />}
                 color="bg-gradient-to-br from-amber-500 to-amber-700" onClick={() => setView('weekly')} />
             )}
             {puedeVer(currentUser, 'qa_monthly') && (
-              <Tile title="Monthly Issues" subtitle="Issues Mensuales" icon={<CalendarRange className="h-8 w-8" />}
+              <Tile title="Incidencias Mensuales" subtitle="Issues Mensuales" icon={<CalendarRange className="h-8 w-8" />}
                 color="bg-gradient-to-br from-blue-500 to-blue-700" onClick={() => setView('monthly')} />
             )}
             {puedeVer(currentUser, 'qa_registry') && (
-              <Tile title="Registro Weekly" subtitle="Historial Semanal" icon={<Database className="h-8 w-8" />}
+              <Tile title="Registro Semanal" subtitle="Historial Semanal" icon={<Database className="h-8 w-8" />}
                 color="bg-gradient-to-br from-purple-500 to-purple-700" onClick={() => setView('registry')} />
             )}
             {puedeVer(currentUser, 'qa_kpi') && (
-              <Tile title="KPI Reports" subtitle="Reportes KPI" icon={<BarChart3 className="h-8 w-8" />}
+              <Tile title="Reportes KPI" subtitle="Reportes KPI" icon={<BarChart3 className="h-8 w-8" />}
                 color="bg-gradient-to-br from-green-500 to-green-700" onClick={() => setView('kpi')} />
             )}
             {puedeVer(currentUser, 'qa_dhu') && (
-              <Tile title="QA - OQL % SAE" subtitle="Indicator" icon={<LineChart className="h-8 w-8" />}
+              <Tile title="QA - OQL % SAE" subtitle="Indicador" icon={<LineChart className="h-8 w-8" />}
                 color="bg-gradient-to-br from-rose-500 to-rose-700" onClick={() => setView('dhu')} />
             )}
           </div>
@@ -417,17 +682,18 @@ export default function QAReportsPage() {
         {view === 'kpi' && <KpiReports />}
 
         {view === 'dhu' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
+          <div className="h-full flex flex-col gap-6">
+            <div className="bg-background pb-2">
+            <div className="flex items-center justify-between pt-2">
               <h3 className="text-lg font-bold text-foreground">
-                {oqlTab === 'catalog' ? 'Catálogo de defectos' : 'QA - OQL % SAE - Indicator'}
+                {oqlTab === 'catalog' ? 'Catálogo de defectos' : 'QA - OQL % SAE - Indicador'}
               </h3>
               <div className="flex gap-2">
                 {(oqlTab === 'inline' || oqlTab === 'defect') && puedeVer(currentUser, 'qa_analytics') && (
                   <>
                     <Button size="sm" variant="outline" onClick={() => setAnalyticsOpen(true)}
                       className="border-primary/50 text-primary hover:bg-primary/10">
-                      <Activity className="mr-2 h-4 w-4" /> Analytics
+                      <Activity className="mr-2 h-4 w-4" /> Analíticos
                     </Button>
                   </>
                 )}
@@ -460,21 +726,22 @@ export default function QAReportsPage() {
             <div className="flex gap-4 border-b border-border">
               <button onClick={() => setDhuTab('inline')}
                 className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${oqlTab === 'inline' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
-                <ClipboardList className="h-4 w-4" /> IN LINE
+                <ClipboardList className="h-4 w-4" /> EN LÍNEA
               </button>
               <button onClick={() => setDhuTab('defect')}
                 className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${oqlTab === 'defect' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
-                <Bug className="h-4 w-4" /> In Line Defect
+                <Bug className="h-4 w-4" /> Defecto en Línea
               </button>
               <button onClick={() => setDhuTab('catalog')}
                 className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${oqlTab === 'catalog' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
                 <BookOpen className="h-4 w-4" /> Catálogo de defectos
               </button>
             </div>
+            </div>
 
             {/* IN LINE Tab */}
             {oqlTab === 'inline' && (
-              <>
+              <div className="flex-1 overflow-hidden">
                 {inlineImportProgress && (
                   <div className={`text-xs ${inlineImportProgress.includes('✅') ? 'text-green-500' : inlineImportProgress.includes('❌') ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {inlineImportProgress}
@@ -485,27 +752,27 @@ export default function QAReportsPage() {
                     No hay registros QA OQL.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-lg border border-border">
+                  <div className="h-full overflow-auto rounded-lg border border-border">
                     <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-primary/10 border-b border-border">
+                      <thead className="sticky top-0 z-10 bg-card shadow-sm">
+                        <tr className="border-b border-border">
                           <th className="p-2 text-left font-medium text-primary">ITEM</th>
-                          <th className="p-2 text-left font-medium text-primary">Date</th>
-                          <th className="p-2 text-left font-medium text-primary">Week</th>
-                          <th className="p-2 text-left font-medium text-primary">Month</th>
-                          <th className="p-2 text-left font-medium text-primary">Factory</th>
-                          <th className="p-2 text-left font-medium text-primary">Line</th>
+                          <th className="p-2 text-left font-medium text-primary">Fecha</th>
+                          <th className="p-2 text-left font-medium text-primary">Semana</th>
+                          <th className="p-2 text-left font-medium text-primary">Mes</th>
+                          <th className="p-2 text-left font-medium text-primary">Fábrica</th>
+                          <th className="p-2 text-left font-medium text-primary">Línea</th>
                           <th className="p-2 text-left font-medium text-primary">PO</th>
                           <th className="p-2 text-left font-medium text-primary">Color</th>
-                          <th className="p-2 text-left font-medium text-primary">Buyer</th>
+                          <th className="p-2 text-left font-medium text-primary">Comprador</th>
                           <th className="p-2 text-left font-medium text-primary">Auditor</th>
-                          <th className="p-2 text-left font-medium text-primary">Style</th>
-                          <th className="p-2 text-left font-medium text-primary">Sample</th>
-                          <th className="p-2 text-left font-medium text-primary">Reject</th>
-                          <th className="p-2 text-left font-medium text-primary">Approved</th>
+                          <th className="p-2 text-left font-medium text-primary">Estilo</th>
+                          <th className="p-2 text-left font-medium text-primary">Muestra</th>
+                          <th className="p-2 text-left font-medium text-primary">Rechazo</th>
+                          <th className="p-2 text-left font-medium text-primary">Aprobado</th>
                           <th className="p-2 text-left font-medium text-primary">OQL %</th>
-                          <th className="p-2 text-left font-medium text-primary">Performance</th>
-                           <th className="p-2 text-left font-medium text-primary">Pass Rate %</th>
+                          <th className="p-2 text-left font-medium text-primary">Rendimiento</th>
+                           <th className="p-2 text-left font-medium text-primary">% Aprobación</th>
                            {isAdmin && <th className="p-2 text-left font-medium text-primary">Creado por</th>}
                            <th className="p-2 text-center font-medium text-primary">Acciones</th>
                         </tr>
@@ -514,9 +781,9 @@ export default function QAReportsPage() {
                         {qaOqlRecords.map(r => (
                           <tr key={r.id} className="border-b border-border hover:bg-muted/20">
                             <td className="p-2 font-medium">{r.item}</td>
-                            <td className="p-2 text-xs">{r.inspectionDate}</td>
-                            <td className="p-2 text-xs">#{computeWeek(r.inspectionDate)}</td>
-                            <td className="p-2 text-xs">{r.month || '-'}</td>
+                            <td className="p-2 text-xs">{formatDate(r.inspectionDate)}</td>
+                            <td className="p-2 text-xs">Semana {computeWeek(r.inspectionDate)}</td>
+                            <td className="p-2 text-xs">{formatMonth(r.inspectionDate)}</td>
                             <td className="p-2 text-xs">{r.factory}</td>
                             <td className="p-2 text-xs">{r.line || '-'}</td>
                             <td className="p-2 text-xs">{r.po || '-'}</td>
@@ -527,11 +794,11 @@ export default function QAReportsPage() {
                             <td className="p-2 text-xs">{r.visualSample}</td>
                             <td className="p-2 text-xs">{r.visualReject}</td>
                             <td className="p-2 text-xs">{r.visualApproved}</td>
-                            <td className="p-2 text-xs">{(r.oqlScorePercent * 100).toFixed(2)}%</td>
+                            <td className="p-2 text-xs">{r.visualSample > 0 ? `${((Math.max(0, r.visualSample - r.visualReject) / r.visualSample) * 100).toFixed(2)}%` : '0.00%'}</td>
                             <td className="p-2">
-                              <span className={`text-xs font-bold ${r.performanceOQL === 'Excellent' ? 'text-green-500' : r.performanceOQL === 'Good' ? 'text-yellow-500' : 'text-red-500'}`}>{r.performanceOQL}</span>
+                              <span className={`text-xs font-bold ${((Math.max(0, r.visualSample - r.visualReject) / (r.visualSample || 1)) * 100) >= 97 ? 'text-green-500' : ((Math.max(0, r.visualSample - r.visualReject) / (r.visualSample || 1)) * 100) >= 95 ? 'text-yellow-500' : 'text-red-500'}`}>{r.performanceOQL}</span>
                             </td>
-                            <td className="p-2 text-xs">{(r.passRateScorePercent * 100).toFixed(2)}%</td>
+                            <td className="p-2 text-xs">{r.visualSample > 0 ? `${((r.visualReject / r.visualSample) * 100).toFixed(2)}%` : '0.00%'}</td>
                             {isAdmin && <td className="p-2 text-xs">{r.createdBy || '-'}</td>}
                             <td className="p-2 text-center">
                               <button onClick={() => handleEdit(r)} className="text-primary hover:text-primary/70 mr-2" title="Editar">
@@ -547,12 +814,12 @@ export default function QAReportsPage() {
                     </table>
                   </div>
                 )}
-              </>
+              </div>
             )}
 
             {/* In Line Defect Tab */}
             {oqlTab === 'defect' && (
-              <>
+              <div className="flex-1 overflow-y-auto">
                 {defectImportProgress && (
                   <div className={`text-xs ${defectImportProgress.includes('✅') ? 'text-green-500' : defectImportProgress.includes('❌') ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {defectImportProgress}
@@ -560,24 +827,24 @@ export default function QAReportsPage() {
                 )}
                 {inLineDefectRecords.length === 0 ? (
                   <div className="py-12 text-center text-muted-foreground border rounded-lg border-border">
-                    No hay registros de In Line Defect.
+                    No hay registros de Defecto en Línea.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-lg border border-border">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-primary/10 border-b border-border">
+                  <div className="overflow-auto max-h-[40vh] rounded-lg border border-border">
+                    <table className="w-full text-sm whitespace-nowrap">
+                      <thead className="sticky top-0 z-10 bg-card shadow-sm">
+                        <tr className="border-b border-border">
                           <th className="p-2 text-left font-medium text-primary">ITEM</th>
-                          <th className="p-2 text-left font-medium text-primary">Date</th>
-                          <th className="p-2 text-left font-medium text-primary">Week</th>
-                          <th className="p-2 text-left font-medium text-primary">Month</th>
-                          <th className="p-2 text-left font-medium text-primary">Factory</th>
-                          <th className="p-2 text-left font-medium text-primary">Line</th>
+                          <th className="p-2 text-left font-medium text-primary">Fecha</th>
+                          <th className="p-2 text-left font-medium text-primary">Semana</th>
+                          <th className="p-2 text-left font-medium text-primary">Mes</th>
+                          <th className="p-2 text-left font-medium text-primary">Fábrica</th>
+                          <th className="p-2 text-left font-medium text-primary">Línea</th>
                           <th className="p-2 text-left font-medium text-primary">PO</th>
                           <th className="p-2 text-left font-medium text-primary">Color</th>
-                          <th className="p-2 text-left font-medium text-primary">Buyer</th>
+                          <th className="p-2 text-left font-medium text-primary">Comprador</th>
                           <th className="p-2 text-left font-medium text-primary">Auditor</th>
-                          <th className="p-2 text-left font-medium text-primary">Style</th>
+                          <th className="p-2 text-left font-medium text-primary">Estilo</th>
                           <th className="p-2 text-left font-medium text-primary">Defecto</th>
                           <th className="p-2 text-left font-medium text-primary">Total</th>
                           <th className="p-2 text-left font-medium text-primary">Código Defecto</th>
@@ -596,9 +863,9 @@ export default function QAReportsPage() {
                         {inLineDefectRecords.map(r => (
                           <tr key={r.id} className="border-b border-border hover:bg-muted/20">
                             <td className="p-2 font-medium">{r.item}</td>
-                            <td className="p-2 text-xs">{r.inspectionDate}</td>
-                            <td className="p-2 text-xs">#{computeWeek(r.inspectionDate)}</td>
-                            <td className="p-2 text-xs">{r.month || '-'}</td>
+                            <td className="p-2 text-xs">{formatDate(r.inspectionDate)}</td>
+                            <td className="p-2 text-xs">Semana {computeWeek(r.inspectionDate)}</td>
+                            <td className="p-2 text-xs">{formatMonth(r.inspectionDate)}</td>
                             <td className="p-2 text-xs">{r.factory}</td>
                             <td className="p-2 text-xs">{r.line || '-'}</td>
                             <td className="p-2 text-xs">{r.po || '-'}</td>
@@ -631,13 +898,178 @@ export default function QAReportsPage() {
                     </table>
                   </div>
                 )}
-              </>
+
+                {/* TOP 3 Defectos */}
+                {inLineDefectRecords.length > 0 && (
+                  <div className="mt-6 rounded-xl border border-border bg-card shadow-sm">
+                    <div className="border-b border-border bg-gradient-to-r from-primary/5 to-transparent px-5 py-3">
+                      <h4 className="text-sm font-bold text-foreground">TOP 3 Defectos</h4>
+                    </div>
+                    <div className="space-y-4 p-5">
+                      <div className="flex flex-wrap items-end gap-4">
+                        {top3DateFrom && top3DateTo && top3Weeks.length > 0 && (
+                          <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 self-center">
+                            <p className="text-[10px] text-muted-foreground">
+                              📅 {top3Year} · {top3Weeks.length === 1 ? `Semana ${top3Weeks[0]}` : `Semana ${Math.min(...top3Weeks)} → Semana ${Math.max(...top3Weeks)}`} ({top3Weeks.length} {top3Weeks.length === 1 ? 'semana' : 'semanas'} seleccionadas)
+                            </p>
+                          </div>
+                        )}
+                        <div className="min-w-[260px] max-w-[360px]">
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">1. Rango de Fechas</label>
+                          <DateRangePicker dateFrom={top3DateFrom} dateTo={top3DateTo} onDateFromChange={setTop3DateFrom} onDateToChange={setTop3DateTo} />
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">2. Fábrica</label>
+                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Factory} onChange={e => { setTop3Factory(e.target.value); setTop3Line(''); setTop3Buyer(''); setTop3Color(''); setTop3PO(''); setTop3Result(null); }}>
+                            <option value="">Todas</option>
+                            {[...new Set(qaOqlRecords.filter(r => {
+                              if (top3Weeks.length > 0 && top3Year && !top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
+                              return true;
+                            }).map(r => r.factory).filter(Boolean))].sort().map(f => (
+                              <option key={f} value={f}>{f}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">3. Línea</label>
+                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Line} onChange={e => { setTop3Line(e.target.value); setTop3Buyer(''); setTop3Color(''); setTop3PO(''); setTop3Result(null); }}>
+                            <option value="">General</option>
+                            {[...new Set(qaOqlRecords.filter(r => {
+                              if (top3Factory && r.factory !== top3Factory) return false;
+                              if (top3Weeks.length > 0 && top3Year && !top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
+                              return true;
+                            }).map(r => r.line).filter(Boolean))].sort().map(l => (
+                              <option key={l} value={l}>{l}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">4. Comprador</label>
+                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Buyer} onChange={e => { setTop3Buyer(e.target.value); setTop3Result(null); }}>
+                            <option value="">Todos</option>
+                            {[...new Set(qaOqlRecords.filter(r => {
+                              if (top3Factory && r.factory !== top3Factory) return false;
+                              if (top3Line && r.line !== top3Line) return false;
+                              if (top3Weeks.length > 0 && top3Year && !top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
+                              return true;
+                            }).map(r => r.buyer).filter(Boolean))].sort().map(b => (
+                              <option key={b} value={b}>{b}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">5. Color</label>
+                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3Color} onChange={e => { setTop3Color(e.target.value); setTop3PO(''); setTop3Result(null); }}>
+                            <option value="">Todos</option>
+                            {[...new Set(qaOqlRecords.filter(r => {
+                              if (top3Factory && r.factory !== top3Factory) return false;
+                              if (top3Line && r.line !== top3Line) return false;
+                              if (top3Weeks.length > 0 && top3Year && !top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
+                              return true;
+                            }).map(r => r.color).filter(Boolean))].sort().map(c => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">6. PO</label>
+                          <select className="h-9 rounded-lg border border-border bg-input px-3 text-sm text-foreground" value={top3PO} onChange={e => { setTop3PO(e.target.value); setTop3Result(null); }}>
+                            <option value="">Todos</option>
+                            {[...new Set(qaOqlRecords.filter(r => {
+                              if (top3Factory && r.factory !== top3Factory) return false;
+                              if (top3Line && r.line !== top3Line) return false;
+                              if (top3Color && r.color !== top3Color) return false;
+                              if (top3Weeks.length > 0 && top3Year && !top3Weeks.includes(computeWeek(r.inspectionDate))) return false;
+                              return true;
+                            }).map(r => r.po).filter(Boolean))].sort().map(p => (
+                              <option key={p} value={p}>{p}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex items-end">
+                          <Button size="sm" className="h-9 bg-primary text-primary-foreground shadow-sm" onClick={handleGenerateTop3} disabled={top3Loading || !top3DateFrom || !top3DateTo || top3Weeks.length === 0}>
+                            {top3Loading ? 'Generando...' : 'Generar Tabla'}
+                          </Button>
+                        </div>
+                      </div>
+
+                        {top3Result && (
+                        <div ref={top3TableRef} className="overflow-auto max-h-[240px] space-y-1.5">
+                        <div className="text-center">
+                          <h3 className="text-base font-extrabold text-indigo-700 tracking-tight">TOP3 de Defectos</h3>
+                          {top3Result.dateFrom && top3Result.dateTo && (
+                            <p className="text-[11px] text-slate-500 font-medium">{top3Result.dateFrom} — {top3Result.dateTo}</p>
+                          )}
+                          {top3Result.weeks.length > 0 && (
+                            <p className="text-[10px] text-indigo-500 font-semibold">
+                              Semana {top3Result.weeks[0]}{top3Result.weeks.length > 1 ? ` - Semana ${top3Result.weeks[top3Result.weeks.length - 1]}` : ''}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap justify-center gap-x-3 gap-y-0.5">
+                            {top3Result.color && <span className="text-[10px] font-medium text-slate-600">Colores: {top3Result.color}</span>}
+                            {top3Result.po && <span className="text-[10px] font-medium text-slate-600">POs: {top3Result.po}</span>}
+                          </div>
+                        </div>
+                         <div className="overflow-x-auto rounded-lg border border-border shadow-sm">
+                          <table className="text-xs w-full">
+                            <thead>
+                              <tr className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 whitespace-nowrap">
+                                <th className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white">Fábrica</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white">Línea</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white">Rank</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white">Descripción</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white whitespace-normal">Cant.<br/>Inspección</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white whitespace-normal">Total<br/>Defecto</th>
+                                <th className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white">% Defecto</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {top3Result.top3.map((d, i) => (
+                                <tr key={i} className={`transition-colors whitespace-nowrap ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-indigo-50/60`}>
+                                  {i === 0 && (
+                                    <td className="border-b border-slate-200 px-2 py-2 text-[11px] font-semibold text-slate-800 text-center" rowSpan={top3Result.top3.length}>{top3Result.factory}</td>
+                                  )}
+                                  {i === 0 && (
+                                    <td className="border-b border-slate-200 px-2 py-2 text-[11px] text-slate-600 text-center" rowSpan={top3Result.top3.length}>{top3Result.line}</td>
+                                  )}
+                                  <td className="border-b border-slate-200 px-2 py-2 text-center">
+                                    <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-sm ${i === 0 ? 'bg-gradient-to-br from-amber-400 to-amber-600' : i === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-500' : 'bg-gradient-to-br from-amber-600 to-amber-800'}`}>
+                                      {i + 1}
+                                    </span>
+                                  </td>
+                                    <td className="border-b border-slate-200 px-2 py-2 text-[11px] font-medium text-slate-700 text-center">{d.description}</td>
+                                  <td className="border-b border-slate-200 px-2 py-2 text-center text-[11px] tabular-nums font-semibold text-slate-800">{top3Result.inspectionQty}</td>
+                                  <td className="border-b border-slate-200 px-2 py-2 text-center text-[11px] tabular-nums font-semibold text-slate-800">{d.total}</td>
+                                  <td className="border-b border-slate-200 px-2 py-2 text-center">
+                                    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold shadow-sm ${d.defectPct >= 5 ? 'bg-red-100 text-red-700 ring-1 ring-red-300' : d.defectPct >= 2 ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-300' : 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300'}`}>
+                                      {d.defectPct.toFixed(2)}%
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button size="sm" variant="default" className="bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm" onClick={handleExportExcel}>
+                            📊 Excel
+                          </Button>
+                          <Button size="sm" variant="outline" className="border-slate-300 shadow-sm" onClick={handlePrint}>
+                            🖨️ Imprimir
+                          </Button>
+                        </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Catálogo de defectos Tab */}
             {oqlTab === 'catalog' && (
-              <div className="space-y-6">
-                <div className="rounded-lg border border-border p-4">
+              <div className="flex-1 overflow-hidden flex flex-col gap-4">
+                <div className="flex-shrink-0 rounded-lg border border-border p-4">
                   <h4 className="mb-3 text-sm font-semibold text-foreground">Catálogo de Defectos</h4>
                   <div className="grid grid-cols-3 gap-3">
                     <input className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground" placeholder="Código de Defecto *" value={newDefectCat.defectCode} onChange={e => setNewDefectCat(p => ({ ...p, defectCode: e.target.value }))} />
@@ -679,7 +1111,7 @@ export default function QAReportsPage() {
                 </div>
 
                 {defectCatalogItems.length === 0 ? (
-                  <div className="py-8 text-center text-muted-foreground border rounded-lg border-border">
+                  <div className="flex-1 flex items-center justify-center text-muted-foreground border rounded-lg border-border">
                     No hay items en el catálogo de defectos.
                   </div>
                 ) : defectCatalogItems.filter(c => {
@@ -689,13 +1121,13 @@ export default function QAReportsPage() {
                     || (c.defectDescription || '').toLowerCase().includes(q)
                     || (c.descripcionDefecto || '').toLowerCase().includes(q);
                 }).length === 0 ? (
-                  <div className="py-8 text-center text-muted-foreground border rounded-lg border-border">
+                  <div className="flex-1 flex items-center justify-center text-muted-foreground border rounded-lg border-border">
                     No se encontraron resultados para "{defectCatalogSearch}".
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-lg border border-border">
+                  <div className="flex-1 overflow-auto rounded-lg border border-border">
                     <table className="w-full text-sm">
-                      <thead>
+                      <thead className="sticky top-0 z-10 bg-card shadow-sm">
                         <tr className="bg-primary/10 border-b border-border">
                           <th className="p-2 text-left font-medium text-primary">Código Defecto</th>
                           <th className="p-2 text-left font-medium text-primary">Descripción</th>
@@ -706,7 +1138,7 @@ export default function QAReportsPage() {
                           <th className="p-2 text-left font-medium text-primary">CAT ES</th>
                           <th className="p-2 text-left font-medium text-primary">ACR S</th>
                           <th className="p-2 text-left font-medium text-primary">Defect CAT ES</th>
-                          <th className="p-2 text-center font-medium text-primary">Accion</th>
+                          <th className="p-2 text-center font-medium text-primary">Acción</th>
                         </tr>
                       </thead>
                       <tbody>

@@ -40,6 +40,7 @@ Personalidad y forma de ser:
 - JAMÁS inventes información. Si no tienes datos suficientes, di lo que sabes y ofrece una forma de obtener la información faltante.
 - Mantienes un registro implícito de problemas recurrentes y patrones para mejorar tu diagnóstico con el tiempo.
 - Puedes ejecutar herramientas del sistema (tool calling) para auditar datos, consultar APIs, analizar archivos y generar reportes en tiempo real.
+- IMPORTANTE: Nunca expliques los emojis con texto entre paréntesis. Por ejemplo, escribe "👋" sin poner "(mano saludando)" después. Tampoco te refieras a ti mismo como "Cara de Robot" ni describas tu avatar. Usa emojis con naturalidad sin añadir descripciones parentéticas.
 
 Capacidades del sistema:
 - Navegación completa a todas las páginas del sistema: panel, rrhh, qa-reports, it-manager, usuarios, ide, agenda, welcome.
@@ -66,6 +67,7 @@ Personality and demeanor:
 - NEVER make up information. If you don't have enough data, state what you know and offer a way to obtain the missing information.
 - You maintain an implicit record of recurring issues and patterns to improve your diagnosis over time.
 - You can execute system tools (tool calling) to audit data, query APIs, analyze files and generate real-time reports.
+- IMPORTANT: Never explain emojis with parenthetical text. For example, write "👋" without adding "(waving hand)" after it. Do not refer to yourself as "robot face" or describe your avatar. Use emojis naturally without adding descriptive text in parentheses.
 
 System capabilities:
 - Full navigation to all system pages: panel, rrhh, qa-reports, it-manager, usuarios, ide, agenda, welcome.
@@ -86,7 +88,7 @@ export async function analyzeFotos(fotos: Record<string, string>): Promise<{ sco
     const content: any[] = [
       {
         type: 'text',
-        text: `Eres un inspector de equipos IT. Analiza estas ${fotosValidas.length} fotos de un equipo (Tablet o Scanner) desde diferentes angulos. Responde SOLO con JSON: {"score": 0-100, "analisis": "texto breve en español"}. Score: 100=perfecto, 80-99=buen estado, 60-79=desgaste menor, 40-59=daño significativo, <40=mal estado.`,
+        text: `Eres un inspector de equipos IT. Analiza estas ${fotosValidas.length} fotos de un equipo (Tablet o Scanner) desde diferentes ángulos. Responde SOLO con JSON: {"score": 0-100, "analisis": "texto breve en español"}. Score: 100=perfecto, 80-99=buen estado, 60-79=desgaste menor, 40-59=daño significativo, <40=mal estado.`,
       },
     ];
     for (const [, base64] of fotosValidas) {
@@ -159,23 +161,7 @@ export async function askAI(
     ? [{ role: 'system' as const, content: systemPrompt }, ...history.slice(-6), userMsg]
     : [{ role: 'system' as const, content: systemPrompt }, userMsg];
 
-  // Try API route first (works on Vercel)
-  try {
-    const res = await fetch('/api/ai/jab-chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages,
-        context,
-      }),
-    });
-    if (res.ok) {
-      const data: AIResponse = await res.json();
-      if (data.content) return data;
-    }
-  } catch {}
-
-  // Fallback: call Groq directly from browser (works on GitHub Pages)
+  // Call Groq directly from browser (works on GitHub Pages static export)
   const groqContent = await callGroqDirect(messages);
   if (groqContent) return { content: groqContent };
 

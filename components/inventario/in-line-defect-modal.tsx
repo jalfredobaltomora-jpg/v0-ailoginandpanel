@@ -75,7 +75,7 @@ export function InLineDefectModal({ onClose, onSaved, record }: InLineDefectModa
           if (n > maxNum) maxNum = n;
         }
       }
-      setItem(`#${String(maxNum + 1).padStart(3, '0')}`);
+      setItem(`#${String(maxNum + 1).padStart(2, '0')}`);
     });
   }, [isEditing]);
 
@@ -123,7 +123,7 @@ export function InLineDefectModal({ onClose, onSaved, record }: InLineDefectModa
 
   const handleSave = async () => {
     if (!item || !factory || !buyer || !auditor || !defectCode) {
-      setError('Completa los campos requeridos: ITEM, Factory, Buyer, Auditor, Código de Defecto');
+      setError('Complete los campos requeridos: ÍTEM, Fábrica, Comprador, Auditor, Código de Defecto');
       return;
     }
     setSaving(true);
@@ -175,20 +175,20 @@ export function InLineDefectModal({ onClose, onSaved, record }: InLineDefectModa
       <Card className="w-full max-w-4xl border-primary/20 bg-card max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex-row items-center justify-between border-b border-border sticky top-0 bg-card z-10">
           <CardTitle className="flex items-center gap-2 text-primary text-base">
-            {isEditing ? 'Editar In Line Defect' : 'In Line Defect - Nuevo Registro'}
+            {isEditing ? 'Editar Defecto en Línea' : 'Defecto en Línea - Nuevo Registro'}
           </CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose}><X className="h-5 w-5" /></Button>
         </CardHeader>
         <CardContent className="p-6">
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
             <Field label="ITEM" value={item} onChange={setItem} required />
-            <Field label="Inspection Date" type="date" value={inspectionDate} onChange={setInspectionDate} required />
-            <Field label="Week" value={`#${week}`} readOnly />
-            <Field label="Month" value={month} onChange={setMonth} placeholder="Ej: May 2026" required />
+            <Field label="Fecha de Inspección" type="date" value={inspectionDate} onChange={setInspectionDate} required />
+            <Field label="Semana" value={`#${week}`} readOnly />
+            <Field label="Mes" value={month} onChange={setMonth} placeholder="Ej: May 2026" required />
 
             {/* Factory */}
             <div className="relative">
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Factory *</label>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Fábrica *</label>
               <button onClick={() => setDropdownOpen(dropdownOpen === 'factory' ? null : 'factory')}
                 className="w-full rounded-lg border border-border bg-input px-3 py-2 text-left text-sm text-foreground hover:bg-muted/20">
                 {factory || <span className="text-muted-foreground">Seleccionar...</span>}
@@ -205,13 +205,13 @@ export function InLineDefectModal({ onClose, onSaved, record }: InLineDefectModa
               )}
             </div>
 
-            <Field label="Line" value={line} onChange={setLine} />
+            <Field label="Línea" value={line} onChange={setLine} />
             <Field label="PO" value={po} onChange={setPo} />
             <Field label="Color" value={color} onChange={setColor} />
 
             {/* Buyer */}
             <div className="relative">
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Buyer *</label>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Comprador *</label>
               <button onClick={() => setDropdownOpen(dropdownOpen === 'buyer' ? null : 'buyer')}
                 className="w-full rounded-lg border border-border bg-input px-3 py-2 text-left text-sm text-foreground hover:bg-muted/20">
                 {buyer || <span className="text-muted-foreground">Seleccionar...</span>}
@@ -247,7 +247,7 @@ export function InLineDefectModal({ onClose, onSaved, record }: InLineDefectModa
               )}
             </div>
 
-            <Field label="Style" value={style} onChange={setStyle} />
+            <Field label="Estilo" value={style} onChange={setStyle} />
 
             {/* Defect specific fields */}
             <Field label="Defecto" value={defect} onChange={setDefect} />
@@ -282,7 +282,7 @@ export function InLineDefectModal({ onClose, onSaved, record }: InLineDefectModa
 
             {/* Auto-filled fields from defect catalog */}
             <Field label="Descripción de Defecto" value={defectDescription} readOnly />
-            <Field label="CAT ENGLISH" value={catEnglish} readOnly />
+            <Field label="CAT INGLÉS" value={catEnglish} readOnly />
             <Field label="ACR" value={acr} readOnly />
             <Field label="Defecto CAT Inglés" value={defectCatEnglish} readOnly />
             <Field label="Descripción de Defecto" value={descripcionDefecto} readOnly />

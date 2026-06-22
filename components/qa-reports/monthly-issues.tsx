@@ -231,7 +231,7 @@ export function MonthlyIssues() {
 
   const copyMonthly = async (group: MonthGroup, key: string) => {
     const data = editKey === key ? editData : group.factories;
-    const lines = ['Factory Buyer\tNo. Audit\tNo. Failure\tFail Rate %\tMeas Qty\tMeas Def\tMeas Rate %\tVis Qty\tVis Def\tVis Rate %'];
+    const lines = ['Fábrica / Comprador\tNo. Auditoría\tNo. Fallos\tTasa de Fallo %\tCant. Med.\tDef. Med.\tTasa Med. %\tCant. Vis.\tDef. Vis.\tTasa Vis. %'];
     data.forEach(f => {
       lines.push(`${f.factoryBuyer}\t${f.totalAudit}\t${f.totalFail}\t${f.totalRate}\t${f.measQty}\t${f.measDef}\t${f.measRate}\t${f.visQty}\t${f.visDef}\t${f.visRate}`);
     });
@@ -289,7 +289,7 @@ export function MonthlyIssues() {
           <div>
             <CardTitle className="flex items-center gap-2 text-primary">
               <CalendarRange className="h-5 w-5" />
-              Monthly Issues
+              Incidencias Mensuales
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
               Total acumulado del mes — edición y copia al portapapeles
@@ -435,27 +435,27 @@ export function MonthlyIssues() {
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="bg-slate-800">
-                              <th rowSpan={2} className="border-b border-r border-border px-2 py-1.5 text-left text-white sticky top-0 bg-slate-800 z-10">Factory Buyer</th>
+                              <th rowSpan={2} className="border-b border-r border-border px-2 py-1.5 text-left text-white sticky top-0 bg-slate-800 z-10">Fábrica / Comprador</th>
                               <th colSpan={3} className="border-b border-r border-border px-2 py-1.5 text-center font-semibold text-white sticky top-0 bg-slate-800 z-10">
                                 TOTAL
                               </th>
                               <th colSpan={3} className="border-b border-r border-border px-2 py-1.5 text-center font-semibold text-white sticky top-0 bg-slate-800 z-10">
-                                MEASUREMENT
+                                MEDICIÓN
                               </th>
                               <th colSpan={3} className="border-b border-border px-2 py-1.5 text-center font-semibold text-white sticky top-0 bg-slate-800 z-10">
                                 VISUAL
                               </th>
                             </tr>
                             <tr className="bg-slate-700">
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-cyan-300 sticky top-[33px] bg-slate-700 z-10">No. Audit</th>
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-cyan-300 sticky top-[33px] bg-slate-700 z-10">No. Failure</th>
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-muted-foreground sticky top-[33px] bg-slate-700 z-10">Fail Rate %</th>
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-amber-300 sticky top-[33px] bg-slate-700 z-10">Insp. Qty</th>
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-amber-300 sticky top-[33px] bg-slate-700 z-10">Def. Qty</th>
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-amber-300 sticky top-[33px] bg-slate-700 z-10">Defect Rate %</th>
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-violet-300 sticky top-[33px] bg-slate-700 z-10">Insp. Qty</th>
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-violet-300 sticky top-[33px] bg-slate-700 z-10">Def. Qty</th>
-                              <th className="border-b border-border px-2 py-1 text-center text-xs text-violet-300 sticky top-[33px] bg-slate-700 z-10">Defect Rate %</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-cyan-300 sticky top-[33px] bg-slate-700 z-10">No. Auditoría</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-cyan-300 sticky top-[33px] bg-slate-700 z-10">No. Fallos</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-muted-foreground sticky top-[33px] bg-slate-700 z-10">Tasa de Fallo %</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-amber-300 sticky top-[33px] bg-slate-700 z-10">Cant. Insp.</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-amber-300 sticky top-[33px] bg-slate-700 z-10">Cant. Def.</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-amber-300 sticky top-[33px] bg-slate-700 z-10">Tasa de Defecto %</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-violet-300 sticky top-[33px] bg-slate-700 z-10">Cant. Insp.</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-violet-300 sticky top-[33px] bg-slate-700 z-10">Cant. Def.</th>
+                              <th className="border-b border-border px-2 py-1 text-center text-xs text-violet-300 sticky top-[33px] bg-slate-700 z-10">Tasa de Defecto %</th>
                             </tr>
                           </thead>
                           <tbody>

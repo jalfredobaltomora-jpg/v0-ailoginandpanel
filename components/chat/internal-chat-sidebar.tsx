@@ -43,7 +43,7 @@ export function InternalChatSidebar({ onSelectConv, selectedConvId }: SidebarPro
     const grouped: { area: string; users: ChatUser[] }[] = [];
     const areaMap = new Map<string, ChatUser[]>();
     for (const u of otherUsers) {
-      const area = u.area || 'Sin area';
+      const area = u.area || 'Sin área';
       if (!areaMap.has(area)) areaMap.set(area, []);
       areaMap.get(area)!.push(u);
     }
@@ -175,7 +175,7 @@ export function InternalChatSidebar({ onSelectConv, selectedConvId }: SidebarPro
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={tab === 'contacts' ? 'Buscar contacto o area...' : 'Buscar conversacion...'}
+            placeholder={tab === 'contacts' ? 'Buscar contacto o área...' : 'Buscar conversación...'}
             className="h-8 pl-8 text-xs"
           />
         </div>
