@@ -628,7 +628,7 @@ function formatMonth(dateStr: string): string {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-card/50 p-4 shadow-sm">
+      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-card p-4 shadow-sm">
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
@@ -645,7 +645,7 @@ function formatMonth(dateStr: string): string {
         </div>
       </div>
 
-      <div className="p-8">
+      <div className="p-8 bg-background">
         {view === 'tiles' && (
           <div className="flex flex-wrap justify-center gap-6">
             {puedeVer(currentUser, 'qa_extractor') && (
