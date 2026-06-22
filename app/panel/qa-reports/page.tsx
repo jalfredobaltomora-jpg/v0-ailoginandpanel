@@ -627,8 +627,8 @@ function formatMonth(dateStr: string): string {
   }, [top3Result, top3DateFrom, top3DateTo]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-card p-4 shadow-sm">
+    <main className={`${view === 'dhu' ? 'h-dvh flex flex-col overflow-hidden' : 'min-h-screen'} bg-gradient-to-br from-background via-background to-secondary/20`}>
+      <div className={`${view === 'dhu' ? '' : 'sticky top-0 z-30'} flex items-center justify-between border-b border-border bg-card p-4 shadow-sm`}>
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
@@ -645,7 +645,7 @@ function formatMonth(dateStr: string): string {
         </div>
       </div>
 
-      <div className="p-8 bg-background">
+      <div className={`${view === 'dhu' ? 'flex-1 overflow-hidden' : ''} p-8 bg-background`}>
         {view === 'tiles' && (
           <div className="flex flex-wrap justify-center gap-6">
             {puedeVer(currentUser, 'qa_extractor') && (
@@ -682,8 +682,8 @@ function formatMonth(dateStr: string): string {
         {view === 'kpi' && <KpiReports />}
 
         {view === 'dhu' && (
-          <div className="space-y-6">
-            <div className="sticky top-[57px] z-20 bg-background pb-2">
+          <div className="h-full flex flex-col gap-6">
+            <div className="bg-background pb-2">
             <div className="flex items-center justify-between pt-2">
               <h3 className="text-lg font-bold text-foreground">
                 {oqlTab === 'catalog' ? 'Catálogo de defectos' : 'QA - OQL % SAE - Indicador'}
@@ -741,7 +741,7 @@ function formatMonth(dateStr: string): string {
 
             {/* IN LINE Tab */}
             {oqlTab === 'inline' && (
-              <>
+              <div className="flex-1 overflow-hidden">
                 {inlineImportProgress && (
                   <div className={`text-xs ${inlineImportProgress.includes('✅') ? 'text-green-500' : inlineImportProgress.includes('❌') ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {inlineImportProgress}
@@ -752,7 +752,7 @@ function formatMonth(dateStr: string): string {
                     No hay registros QA OQL.
                   </div>
                 ) : (
-                  <div className="overflow-auto max-h-[65vh] rounded-lg border border-border">
+                  <div className="h-full overflow-auto rounded-lg border border-border">
                     <table className="w-full text-sm">
                       <thead className="sticky top-0 z-10 bg-card shadow-sm">
                         <tr className="border-b border-border">
@@ -814,12 +814,12 @@ function formatMonth(dateStr: string): string {
                     </table>
                   </div>
                 )}
-              </>
+              </div>
             )}
 
             {/* In Line Defect Tab */}
             {oqlTab === 'defect' && (
-              <>
+              <div className="flex-1 overflow-y-auto">
                 {defectImportProgress && (
                   <div className={`text-xs ${defectImportProgress.includes('✅') ? 'text-green-500' : defectImportProgress.includes('❌') ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {defectImportProgress}
@@ -830,7 +830,7 @@ function formatMonth(dateStr: string): string {
                     No hay registros de Defecto en Línea.
                   </div>
                 ) : (
-                  <div className="overflow-auto max-h-[320px] rounded-lg border border-border">
+                  <div className="overflow-auto max-h-[40vh] rounded-lg border border-border">
                     <table className="w-full text-sm whitespace-nowrap">
                       <thead className="sticky top-0 z-10 bg-card shadow-sm">
                         <tr className="border-b border-border">
@@ -1063,13 +1063,13 @@ function formatMonth(dateStr: string): string {
                     </div>
                   </div>
                 )}
-              </>
+              </div>
             )}
 
             {/* Catálogo de defectos Tab */}
             {oqlTab === 'catalog' && (
-              <div className="space-y-6">
-                <div className="rounded-lg border border-border p-4">
+              <div className="flex-1 overflow-hidden flex flex-col gap-4">
+                <div className="flex-shrink-0 rounded-lg border border-border p-4">
                   <h4 className="mb-3 text-sm font-semibold text-foreground">Catálogo de Defectos</h4>
                   <div className="grid grid-cols-3 gap-3">
                     <input className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground" placeholder="Código de Defecto *" value={newDefectCat.defectCode} onChange={e => setNewDefectCat(p => ({ ...p, defectCode: e.target.value }))} />
@@ -1111,7 +1111,7 @@ function formatMonth(dateStr: string): string {
                 </div>
 
                 {defectCatalogItems.length === 0 ? (
-                  <div className="py-8 text-center text-muted-foreground border rounded-lg border-border">
+                  <div className="flex-1 flex items-center justify-center text-muted-foreground border rounded-lg border-border">
                     No hay items en el catálogo de defectos.
                   </div>
                 ) : defectCatalogItems.filter(c => {
@@ -1121,11 +1121,11 @@ function formatMonth(dateStr: string): string {
                     || (c.defectDescription || '').toLowerCase().includes(q)
                     || (c.descripcionDefecto || '').toLowerCase().includes(q);
                 }).length === 0 ? (
-                  <div className="py-8 text-center text-muted-foreground border rounded-lg border-border">
+                  <div className="flex-1 flex items-center justify-center text-muted-foreground border rounded-lg border-border">
                     No se encontraron resultados para "{defectCatalogSearch}".
                   </div>
                 ) : (
-                  <div className="overflow-auto max-h-[65vh] rounded-lg border border-border">
+                  <div className="flex-1 overflow-auto rounded-lg border border-border">
                     <table className="w-full text-sm">
                       <thead className="sticky top-0 z-10 bg-card shadow-sm">
                         <tr className="bg-primary/10 border-b border-border">
