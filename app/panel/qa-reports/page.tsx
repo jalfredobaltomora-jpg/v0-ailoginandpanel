@@ -752,7 +752,7 @@ function formatMonth(dateStr: string): string {
                     No hay registros QA OQL.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-lg border border-border">
+                  <div className="overflow-auto max-h-[65vh] rounded-lg border border-border">
                     <table className="w-full text-sm">
                       <thead className="sticky top-0 z-10 bg-card shadow-sm">
                         <tr className="border-b border-border">
