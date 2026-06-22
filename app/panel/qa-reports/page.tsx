@@ -1125,9 +1125,9 @@ function formatMonth(dateStr: string): string {
                     No se encontraron resultados para "{defectCatalogSearch}".
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-lg border border-border">
+                  <div className="overflow-auto max-h-[65vh] rounded-lg border border-border">
                     <table className="w-full text-sm">
-                      <thead>
+                      <thead className="sticky top-0 z-10 bg-card shadow-sm">
                         <tr className="bg-primary/10 border-b border-border">
                           <th className="p-2 text-left font-medium text-primary">Código Defecto</th>
                           <th className="p-2 text-left font-medium text-primary">Descripción</th>
