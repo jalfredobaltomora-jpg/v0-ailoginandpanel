@@ -242,7 +242,7 @@ export default function RRHHPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+    <main className={`${view === 'catalogo' ? 'h-dvh flex flex-col overflow-hidden' : 'min-h-screen'} bg-gradient-to-br from-background via-background to-secondary/20`}>
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border bg-card/50 p-4">
         <div className="flex items-center gap-4">
@@ -261,7 +261,7 @@ export default function RRHHPage() {
         </div>
       </div>
 
-      <div className="p-8">
+      <div className={`${view === 'catalogo' ? 'flex-1 overflow-hidden' : ''} p-8`}>
         {view === 'tiles' && (
           <div className="flex flex-wrap justify-center gap-6">
             {puedeVer(currentUser, 'rrhh_catalogo') && (
@@ -322,8 +322,8 @@ export default function RRHHPage() {
         )}
 
         {view === 'catalogo' && (
-          <Card className="mx-auto max-w-5xl border-primary/20 bg-card/95">
-            <CardHeader className="flex-row items-center justify-between flex-wrap gap-4">
+          <Card className="mx-auto max-w-5xl h-full flex flex-col border-primary/20 bg-card/95">
+            <CardHeader className="flex-row items-center justify-between flex-wrap gap-4 flex-shrink-0">
               <CardTitle className="flex items-center gap-2 text-primary">
                 <Users className="h-5 w-5" />
                 {showInactivos ? 'Catalogo de Personal Inactivos' : 'Catalogo de Personal Activo'}
@@ -358,12 +358,12 @@ export default function RRHHPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="mb-4 text-sm text-muted-foreground">
+            <CardContent className="flex-1 overflow-hidden flex flex-col">
+              <p className="mb-4 text-sm text-muted-foreground flex-shrink-0">
                 Doble click para ver detalles del empleado
               </p>
               {!showInactivos && (
-                <div className="mb-6 flex flex-wrap items-center gap-6">
+                <div className="mb-6 flex flex-wrap items-center gap-6 flex-shrink-0">
                   <span className="flex items-center gap-3 rounded-xl border-2 border-border bg-card px-6 py-4 shadow-sm">
                     <Users className="h-8 w-8 text-primary" />
                     <div className="flex flex-col">
@@ -392,13 +392,13 @@ export default function RRHHPage() {
                 </div>
               )}
               {loading ? (
-                <div className="py-12 text-center text-muted-foreground">Cargando...</div>
+                <div className="flex-1 flex items-center justify-center text-muted-foreground">Cargando...</div>
               ) : filteredEmpleados.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground">
+                <div className="flex-1 flex items-center justify-center text-muted-foreground">
                   {showInactivos ? 'No hay empleados inactivos' : 'No hay empleados registrados'}
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="flex-1 overflow-y-auto space-y-3">
                   {filteredEmpleados.map((emp) => (
                     <div
                       key={emp.code}
