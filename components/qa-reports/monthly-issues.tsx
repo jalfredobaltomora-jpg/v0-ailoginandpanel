@@ -66,6 +66,20 @@ export function MonthlyIssues() {
   const [statusMsg, setStatusMsg] = useState('');
   const [filterYear, setFilterYear] = useState<string>('all');
   const [filterMonth, setFilterMonth] = useState<string>('all');
+  const [selectedWeek, setSelectedWeek] = useState<Record<string, number>>({});
+
+  const getFilteredData = (group: MonthGroup, key: string): FactoryRow[] => {
+    const weekNum = selectedWeek[key];
+    if (!weekNum) return editKey === key ? editData : group.factories;
+    const week = group.weeks.find(w => w.weekNumber === weekNum);
+    if (!week) return editKey === key ? editData : group.factories;
+    return week.factories.map(f => ({
+      ...f,
+      totalRate: calcularPorcentaje(f.totalFail, f.totalAudit),
+      measRate: calcularPorcentaje(f.measDef, f.measQty),
+      visRate: calcularPorcentaje(f.visDef, f.visQty),
+    }));
+  };
 
   useEffect(() => {
     const unsubscribe = onValue(ref(db, 'qa-reports/weekly-registry'), (snapshot) => {
@@ -230,13 +244,12 @@ export function MonthlyIssues() {
   };
 
   const copyMonthly = async (group: MonthGroup, key: string) => {
-    const data = editKey === key ? editData : group.factories;
-    const lines = ['Fábrica / Comprador\tNo. Auditoría\tNo. Fallos\tTasa de Fallo %\tCant. Med.\tDef. Med.\tTasa Med. %\tCant. Vis.\tDef. Vis.\tTasa Vis. %'];
-    data.forEach(f => {
-      lines.push(`${f.factoryBuyer}\t${f.totalAudit}\t${f.totalFail}\t${f.totalRate}\t${f.measQty}\t${f.measDef}\t${f.measRate}\t${f.visQty}\t${f.visDef}\t${f.visRate}`);
-    });
+    const data = getFilteredData(group, key);
+    const lines = data.map(f =>
+      `${f.totalAudit}\t${f.totalFail}\t${f.totalRate}\t${f.measQty}\t${f.measDef}\t${f.measRate}\t${f.visQty}\t${f.visDef}\t${f.visRate}`
+    );
     const t = group.totals;
-    lines.push(`\n${t.factoryBuyer}\t${t.totalAudit}\t${t.totalFail}\t${t.totalRate}\t${t.measQty}\t${t.measDef}\t${t.measRate}\t${t.visQty}\t${t.visDef}\t${t.visRate}`);
+    lines.push(`${t.totalAudit}\t${t.totalFail}\t${t.totalRate}\t${t.measQty}\t${t.measDef}\t${t.measRate}\t${t.visQty}\t${t.visDef}\t${t.visRate}`);
     try {
       await navigator.clipboard.writeText(lines.join('\n'));
       setStatusMsg(`✅ Datos de ${group.label} copiados al portapapeles`);
@@ -366,26 +379,19 @@ export function MonthlyIssues() {
             ) : filteredGroups.map((group) => {
               const key = `${group.year}-${group.month}`;
               const isEditing = editKey === key;
-              const data = isEditing ? editData : group.factories;
-              const total = isEditing
-                ? {
-                    factoryBuyer: 'Total General', buyer: '',
-                    totalAudit: editData.reduce((s, f) => s + f.totalAudit, 0),
-                    totalFail: editData.reduce((s, f) => s + f.totalFail, 0),
-                    totalRate: '',
-                    measQty: editData.reduce((s, f) => s + f.measQty, 0),
-                    measDef: editData.reduce((s, f) => s + f.measDef, 0),
-                    measRate: '',
-                    visQty: editData.reduce((s, f) => s + f.visQty, 0),
-                    visDef: editData.reduce((s, f) => s + f.visDef, 0),
-                    visRate: '',
-                  }
-                : group.totals;
-              if (isEditing) {
-                (total as any).totalRate = calcularPorcentaje(total.totalFail, total.totalAudit);
-                (total as any).measRate = calcularPorcentaje(total.measDef, total.measQty);
-                (total as any).visRate = calcularPorcentaje(total.visDef, total.visQty);
-              }
+              const data = getFilteredData(group, key);
+              const total = {
+                factoryBuyer: 'Total General', buyer: '',
+                totalAudit: data.reduce((s, f) => s + f.totalAudit, 0),
+                totalFail: data.reduce((s, f) => s + f.totalFail, 0),
+                totalRate: calcularPorcentaje(data.reduce((s, f) => s + f.totalFail, 0), data.reduce((s, f) => s + f.totalAudit, 0)),
+                measQty: data.reduce((s, f) => s + f.measQty, 0),
+                measDef: data.reduce((s, f) => s + f.measDef, 0),
+                measRate: calcularPorcentaje(data.reduce((s, f) => s + f.measDef, 0), data.reduce((s, f) => s + f.measQty, 0)),
+                visQty: data.reduce((s, f) => s + f.visQty, 0),
+                visDef: data.reduce((s, f) => s + f.visDef, 0),
+                visRate: calcularPorcentaje(data.reduce((s, f) => s + f.visDef, 0), data.reduce((s, f) => s + f.visQty, 0)),
+              };
 
               return (
                 <div key={key} className="rounded-lg border border-border bg-muted/10 overflow-hidden">
@@ -402,8 +408,30 @@ export function MonthlyIssues() {
                         <span className="ml-3 text-xs text-muted-foreground">{group.factories.length} fábricas · {group.weeks.length} semanas</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      {group.weeks.map((w, wi) => <span key={`${w.id}-${wi}`} className="rounded bg-muted/30 px-2 py-0.5">S{w.weekNumber}</span>)}
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      {group.weeks.map((w, wi) => {
+                        const isActive = selectedWeek[key] === w.weekNumber;
+                        return (
+                          <button
+                            key={`${w.id}-${wi}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedWeek(prev => ({
+                                ...prev,
+                                [key]: isActive ? 0 : w.weekNumber,
+                              }));
+                              if (isEditing) setEditKey(null);
+                            }}
+                            className={`rounded px-2 py-0.5 font-medium transition-colors ${
+                              isActive
+                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+                            }`}
+                          >
+                            S{w.weekNumber}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 

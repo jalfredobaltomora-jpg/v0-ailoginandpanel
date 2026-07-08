@@ -363,18 +363,31 @@ export default function RRHHPage() {
                 Doble click para ver detalles del empleado
               </p>
               {!showInactivos && (
-                <div className="mb-4 flex items-center gap-4 text-sm">
-                  <span className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/20 px-3 py-1.5">
-                    <Users className="h-4 w-4 text-primary" />
-                    Total: <strong className="text-primary">{filteredEmpleados.length}</strong>
+                <div className="mb-6 flex flex-wrap items-center gap-6">
+                  <span className="flex items-center gap-3 rounded-xl border-2 border-border bg-card px-6 py-4 shadow-sm">
+                    <Users className="h-8 w-8 text-primary" />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</span>
+                      <strong className="text-2xl font-bold text-primary">{filteredEmpleados.length}</strong>
+                    </div>
                   </span>
-                  <span className="flex items-center gap-1.5 rounded-lg border border-green-500/20 bg-green-500/10 px-3 py-1.5">
-                    <span className="h-2 w-2 rounded-full bg-green-500" />
-                    Presentes: <strong className="text-green-500">{filteredEmpleados.filter(e => marcasHoy[e.code]).length}</strong>
+                  <span className="flex items-center gap-3 rounded-xl border-2 border-green-500/30 bg-green-500/5 px-6 py-4 shadow-sm">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/20">
+                      <span className="h-3 w-3 rounded-full bg-green-500" />
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium uppercase tracking-wide text-green-700">Presentes</span>
+                      <strong className="text-2xl font-bold text-green-600">{filteredEmpleados.filter(e => marcasHoy[e.code]).length}</strong>
+                    </div>
                   </span>
-                  <span className="flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5">
-                    <span className="h-2 w-2 rounded-full bg-red-500" />
-                    Ausentes: <strong className="text-red-500">{filteredEmpleados.filter(e => !marcasHoy[e.code]).length}</strong>
+                  <span className="flex items-center gap-3 rounded-xl border-2 border-red-500/30 bg-red-500/5 px-6 py-4 shadow-sm">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/20">
+                      <span className="h-3 w-3 rounded-full bg-red-500" />
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium uppercase tracking-wide text-red-700">Ausentes</span>
+                      <strong className="text-2xl font-bold text-red-600">{filteredEmpleados.filter(e => !marcasHoy[e.code]).length}</strong>
+                    </div>
                   </span>
                 </div>
               )}
