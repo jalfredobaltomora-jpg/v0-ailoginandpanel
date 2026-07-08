@@ -323,7 +323,7 @@ export default function RRHHPage() {
 
         {view === 'catalogo' && (
           <div className="h-[calc(100vh-8rem)] overflow-hidden flex flex-col">
-          <Card className="mx-auto max-w-5xl h-full flex flex-col border-primary/20 bg-card/95">
+          <Card className="w-full h-full flex flex-col border-primary/20 bg-card/95">
             <CardHeader className="flex-row items-center justify-between flex-wrap gap-4 flex-shrink-0">
               <CardTitle className="flex items-center gap-2 text-primary">
                 <Users className="h-5 w-5" />
