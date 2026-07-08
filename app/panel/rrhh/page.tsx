@@ -242,7 +242,7 @@ export default function RRHHPage() {
   };
 
   return (
-    <main className={`${view === 'catalogo' ? 'h-dvh flex flex-col overflow-hidden' : 'min-h-screen'} bg-gradient-to-br from-background via-background to-secondary/20`}>
+    <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border bg-card/50 p-4">
         <div className="flex items-center gap-4">
@@ -261,7 +261,7 @@ export default function RRHHPage() {
         </div>
       </div>
 
-      <div className={`${view === 'catalogo' ? 'flex-1 overflow-hidden' : ''} p-8`}>
+      <div className="p-8">
         {view === 'tiles' && (
           <div className="flex flex-wrap justify-center gap-6">
             {puedeVer(currentUser, 'rrhh_catalogo') && (
@@ -322,6 +322,7 @@ export default function RRHHPage() {
         )}
 
         {view === 'catalogo' && (
+          <div className="h-[calc(100vh-8rem)] overflow-hidden flex flex-col">
           <Card className="mx-auto max-w-5xl h-full flex flex-col border-primary/20 bg-card/95">
             <CardHeader className="flex-row items-center justify-between flex-wrap gap-4 flex-shrink-0">
               <CardTitle className="flex items-center gap-2 text-primary">
@@ -470,6 +471,7 @@ export default function RRHHPage() {
               )}
             </CardContent>
           </Card>
+          </div>
         )}
 
         {view === 'cumpleaneros' && (
