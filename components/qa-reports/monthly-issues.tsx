@@ -257,9 +257,9 @@ export function MonthlyIssues() {
     const calcScore = (rate: number, threshold: number) =>
       rate > 0.9 ? "2.5" : rate > 0.7 ? "5" : rate > 0.5 ? "7.5" : rate > threshold ? "10" : "12.5";
     const totalLine =
-      `${tAudit}\t${tFail}\t=SI.ERROR(E9/D9;0%)\t=SI(F9>0.9%;"2.5";SI(F9>0.7%;"5";SI(F9>0.5%;"7.5";SI(F9>0.3%;"10";SI(F9>=0%;"12.5")))))\t${tVisRate.toFixed(4)}\t=SI(H9>2.9%;"2.5";SI(H9>2.7%;"5";SI(H9>2.5%;"7.5";SI(H9>2.3%;"10";SI(H9>=0%;"12.5")))))\t${tMeasRate.toFixed(4)}`;
+      `${tAudit}\t${tFail}\t=SI.ERROR(E10/D10;0%)\t=SI(F10>0.9%;"2.5";SI(F10>0.7%;"5";SI(F10>0.5%;"7.5";SI(F10>0.3%;"10";SI(F10>=0%;"12.5")))))\t${tVisRate.toFixed(4)}\t=SI(H10>2.9%;"2.5";SI(H10>2.7%;"5";SI(H10>2.5%;"7.5";SI(H10>2.3%;"10";SI(H10>=0%;"12.5")))))\t${tMeasRate.toFixed(4)}`;
     const lines = [totalLine, ...data.map((f, i) => {
-      const row = 10 + i;
+      const row = 11 + i;
       const vRate = (parseNum(f.visRate.replace('%', '')) / 100).toFixed(4);
       const mRate = (parseNum(f.measRate.replace('%', '')) / 100).toFixed(4);
       return `${f.totalAudit}\t${f.totalFail}\t=SI.ERROR(E${row}/D${row};0%)\t=SI(F${row}>0.9%;"2.5";SI(F${row}>0.7%;"5";SI(F${row}>0.5%;"7.5";SI(F${row}>0.3%;"10";SI(F${row}>=0%;"12.5")))))\t${vRate}\t=SI(H${row}>2.9%;"2.5";SI(H${row}>2.7%;"5";SI(H${row}>2.5%;"7.5";SI(H${row}>2.3%;"10";SI(H${row}>=0%;"12.5")))))\t${mRate}`;
