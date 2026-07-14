@@ -245,11 +245,16 @@ export function MonthlyIssues() {
 
   const copyMonthly = async (group: MonthGroup, key: string) => {
     const data = getFilteredData(group, key);
-    const lines = data.map(f =>
+    const sAudit = data.reduce((s, f) => s + f.totalAudit, 0);
+    const sFail = data.reduce((s, f) => s + f.totalFail, 0);
+    const sMQty = data.reduce((s, f) => s + f.measQty, 0);
+    const sMDef = data.reduce((s, f) => s + f.measDef, 0);
+    const sVQty = data.reduce((s, f) => s + f.visQty, 0);
+    const sVDef = data.reduce((s, f) => s + f.visDef, 0);
+    const totalLine = `${sAudit}\t${sFail}\t${calcularPorcentaje(sFail, sAudit)}\t${sMQty}\t${sMDef}\t${calcularPorcentaje(sMDef, sMQty)}\t${sVQty}\t${sVDef}\t${calcularPorcentaje(sVDef, sVQty)}`;
+    const lines = [totalLine, ...data.map(f =>
       `${f.totalAudit}\t${f.totalFail}\t${f.totalRate}\t${f.measQty}\t${f.measDef}\t${f.measRate}\t${f.visQty}\t${f.visDef}\t${f.visRate}`
-    );
-    const t = group.totals;
-    lines.push(`${t.totalAudit}\t${t.totalFail}\t${t.totalRate}\t${t.measQty}\t${t.measDef}\t${t.measRate}\t${t.visQty}\t${t.visDef}\t${t.visRate}`);
+    )];
     try {
       await navigator.clipboard.writeText(lines.join('\n'));
       setStatusMsg(`✅ Datos de ${group.label} copiados al portapapeles`);
