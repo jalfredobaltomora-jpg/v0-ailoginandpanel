@@ -245,16 +245,25 @@ export function MonthlyIssues() {
 
   const copyMonthly = async (group: MonthGroup, key: string) => {
     const data = getFilteredData(group, key);
-    const sAudit = data.reduce((s, f) => s + f.totalAudit, 0);
-    const sFail = data.reduce((s, f) => s + f.totalFail, 0);
-    const sMQty = data.reduce((s, f) => s + f.measQty, 0);
-    const sMDef = data.reduce((s, f) => s + f.measDef, 0);
-    const sVQty = data.reduce((s, f) => s + f.visQty, 0);
-    const sVDef = data.reduce((s, f) => s + f.visDef, 0);
-    const totalLine = `${sAudit}\t${sFail}\t${calcularPorcentaje(sFail, sAudit)}\t${sMQty}\t${sMDef}\t${calcularPorcentaje(sMDef, sMQty)}\t${sVQty}\t${sVDef}\t${calcularPorcentaje(sVDef, sVQty)}`;
-    const lines = [totalLine, ...data.map(f =>
-      `${f.totalAudit}\t${f.totalFail}\t${f.totalRate}\t${f.measQty}\t${f.measDef}\t${f.measRate}\t${f.visQty}\t${f.visDef}\t${f.visRate}`
-    )];
+    const tAudit = data.reduce((s, f) => s + f.totalAudit, 0);
+    const tFail = data.reduce((s, f) => s + f.totalFail, 0);
+    const tVisQty = data.reduce((s, f) => s + f.visQty, 0);
+    const tVisDef = data.reduce((s, f) => s + f.visDef, 0);
+    const tMeasQty = data.reduce((s, f) => s + f.measQty, 0);
+    const tMeasDef = data.reduce((s, f) => s + f.measDef, 0);
+    const tVisRate = tVisQty ? tVisDef / tVisQty : 0;
+    const tMeasRate = tMeasQty ? tMeasDef / tMeasQty : 0;
+    const tFailRate = tAudit ? tFail / tAudit : 0;
+    const calcScore = (rate: number, threshold: number) =>
+      rate > 0.9 ? "2.5" : rate > 0.7 ? "5" : rate > 0.5 ? "7.5" : rate > threshold ? "10" : "12.5";
+    const totalLine =
+      `${tAudit}\t${tFail}\t=SI.ERROR(E9/D9;0%)\t=SI(F9>0.9%;"2.5";SI(F9>0.7%;"5";SI(F9>0.5%;"7.5";SI(F9>0.3%;"10";SI(F9>=0%;"12.5")))))\t${tVisRate.toFixed(4)}\t=SI(H9>2.9%;"2.5";SI(H9>2.7%;"5";SI(H9>2.5%;"7.5";SI(H9>2.3%;"10";SI(H9>=0%;"12.5")))))\t${tMeasRate.toFixed(4)}`;
+    const lines = [totalLine, ...data.map((f, i) => {
+      const row = 10 + i;
+      const vRate = (parseNum(f.visRate.replace('%', '')) / 100).toFixed(4);
+      const mRate = (parseNum(f.measRate.replace('%', '')) / 100).toFixed(4);
+      return `${f.totalAudit}\t${f.totalFail}\t=SI.ERROR(E${row}/D${row};0%)\t=SI(F${row}>0.9%;"2.5";SI(F${row}>0.7%;"5";SI(F${row}>0.5%;"7.5";SI(F${row}>0.3%;"10";SI(F${row}>=0%;"12.5")))))\t${vRate}\t=SI(H${row}>2.9%;"2.5";SI(H${row}>2.7%;"5";SI(H${row}>2.5%;"7.5";SI(H${row}>2.3%;"10";SI(H${row}>=0%;"12.5")))))\t${mRate}`;
+    })];
     try {
       await navigator.clipboard.writeText(lines.join('\n'));
       setStatusMsg(`✅ Datos de ${group.label} copiados al portapapeles`);
