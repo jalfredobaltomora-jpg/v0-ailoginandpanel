@@ -778,16 +778,16 @@ export function FloatingAI() {
           {/* Chat Panel - Premium Design */}
           {isChatOpen && (
             <div
-              className="fixed z-[70] bottom-32 left-4 md:left-6 w-[calc(100vw-2rem)] md:w-96 max-h-[85vh] bg-gradient-to-b from-[#0d1117] to-[#161b22] border border-cyan-500/20 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+              className="fixed z-[70] bottom-32 left-4 md:left-6 w-[calc(100vw-2rem)] md:w-96 max-h-[85vh] bg-black/80 backdrop-blur-xl border border-[#00eeff]/20 rounded-3xl shadow-2xl shadow-[#00eeff]/10 flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-b border-cyan-500/20 px-6 py-4">
+                <div className="bg-gradient-to-r from-[#00eeff]/5 to-[#00ffff]/5 border-b border-[#00eeff]/15 px-6 py-4">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <Sparkles className="w-5 h-5 text-cyan-400 animate-pulse" />
+                      <div className="w-2 h-2 rounded-full bg-[#00eeff] shadow-[0_0_8px_#00eeff] animate-pulse" />
                       <div>
-                        <p className="text-sm font-bold text-white">JAB AI Assistant</p>
+                        <p className="text-sm font-bold text-white tracking-wide">JAB</p>
                         <p className="text-xs text-cyan-300">{lang === 'es' ? 'En línea' : 'Online'}</p>
                       </div>
                     </div>

@@ -15,7 +15,7 @@ import { detectIntent, getIntentResponse, LANG_LABELS, SYSTEM_INFO } from './sys
 import { askAI } from '@/lib/ai-client';
 import { buscarEmpleados, buscarUsuariosIT, buscarAgendaNotes, updateEmpleado, updateUsuarioIT, updateAgendaNote } from '@/lib/firebase';
 import { useLang } from '@/lib/lang-context';
-import { EVARobotComponent, drawEVARobot, type EVAExpression } from './eva-design';
+import { EVARobotComponent, type EVAExpression } from './eva-design';
 import { executeJARVISCommand } from '@/lib/jarvis-commands';
 import { getDeviceInfo, isCapabilityAvailable } from '@/lib/device-api';
 
