@@ -475,7 +475,8 @@ export default function RRHHPage() {
         )}
 
         {view === 'cumpleaneros' && (
-          <div className="mx-auto max-w-4xl space-y-8">
+          <div className="h-[calc(100vh-8rem)] overflow-hidden flex flex-col">
+          <div className="mx-auto max-w-4xl space-y-8 flex-1 overflow-y-auto min-h-0">
             {/* Section: Cumpleañeros del Mes */}
             <Card className="border-pink-500/30 bg-card/95">
               <CardHeader className="border-b border-border">
@@ -625,6 +626,7 @@ export default function RRHHPage() {
                 )}
               </CardContent>
             </Card>
+          </div>
           </div>
         )}
 
