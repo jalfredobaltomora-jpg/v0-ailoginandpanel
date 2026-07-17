@@ -508,7 +508,12 @@ export function EVARobotComponent(props: EVADesignProps) {
     : expression === 'thinking' ? '167,139,250'
     : expression === 'happy' ? '52,211,153'
     : expression === 'surprised' ? '250,204,21'
-    : '34,211,238';
+    : '6,182,212';
+
+  const glowStr = isListening ? '52,211,153'
+    : isSpeaking ? '251,146,60'
+    : expression === 'thinking' ? '167,139,250'
+    : '6,182,212';
 
   return (
     <div
@@ -516,88 +521,141 @@ export function EVARobotComponent(props: EVADesignProps) {
       style={{ width: size, height: size }}
     >
       <style>{`
-@keyframes jarvisRotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-@keyframes jarvisPulse { 0%, 100% { opacity: 0.15; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.05); } }
-@keyframes jarvisRingExpand { 0% { transform: scale(0.8); opacity: 0.6; } 100% { transform: scale(1.4); opacity: 0; } }
-@keyframes jarvisScan { 0% { transform: rotate(0deg) scaleX(1); } 50% { transform: rotate(180deg) scaleX(0.3); } 100% { transform: rotate(360deg) scaleX(1); } }
+@keyframes jarvisSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes jarvisSpinRev { 0% { transform: rotate(360deg); } 100% { transform: rotate(0deg); } }
+@keyframes jarvisPulse { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.03); } }
+@keyframes jarvisWave { 0% { transform: scale(0.3); opacity: 0.8; } 100% { transform: scale(1.6); opacity: 0; } }
+@keyframes jarvisData { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 `}</style>
 
-      {/* Expanding wave rings (listening) */}
+      {/* JARVIS-style concentric segmented rings */}
+      {/* Outermost ring */}
+      <div className="absolute inset-0 rounded-full" style={{
+        border: `1.5px solid rgba(${glowRgb},0.25)`,
+        animation: 'jarvisSpin 20s linear infinite',
+      }}>
+        <div className="absolute w-[4px] h-[4px] rounded-full" style={{
+          top: '-2px', left: '50%', marginLeft: '-2px',
+          background: `rgba(${glowRgb},0.8)`,
+          boxShadow: `0 0 6px rgba(${glowRgb},0.9)`,
+        }} />
+        <div className="absolute w-[3px] h-[3px] rounded-full" style={{
+          bottom: '-1.5px', left: '30%',
+          background: `rgba(${glowRgb},0.5)`,
+        }} />
+      </div>
+
+      {/* Second ring - dashed style */}
+      <div className="absolute inset-[8%] rounded-full" style={{
+        border: `1px solid rgba(${glowRgb},0.2)`,
+        animation: 'jarvisSpinRev 15s linear infinite',
+      }}>
+        <div className="absolute w-[3px] h-[3px] rounded-full" style={{
+          top: '-1.5px', left: '50%', marginLeft: '-1.5px',
+          background: `rgba(${glowRgb},0.7)`,
+          boxShadow: `0 0 4px rgba(${glowRgb},0.7)`,
+        }} />
+      </div>
+
+      {/* Third ring - thin */}
+      <div className="absolute inset-[18%] rounded-full" style={{
+        border: `0.5px solid rgba(${glowRgb},0.3)`,
+        animation: 'jarvisSpin 12s linear infinite',
+      }} />
+
+      {/* Fourth ring - innermost */}
+      <div className="absolute inset-[32%] rounded-full" style={{
+        border: `1px solid rgba(${glowRgb},0.25)`,
+        animation: 'jarvisSpinRev 10s linear infinite',
+      }} />
+
+      {/* Segments / tick marks around the main ring */}
+      <div className="absolute inset-[5%] rounded-full" style={{ animation: 'jarvisSpin 8s linear infinite' }}>
+        {Array.from({ length: 12 }).map((_, i) => (
+          <div key={i} className="absolute" style={{
+            top: '50%', left: '50%',
+            transform: `rotate(${i * 30}deg) translateY(-50%)`,
+            width: '1px', height: '6px',
+            background: `rgba(${glowRgb},${i % 3 === 0 ? 0.6 : 0.25})`,
+            transformOrigin: 'center center',
+            marginTop: '-3px',
+          }} />
+        ))}
+      </div>
+
+      {/* Hexagonal overlay */}
+      <div className="absolute inset-[15%]" style={{
+        border: `0.5px solid rgba(${glowRgb},0.12)`,
+        clipPath: 'polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)',
+        animation: 'jarvisSpin 25s linear infinite reverse',
+      }} />
+
+      {/* Pulsing glow ring */}
+      <div className="absolute inset-[5%] rounded-full" style={{
+        border: `1px solid rgba(${glowRgb},0.15)`,
+        boxShadow: `0 0 15px rgba(${glowRgb},0.15), inset 0 0 15px rgba(${glowRgb},0.05)`,
+        animation: 'jarvisPulse 3s ease-in-out infinite',
+      }} />
+
+      {/* Expanding wave rings when listening (sonar effect) */}
       {isListening && (
         <>
-          <div className="absolute inset-0 rounded-full" style={{
-            border: '1px solid rgba(52,211,153,0.3)',
-            animation: 'jarvisRingExpand 2s ease-out infinite',
+          <div className="absolute rounded-full" style={{
+            inset: '10%',
+            border: '1px solid rgba(52,211,153,0.4)',
+            animation: 'jarvisWave 2s ease-out infinite',
           }} />
-          <div className="absolute inset-0 rounded-full" style={{
-            border: '1px solid rgba(52,211,153,0.2)',
-            animation: 'jarvisRingExpand 2s ease-out 0.5s infinite',
+          <div className="absolute rounded-full" style={{
+            inset: '10%',
+            border: '1px solid rgba(52,211,153,0.25)',
+            animation: 'jarvisWave 2s ease-out 0.6s infinite',
           }} />
-          <div className="absolute inset-0 rounded-full" style={{
+          <div className="absolute rounded-full" style={{
+            inset: '10%',
             border: '1px solid rgba(52,211,153,0.15)',
-            animation: 'jarvisRingExpand 2s ease-out 1s infinite',
+            animation: 'jarvisWave 2s ease-out 1.2s infinite',
           }} />
         </>
       )}
 
-      {/* Rotating orbital rings */}
-      <div className="absolute inset-0" style={{ animation: 'jarvisRotate 8s linear infinite' }}>
-        <div className="absolute inset-0 rounded-full" style={{
-          border: `1px solid rgba(${glowRgb},0.2)`,
-          clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
-        }} />
-      </div>
-      <div className="absolute inset-0" style={{ animation: 'jarvisRotate 12s linear infinite reverse' }}>
-        <div className="absolute inset-0 rounded-full" style={{
-          border: `1px solid rgba(${glowRgb},0.15)`,
-          clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
-        }} />
-      </div>
-
-      {/* Main holographic ring */}
-      <div className="absolute inset-[5%] rounded-full" style={{
-        border: `1.5px solid rgba(${glowRgb},0.35)`,
-        boxShadow: `0 0 12px rgba(${glowRgb},0.2), inset 0 0 12px rgba(${glowRgb},0.1)`,
-        animation: `jarvisPulse ${isListening ? '1.5' : '3'}s ease-in-out infinite`,
-      }} />
-
-      {/* Inner ring */}
-      <div className="absolute inset-[20%] rounded-full" style={{
-        border: `1px solid rgba(${glowRgb},0.25)`,
-        boxShadow: `0 0 8px rgba(${glowRgb},0.15), inset 0 0 8px rgba(${glowRgb},0.08)`,
-      }} />
-
-      {/* Core center dot */}
-      <div className="absolute rounded-full" style={{
-        width: '20%', height: '20%',
-        background: `radial-gradient(circle, rgba(${glowRgb},0.8) 0%, rgba(${glowRgb},0.2) 50%, transparent 100%)`,
-        boxShadow: `0 0 15px rgba(${glowRgb},0.5)`,
-      }} />
-
-      {/* Scanning line */}
-      <div className="absolute inset-0" style={{
-        animation: 'jarvisScan 4s ease-in-out infinite',
-        background: `linear-gradient(90deg, transparent 0%, rgba(${glowRgb},0.08) 50%, transparent 100%)`,
-        borderRadius: '50%',
-      }} />
-
-      {/* Sound wave arcs when speaking */}
+      {/* Speaking arcs */}
       {isSpeaking && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          {[1.2, 1.5, 1.8].map((r, i) => (
-            <div key={i} className="absolute rounded-full" style={{
-              width: `${r * 50}%`, height: `${r * 50}%`,
-              border: '1px solid rgba(251,146,60,0.3)',
-              animation: `jarvisRingExpand 1.5s ease-out ${i * 0.3}s infinite`,
-            }} />
-          ))}
+        <div className="absolute inset-[10%] flex items-center justify-center">
+          <div className="absolute rounded-full" style={{
+            inset: '0%',
+            border: '1px solid rgba(251,146,60,0.3)',
+            clipPath: 'polygon(50% 0%, 100% 0%, 100% 100%, 50% 100%)',
+            animation: 'jarvisSpin 3s linear infinite',
+          }} />
+          <div className="absolute rounded-full" style={{
+            inset: '10%',
+            border: '1px solid rgba(251,146,60,0.15)',
+            clipPath: 'polygon(0% 0%, 50% 0%, 50% 100%, 0% 100%)',
+            animation: 'jarvisSpinRev 4s linear infinite',
+          }} />
         </div>
       )}
 
-      {/* Status indicator */}
+      {/* Data stream arc */}
+      <div className="absolute" style={{
+        top: '15%', left: '50%', width: '40%', height: '1px',
+        background: `linear-gradient(90deg, transparent, rgba(${glowRgb},0.4), transparent)`,
+        animation: 'jarvisData 2s ease-in-out infinite',
+        transform: 'rotate(-30deg)',
+        transformOrigin: 'left center',
+      }} />
+
+      {/* Core center */}
+      <div className="absolute rounded-full" style={{
+        width: '14%', height: '14%',
+        background: `radial-gradient(circle, rgba(${glowRgb},1) 0%, rgba(${glowRgb},0.6) 30%, rgba(${glowRgb},0.2) 60%, transparent 100%)`,
+        boxShadow: `0 0 20px rgba(${glowRgb},0.8), 0 0 40px rgba(${glowRgb},0.3)`,
+      }} />
+
+      {/* Status dot */}
       <div className="absolute -top-0.5 -right-0.5 w-[7px] h-[7px] rounded-full border border-[#0d1117]" style={{
-        background: isListening ? '#4ade80' : isSpeaking ? '#fb923c' : '#22d3ee',
-        boxShadow: `0 0 6px rgba(${glowRgb},0.7)`,
+        background: isListening ? '#4ade80' : isSpeaking ? '#fb923c' : '#06b6d4',
+        boxShadow: `0 0 6px rgba(${glowRgb},0.8)`,
       }} />
     </div>
   );

@@ -749,7 +749,7 @@ export function FloatingAI() {
             ref={buttonRef}
             className="fixed z-[60] cursor-pointer group"
             style={{
-              right: posOverrides.right !== undefined ? `${posOverrides.right}rem` : (isMobile ? '1rem' : '2rem'),
+              left: posOverrides.right !== undefined ? `${posOverrides.right}rem` : (isMobile ? '1rem' : '2rem'),
               bottom: posOverrides.bottom !== undefined ? `${posOverrides.bottom}rem` : (isMobile ? '1rem' : '2rem'),
               filter: 'drop-shadow(0 8px 16px rgba(6, 182, 212, 0.3))',
             }}
@@ -778,7 +778,7 @@ export function FloatingAI() {
           {/* Chat Panel - Premium Design */}
           {isChatOpen && (
             <div
-              className="fixed z-[70] bottom-32 right-4 md:right-6 w-[calc(100vw-2rem)] md:w-96 max-h-[85vh] bg-gradient-to-b from-[#0d1117] to-[#161b22] border border-cyan-500/20 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+              className="fixed z-[70] bottom-32 left-4 md:left-6 w-[calc(100vw-2rem)] md:w-96 max-h-[85vh] bg-gradient-to-b from-[#0d1117] to-[#161b22] border border-cyan-500/20 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
