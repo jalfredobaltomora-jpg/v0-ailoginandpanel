@@ -502,6 +502,12 @@ export function EVARobotComponent(props: EVADesignProps) {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
+  const isSpeakingRef = useRef(isSpeaking);
+  const isListeningRef = useRef(isListening);
+  const expressionRef = useRef(expression);
+  isSpeakingRef.current = isSpeaking;
+  isListeningRef.current = isListening;
+  expressionRef.current = expression;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -515,11 +521,6 @@ export function EVARobotComponent(props: EVADesignProps) {
     canvas.height = H;
     const cx = W / 2, cy = H / 2;
     const R = Math.min(W, H) * 0.42;
-
-    const glowRgb = isListening ? '52,211,153'
-      : isSpeaking ? '251,146,60'
-      : expression === 'thinking' ? '167,139,250'
-      : '6,182,212';
 
     let time = 0;
     const particles: { angle: number; speed: number; radius: number; size: number; phase: number }[] = [];
@@ -535,8 +536,16 @@ export function EVARobotComponent(props: EVADesignProps) {
     }
 
     const render = () => {
+      const speaking = isSpeakingRef.current;
+      const listening = isListeningRef.current;
+      const expr = expressionRef.current;
       time += 0.02;
       ctx.clearRect(0, 0, W, H);
+
+      const glowRgb = listening ? '52,211,153'
+        : speaking ? '251,146,60'
+        : expr === 'thinking' ? '167,139,250'
+        : '6,182,212';
 
       // ─── Outer thin ring with gap ───
       const startA = -Math.PI / 2;
@@ -586,10 +595,10 @@ export function EVARobotComponent(props: EVADesignProps) {
       }
 
       // ─── Data particles flowing along arcs ───
-      const speechIntensity = isSpeaking ? 1 + Math.sin(time * 4) * 0.4 : 1;
-      const listenIntensity = isListening ? 1.3 : 1;
+      const speechIntensity = speaking ? 1 + Math.sin(time * 4) * 0.4 : 1;
+      const listenIntensity = listening ? 1.3 : 1;
 
-      particles.forEach((p, i) => {
+      particles.forEach((p) => {
         p.angle += p.speed * 0.02 * speechIntensity * listenIntensity;
         const x = cx + Math.cos(p.angle) * p.radius;
         const y = cy + Math.sin(p.angle) * p.radius;
@@ -601,7 +610,7 @@ export function EVARobotComponent(props: EVADesignProps) {
       });
 
       // ─── Data stream arcs when speaking ───
-      if (isSpeaking) {
+      if (speaking) {
         for (let i = 0; i < 3; i++) {
           const sweep = Math.PI * 0.4;
           const offset = time * 0.5 + i * 2.1;
@@ -618,7 +627,7 @@ export function EVARobotComponent(props: EVADesignProps) {
       }
 
       // ─── Expanding rings when listening ───
-      if (isListening) {
+      if (listening) {
         for (let i = 0; i < 3; i++) {
           const phase = (time * 0.8 + i * 2.1) % 3;
           const r = R * 0.4 + R * 0.6 * phase;
@@ -666,7 +675,7 @@ export function EVARobotComponent(props: EVADesignProps) {
 
     animRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animRef.current);
-  }, [expression, isSpeaking, isListening, scale]);
+  }, [scale]);
 
   return (
     <div
