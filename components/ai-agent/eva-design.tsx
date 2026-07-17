@@ -1,13 +1,12 @@
 'use client';
 
 /**
- * EVA-style Robot Design with JARVIS Capabilities
- * Inspired by EVA from WALL-E with white polycarbonate shell
- * and OLED eye visor for rich expressions
+ * JARVIS-style HUD Renderer
+ * Canvas-based holographic circular interface with data particles,
+ * scan lines, arc segments, and status indicators
  */
 
-
-
+import { useRef, useEffect } from 'react';
 export type EVAExpression = 'idle' | 'happy' | 'thinking' | 'surprised' | 'curious' | 'concerned' | 'scanning' | 'processing';
 
 interface EVADesignProps {
@@ -501,161 +500,186 @@ export function EVARobotComponent(props: EVADesignProps) {
     interactive = true,
   } = props;
 
-  const size = Math.round(80 * scale);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animRef = useRef<number>(0);
 
-  const glowRgb = isListening ? '52,211,153'
-    : isSpeaking ? '251,146,60'
-    : expression === 'thinking' ? '167,139,250'
-    : expression === 'happy' ? '52,211,153'
-    : expression === 'surprised' ? '250,204,21'
-    : '6,182,212';
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-  const glowStr = isListening ? '52,211,153'
-    : isSpeaking ? '251,146,60'
-    : expression === 'thinking' ? '167,139,250'
-    : '6,182,212';
+    const W = 130 * scale;
+    const H = 130 * scale;
+    canvas.width = W;
+    canvas.height = H;
+    const cx = W / 2, cy = H / 2;
+    const R = Math.min(W, H) * 0.42;
+
+    const glowRgb = isListening ? '52,211,153'
+      : isSpeaking ? '251,146,60'
+      : expression === 'thinking' ? '167,139,250'
+      : '6,182,212';
+
+    let time = 0;
+    const particles: { angle: number; speed: number; radius: number; size: number; phase: number }[] = [];
+
+    for (let i = 0; i < 20; i++) {
+      particles.push({
+        angle: Math.random() * Math.PI * 2,
+        speed: (0.3 + Math.random() * 0.7) * (Math.random() > 0.5 ? 1 : -1),
+        radius: R * (0.5 + Math.random() * 0.5),
+        size: 1 + Math.random() * 2,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+
+    const render = () => {
+      time += 0.02;
+      ctx.clearRect(0, 0, W, H);
+
+      // ─── Outer thin ring with gap ───
+      const startA = -Math.PI / 2;
+      const endA = startA + Math.PI * 1.6;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, startA + Math.sin(time * 0.3) * 0.05, endA + Math.sin(time * 0.3 + 1) * 0.05);
+      ctx.strokeStyle = `rgba(${glowRgb},0.3)`;
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+
+      // ─── Second arc ───
+      ctx.beginPath();
+      ctx.arc(cx, cy, R * 0.82, startA + 0.3 + Math.sin(time * 0.4 + 2) * 0.1, endA - 0.3 + Math.sin(time * 0.4) * 0.1);
+      ctx.strokeStyle = `rgba(${glowRgb},0.2)`;
+      ctx.lineWidth = 0.6;
+      ctx.stroke();
+
+      // ─── Third arc (inner) ───
+      ctx.beginPath();
+      ctx.arc(cx, cy, R * 0.65, startA + 0.8 + Math.sin(time * 0.5 + 1) * 0.08, endA - 0.6 + Math.sin(time * 0.5) * 0.08);
+      ctx.strokeStyle = `rgba(${glowRgb},0.25)`;
+      ctx.lineWidth = 0.7;
+      ctx.stroke();
+
+      // ─── Scan line ───
+      const scanAngle = time * 0.8;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(scanAngle) * R * 1.1, cy + Math.sin(scanAngle) * R * 1.1);
+      ctx.strokeStyle = `rgba(${glowRgb},${0.15 + Math.sin(time * 2) * 0.05})`;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+
+      // ─── Tick marks around perimeter ───
+      for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * Math.PI * 2;
+        const len = i % 4 === 0 ? 5 : 3;
+        const inner = R + 2;
+        const outer = R + 2 + len;
+        const alpha = i % 4 === 0 ? 0.5 : 0.2;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+        ctx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
+        ctx.strokeStyle = `rgba(${glowRgb},${alpha})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+
+      // ─── Data particles flowing along arcs ───
+      const speechIntensity = isSpeaking ? 1 + Math.sin(time * 4) * 0.4 : 1;
+      const listenIntensity = isListening ? 1.3 : 1;
+
+      particles.forEach((p, i) => {
+        p.angle += p.speed * 0.02 * speechIntensity * listenIntensity;
+        const x = cx + Math.cos(p.angle) * p.radius;
+        const y = cy + Math.sin(p.angle) * p.radius;
+        const brightness = 0.3 + Math.sin(time * 2 + p.phase) * 0.2;
+        ctx.beginPath();
+        ctx.arc(x, y, p.size * (0.5 + Math.sin(time + p.phase) * 0.3), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${glowRgb},${brightness * speechIntensity})`;
+        ctx.fill();
+      });
+
+      // ─── Data stream arcs when speaking ───
+      if (isSpeaking) {
+        for (let i = 0; i < 3; i++) {
+          const sweep = Math.PI * 0.4;
+          const offset = time * 0.5 + i * 2.1;
+          const r = R * (0.72 + i * 0.1);
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, offset, offset + sweep);
+          ctx.strokeStyle = `rgba(251,146,60,${0.3 + Math.sin(time * 3 + i) * 0.15})`;
+          ctx.lineWidth = 1.2;
+          ctx.shadowColor = `rgba(251,146,60,0.3)`;
+          ctx.shadowBlur = 6;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
+      }
+
+      // ─── Expanding rings when listening ───
+      if (isListening) {
+        for (let i = 0; i < 3; i++) {
+          const phase = (time * 0.8 + i * 2.1) % 3;
+          const r = R * 0.4 + R * 0.6 * phase;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(52,211,153,${(1 - phase) * 0.3})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+
+      // ─── Center glow ───
+      const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.15);
+      coreGrad.addColorStop(0, `rgba(${glowRgb},${0.8 * speechIntensity})`);
+      coreGrad.addColorStop(0.3, `rgba(${glowRgb},${0.3 * speechIntensity})`);
+      coreGrad.addColorStop(0.7, `rgba(${glowRgb},0.1)`);
+      coreGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = coreGrad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R * 0.15, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ─── Center dot ───
+      ctx.shadowColor = `rgba(${glowRgb},0.6)`;
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${0.9 * speechIntensity})`;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // ─── Data node markers around the edge ───
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2 + time * 0.1;
+        const x = cx + Math.cos(a) * (R + 6);
+        const y = cy + Math.sin(a) * (R + 6);
+        ctx.beginPath();
+        ctx.arc(x, y, 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${glowRgb},${0.4 + Math.sin(time + i) * 0.2})`;
+        ctx.fill();
+      }
+
+      animRef.current = requestAnimationFrame(render);
+    };
+
+    animRef.current = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(animRef.current);
+  }, [expression, isSpeaking, isListening, scale]);
 
   return (
     <div
-      className={`relative flex items-center justify-center ${interactive ? 'cursor-pointer hover:scale-110 transition-transform' : ''}`}
-      style={{ width: size, height: size }}
+      className={`relative ${interactive ? 'cursor-pointer hover:scale-110 transition-transform' : ''}`}
+      style={{ width: `${130 * scale}px`, height: `${130 * scale}px` }}
     >
-      <style>{`
-@keyframes jarvisSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-@keyframes jarvisSpinRev { 0% { transform: rotate(360deg); } 100% { transform: rotate(0deg); } }
-@keyframes jarvisPulse { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.03); } }
-@keyframes jarvisWave { 0% { transform: scale(0.3); opacity: 0.8; } 100% { transform: scale(1.6); opacity: 0; } }
-@keyframes jarvisData { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-`}</style>
-
-      {/* JARVIS-style concentric segmented rings */}
-      {/* Outermost ring */}
-      <div className="absolute inset-0 rounded-full" style={{
-        border: `1.5px solid rgba(${glowRgb},0.25)`,
-        animation: 'jarvisSpin 20s linear infinite',
-      }}>
-        <div className="absolute w-[4px] h-[4px] rounded-full" style={{
-          top: '-2px', left: '50%', marginLeft: '-2px',
-          background: `rgba(${glowRgb},0.8)`,
-          boxShadow: `0 0 6px rgba(${glowRgb},0.9)`,
-        }} />
-        <div className="absolute w-[3px] h-[3px] rounded-full" style={{
-          bottom: '-1.5px', left: '30%',
-          background: `rgba(${glowRgb},0.5)`,
-        }} />
-      </div>
-
-      {/* Second ring - dashed style */}
-      <div className="absolute inset-[8%] rounded-full" style={{
-        border: `1px solid rgba(${glowRgb},0.2)`,
-        animation: 'jarvisSpinRev 15s linear infinite',
-      }}>
-        <div className="absolute w-[3px] h-[3px] rounded-full" style={{
-          top: '-1.5px', left: '50%', marginLeft: '-1.5px',
-          background: `rgba(${glowRgb},0.7)`,
-          boxShadow: `0 0 4px rgba(${glowRgb},0.7)`,
-        }} />
-      </div>
-
-      {/* Third ring - thin */}
-      <div className="absolute inset-[18%] rounded-full" style={{
-        border: `0.5px solid rgba(${glowRgb},0.3)`,
-        animation: 'jarvisSpin 12s linear infinite',
-      }} />
-
-      {/* Fourth ring - innermost */}
-      <div className="absolute inset-[32%] rounded-full" style={{
-        border: `1px solid rgba(${glowRgb},0.25)`,
-        animation: 'jarvisSpinRev 10s linear infinite',
-      }} />
-
-      {/* Segments / tick marks around the main ring */}
-      <div className="absolute inset-[5%] rounded-full" style={{ animation: 'jarvisSpin 8s linear infinite' }}>
-        {Array.from({ length: 12 }).map((_, i) => (
-          <div key={i} className="absolute" style={{
-            top: '50%', left: '50%',
-            transform: `rotate(${i * 30}deg) translateY(-50%)`,
-            width: '1px', height: '6px',
-            background: `rgba(${glowRgb},${i % 3 === 0 ? 0.6 : 0.25})`,
-            transformOrigin: 'center center',
-            marginTop: '-3px',
-          }} />
-        ))}
-      </div>
-
-      {/* Hexagonal overlay */}
-      <div className="absolute inset-[15%]" style={{
-        border: `0.5px solid rgba(${glowRgb},0.12)`,
-        clipPath: 'polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)',
-        animation: 'jarvisSpin 25s linear infinite reverse',
-      }} />
-
-      {/* Pulsing glow ring */}
-      <div className="absolute inset-[5%] rounded-full" style={{
-        border: `1px solid rgba(${glowRgb},0.15)`,
-        boxShadow: `0 0 15px rgba(${glowRgb},0.15), inset 0 0 15px rgba(${glowRgb},0.05)`,
-        animation: 'jarvisPulse 3s ease-in-out infinite',
-      }} />
-
-      {/* Expanding wave rings when listening (sonar effect) */}
-      {isListening && (
-        <>
-          <div className="absolute rounded-full" style={{
-            inset: '10%',
-            border: '1px solid rgba(52,211,153,0.4)',
-            animation: 'jarvisWave 2s ease-out infinite',
-          }} />
-          <div className="absolute rounded-full" style={{
-            inset: '10%',
-            border: '1px solid rgba(52,211,153,0.25)',
-            animation: 'jarvisWave 2s ease-out 0.6s infinite',
-          }} />
-          <div className="absolute rounded-full" style={{
-            inset: '10%',
-            border: '1px solid rgba(52,211,153,0.15)',
-            animation: 'jarvisWave 2s ease-out 1.2s infinite',
-          }} />
-        </>
-      )}
-
-      {/* Speaking arcs */}
-      {isSpeaking && (
-        <div className="absolute inset-[10%] flex items-center justify-center">
-          <div className="absolute rounded-full" style={{
-            inset: '0%',
-            border: '1px solid rgba(251,146,60,0.3)',
-            clipPath: 'polygon(50% 0%, 100% 0%, 100% 100%, 50% 100%)',
-            animation: 'jarvisSpin 3s linear infinite',
-          }} />
-          <div className="absolute rounded-full" style={{
-            inset: '10%',
-            border: '1px solid rgba(251,146,60,0.15)',
-            clipPath: 'polygon(0% 0%, 50% 0%, 50% 100%, 0% 100%)',
-            animation: 'jarvisSpinRev 4s linear infinite',
-          }} />
-        </div>
-      )}
-
-      {/* Data stream arc */}
-      <div className="absolute" style={{
-        top: '15%', left: '50%', width: '40%', height: '1px',
-        background: `linear-gradient(90deg, transparent, rgba(${glowRgb},0.4), transparent)`,
-        animation: 'jarvisData 2s ease-in-out infinite',
-        transform: 'rotate(-30deg)',
-        transformOrigin: 'left center',
-      }} />
-
-      {/* Core center */}
-      <div className="absolute rounded-full" style={{
-        width: '14%', height: '14%',
-        background: `radial-gradient(circle, rgba(${glowRgb},1) 0%, rgba(${glowRgb},0.6) 30%, rgba(${glowRgb},0.2) 60%, transparent 100%)`,
-        boxShadow: `0 0 20px rgba(${glowRgb},0.8), 0 0 40px rgba(${glowRgb},0.3)`,
-      }} />
-
-      {/* Status dot */}
+      <canvas
+        ref={canvasRef}
+        style={{ width: '100%', height: '100%' }}
+      />
       <div className="absolute -top-0.5 -right-0.5 w-[7px] h-[7px] rounded-full border border-[#0d1117]" style={{
         background: isListening ? '#4ade80' : isSpeaking ? '#fb923c' : '#06b6d4',
-        boxShadow: `0 0 6px rgba(${glowRgb},0.8)`,
+        boxShadow: `0 0 6px rgba(${isListening ? '52,211,153' : isSpeaking ? '251,146,60' : '6,182,212'},0.8)`,
       }} />
     </div>
   );
