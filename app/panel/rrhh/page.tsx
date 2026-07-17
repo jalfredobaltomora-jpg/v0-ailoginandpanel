@@ -578,28 +578,28 @@ export default function RRHHPage() {
             {/* Section: Todos los Cumpleañeros */}
             <Card className="border-primary/20 bg-card/95 flex-1 flex flex-col min-h-0">
               <CardHeader className="border-b border-border flex-shrink-0">
-                <CardTitle className="flex items-center gap-2 text-primary">
-                  <CalendarDays className="h-5 w-5" />
-                  Todos los Cumpleañeros del Año
-                </CardTitle>
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <CardTitle className="flex items-center gap-2 text-primary">
+                    <CalendarDays className="h-5 w-5" />
+                    Todos los Cumpleañeros del Año
+                  </CardTitle>
+                  <div className="relative w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Buscar cumpleañero..."
+                      value={birthdaySearch}
+                      onChange={(e) => setBirthdaySearch(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  </div>
+                </div>
               </CardHeader>
-              <div className="p-6 flex-shrink-0">
+              <CardContent className="p-6 flex-1 overflow-y-auto min-h-0">
                 <p className="mb-4 text-sm text-muted-foreground flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-primary" />
                   Click para ver información del trabajador
                 </p>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Buscar cumpleañero..."
-                    value={birthdaySearch}
-                    onChange={(e) => setBirthdaySearch(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  />
-                </div>
-              </div>
-              <CardContent className="px-6 pb-6 flex-1 overflow-y-auto min-h-0 pt-0">
                 {loading ? (
                   <div className="py-8 text-center text-muted-foreground">Cargando...</div>
                 ) : filteredBirthdays.length === 0 ? (
