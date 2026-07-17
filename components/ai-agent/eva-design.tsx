@@ -6,7 +6,7 @@
  * and OLED eye visor for rich expressions
  */
 
-import { useCallback, useRef, useEffect, useState } from 'react';
+
 
 export type EVAExpression = 'idle' | 'happy' | 'thinking' | 'surprised' | 'curious' | 'concerned' | 'scanning' | 'processing';
 
@@ -499,74 +499,76 @@ export function EVARobotComponent(props: EVADesignProps) {
     isListening = false,
     scale = 1,
     interactive = true,
-    onExpressionChange,
   } = props;
 
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animFrameRef = useRef<number>(0);
-  const [canvasFailed, setCanvasFailed] = useState(false);
+  const size = Math.round(72 * scale);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) { setCanvasFailed(true); return; }
-    const ctx = canvas.getContext('2d');
-    if (!ctx) { setCanvasFailed(true); console.error('JAB canvas: getContext failed'); return; }
+  const stateColor = isListening ? 'from-cyan-400 via-emerald-400 to-cyan-500'
+    : isSpeaking ? 'from-amber-400 via-orange-400 to-rose-500'
+    : expression === 'thinking' ? 'from-violet-400 via-purple-400 to-fuchsia-500'
+    : expression === 'happy' ? 'from-emerald-400 via-green-400 to-teal-500'
+    : expression === 'surprised' ? 'from-yellow-400 via-amber-400 to-orange-500'
+    : 'from-cyan-400 via-blue-400 to-indigo-500';
 
-    setCanvasFailed(false);
-    canvas.width = 130 * scale;
-    canvas.height = 160 * scale;
-
-    let time = 0;
-    let blinkCounter = 0;
-    let shouldBlink = false;
-
-    const render = () => {
-      try {
-        time += 0.016;
-        const w = canvas.width;
-        const h = canvas.height;
-
-        ctx.clearRect(0, 0, w, h);
-        ctx.save();
-        ctx.translate(w / 2, h / 2);
-
-        blinkCounter++;
-        if (blinkCounter > 180 + Math.random() * 120) {
-          shouldBlink = blinkCounter < 185 + Math.random() * 120;
-          if (blinkCounter > 200) blinkCounter = 0;
-        }
-
-        drawEVARobot(ctx, w, h, expression, time, shouldBlink, isListening, isSpeaking, scale);
-
-        ctx.restore();
-        animFrameRef.current = requestAnimationFrame(render);
-      } catch (e) {
-        console.error('JAB canvas render error:', e);
-        setCanvasFailed(true);
-      }
-    };
-
-    animFrameRef.current = requestAnimationFrame(render);
-
-    return () => cancelAnimationFrame(animFrameRef.current);
-  }, [expression, isSpeaking, isListening, scale]);
-
-  if (canvasFailed) {
-    return (
-      <div
-        className={`flex items-center justify-center ${interactive ? 'cursor-pointer' : ''}`}
-        style={{ width: `${130 * scale}px`, height: `${160 * scale}px` }}
-      >
-        <span className="text-4xl">🤖</span>
-      </div>
-    );
-  }
+  const glowRgb = isListening ? '52,211,153'
+    : isSpeaking ? '251,146,60'
+    : expression === 'thinking' ? '167,139,250'
+    : expression === 'happy' ? '52,211,153'
+    : expression === 'surprised' ? '250,204,21'
+    : '34,211,238';
 
   return (
-    <canvas
-      ref={canvasRef}
-      className={interactive ? 'cursor-pointer hover:scale-110 transition-transform' : ''}
-      style={{ width: `${130 * scale}px`, height: `${160 * scale}px` }}
-    />
+    <div
+      className={`relative flex items-center justify-center ${interactive ? 'cursor-pointer hover:scale-110 transition-transform' : ''}`}
+      style={{ width: size, height: size }}
+    >
+      <style>{`
+@keyframes jabOrbPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+`}</style>
+      {/* Outer glow ring */}
+      <div
+        className="absolute inset-0 rounded-full animate-pulse"
+        style={{
+          background: `radial-gradient(circle, rgba(${glowRgb},0.35) 0%, transparent 70%)`,
+        }}
+      />
+      {/* Core gradient orb */}
+      <div
+        className={`absolute inset-[12%] rounded-full bg-gradient-to-br ${stateColor}`}
+        style={{
+          boxShadow: `0 0 25px rgba(${glowRgb},0.5)`,
+          animation: 'jabOrbPulse 3s ease-in-out infinite',
+        }}
+      />
+      {/* Inner highlight (glass reflection) */}
+      <div
+        className="absolute inset-[30%] rounded-full"
+        style={{
+          background: 'radial-gradient(circle at 35% 35%, rgba(255,255,255,0.5) 0%, transparent 70%)',
+        }}
+      />
+      {/* Sound wave bars when speaking */}
+      {isSpeaking && (
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-end gap-[2px] h-3">
+          {[1,2,3,4,5].map(i => (
+            <div
+              key={i}
+              className="w-[2px] rounded-full bg-cyan-400/70 animate-wave"
+              style={{ height: '10px', animationDelay: `${i * 0.08}s` }}
+            />
+          ))}
+        </div>
+      )}
+      {/* Status indicator dot */}
+      <div
+        className={`absolute -top-0.5 -right-0.5 w-[7px] h-[7px] rounded-full border border-[#0d1117] ${
+          isListening ? 'bg-green-400' : isSpeaking ? 'bg-orange-400' : 'bg-cyan-400'
+        }`}
+        style={{ boxShadow: `0 0 6px rgba(${glowRgb},0.7)` }}
+      />
+    </div>
   );
 }
