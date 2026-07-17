@@ -501,14 +501,7 @@ export function EVARobotComponent(props: EVADesignProps) {
     interactive = true,
   } = props;
 
-  const size = Math.round(72 * scale);
-
-  const stateColor = isListening ? 'from-cyan-400 via-emerald-400 to-cyan-500'
-    : isSpeaking ? 'from-amber-400 via-orange-400 to-rose-500'
-    : expression === 'thinking' ? 'from-violet-400 via-purple-400 to-fuchsia-500'
-    : expression === 'happy' ? 'from-emerald-400 via-green-400 to-teal-500'
-    : expression === 'surprised' ? 'from-yellow-400 via-amber-400 to-orange-500'
-    : 'from-cyan-400 via-blue-400 to-indigo-500';
+  const size = Math.round(80 * scale);
 
   const glowRgb = isListening ? '52,211,153'
     : isSpeaking ? '251,146,60'
@@ -523,52 +516,89 @@ export function EVARobotComponent(props: EVADesignProps) {
       style={{ width: size, height: size }}
     >
       <style>{`
-@keyframes jabOrbPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.06); }
-}
+@keyframes jarvisRotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes jarvisPulse { 0%, 100% { opacity: 0.15; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.05); } }
+@keyframes jarvisRingExpand { 0% { transform: scale(0.8); opacity: 0.6; } 100% { transform: scale(1.4); opacity: 0; } }
+@keyframes jarvisScan { 0% { transform: rotate(0deg) scaleX(1); } 50% { transform: rotate(180deg) scaleX(0.3); } 100% { transform: rotate(360deg) scaleX(1); } }
 `}</style>
-      {/* Outer glow ring */}
-      <div
-        className="absolute inset-0 rounded-full animate-pulse"
-        style={{
-          background: `radial-gradient(circle, rgba(${glowRgb},0.35) 0%, transparent 70%)`,
-        }}
-      />
-      {/* Core gradient orb */}
-      <div
-        className={`absolute inset-[12%] rounded-full bg-gradient-to-br ${stateColor}`}
-        style={{
-          boxShadow: `0 0 25px rgba(${glowRgb},0.5)`,
-          animation: 'jabOrbPulse 3s ease-in-out infinite',
-        }}
-      />
-      {/* Inner highlight (glass reflection) */}
-      <div
-        className="absolute inset-[30%] rounded-full"
-        style={{
-          background: 'radial-gradient(circle at 35% 35%, rgba(255,255,255,0.5) 0%, transparent 70%)',
-        }}
-      />
-      {/* Sound wave bars when speaking */}
+
+      {/* Expanding wave rings (listening) */}
+      {isListening && (
+        <>
+          <div className="absolute inset-0 rounded-full" style={{
+            border: '1px solid rgba(52,211,153,0.3)',
+            animation: 'jarvisRingExpand 2s ease-out infinite',
+          }} />
+          <div className="absolute inset-0 rounded-full" style={{
+            border: '1px solid rgba(52,211,153,0.2)',
+            animation: 'jarvisRingExpand 2s ease-out 0.5s infinite',
+          }} />
+          <div className="absolute inset-0 rounded-full" style={{
+            border: '1px solid rgba(52,211,153,0.15)',
+            animation: 'jarvisRingExpand 2s ease-out 1s infinite',
+          }} />
+        </>
+      )}
+
+      {/* Rotating orbital rings */}
+      <div className="absolute inset-0" style={{ animation: 'jarvisRotate 8s linear infinite' }}>
+        <div className="absolute inset-0 rounded-full" style={{
+          border: `1px solid rgba(${glowRgb},0.2)`,
+          clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+        }} />
+      </div>
+      <div className="absolute inset-0" style={{ animation: 'jarvisRotate 12s linear infinite reverse' }}>
+        <div className="absolute inset-0 rounded-full" style={{
+          border: `1px solid rgba(${glowRgb},0.15)`,
+          clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+        }} />
+      </div>
+
+      {/* Main holographic ring */}
+      <div className="absolute inset-[5%] rounded-full" style={{
+        border: `1.5px solid rgba(${glowRgb},0.35)`,
+        boxShadow: `0 0 12px rgba(${glowRgb},0.2), inset 0 0 12px rgba(${glowRgb},0.1)`,
+        animation: `jarvisPulse ${isListening ? '1.5' : '3'}s ease-in-out infinite`,
+      }} />
+
+      {/* Inner ring */}
+      <div className="absolute inset-[20%] rounded-full" style={{
+        border: `1px solid rgba(${glowRgb},0.25)`,
+        boxShadow: `0 0 8px rgba(${glowRgb},0.15), inset 0 0 8px rgba(${glowRgb},0.08)`,
+      }} />
+
+      {/* Core center dot */}
+      <div className="absolute rounded-full" style={{
+        width: '20%', height: '20%',
+        background: `radial-gradient(circle, rgba(${glowRgb},0.8) 0%, rgba(${glowRgb},0.2) 50%, transparent 100%)`,
+        boxShadow: `0 0 15px rgba(${glowRgb},0.5)`,
+      }} />
+
+      {/* Scanning line */}
+      <div className="absolute inset-0" style={{
+        animation: 'jarvisScan 4s ease-in-out infinite',
+        background: `linear-gradient(90deg, transparent 0%, rgba(${glowRgb},0.08) 50%, transparent 100%)`,
+        borderRadius: '50%',
+      }} />
+
+      {/* Sound wave arcs when speaking */}
       {isSpeaking && (
-        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-end gap-[2px] h-3">
-          {[1,2,3,4,5].map(i => (
-            <div
-              key={i}
-              className="w-[2px] rounded-full bg-cyan-400/70 animate-wave"
-              style={{ height: '10px', animationDelay: `${i * 0.08}s` }}
-            />
+        <div className="absolute inset-0 flex items-center justify-center">
+          {[1.2, 1.5, 1.8].map((r, i) => (
+            <div key={i} className="absolute rounded-full" style={{
+              width: `${r * 50}%`, height: `${r * 50}%`,
+              border: '1px solid rgba(251,146,60,0.3)',
+              animation: `jarvisRingExpand 1.5s ease-out ${i * 0.3}s infinite`,
+            }} />
           ))}
         </div>
       )}
-      {/* Status indicator dot */}
-      <div
-        className={`absolute -top-0.5 -right-0.5 w-[7px] h-[7px] rounded-full border border-[#0d1117] ${
-          isListening ? 'bg-green-400' : isSpeaking ? 'bg-orange-400' : 'bg-cyan-400'
-        }`}
-        style={{ boxShadow: `0 0 6px rgba(${glowRgb},0.7)` }}
-      />
+
+      {/* Status indicator */}
+      <div className="absolute -top-0.5 -right-0.5 w-[7px] h-[7px] rounded-full border border-[#0d1117]" style={{
+        background: isListening ? '#4ade80' : isSpeaking ? '#fb923c' : '#22d3ee',
+        boxShadow: `0 0 6px rgba(${glowRgb},0.7)`,
+      }} />
     </div>
   );
 }
