@@ -21,6 +21,7 @@ const BirthdayCardModal = dynamic(() => import('@/components/rrhh/birthday-card-
 const AsistenciaView = dynamic(() => import('@/components/rrhh/asistencia-view').then(m => m.AsistenciaView), { ssr: false });
 const ClockIn = dynamic(() => import('@/components/rrhh/clock-in').then(m => m.ClockIn), { ssr: false });
 const PermisosManager = dynamic(() => import('@/components/rrhh/permisos-manager').then(m => m.PermisosManager), { ssr: false });
+const BirthdayPoster = dynamic(() => import('@/components/rrhh/birthday-poster').then(m => m.BirthdayPoster), { ssr: false });
 
 interface TileProps {
   title: string;
@@ -583,15 +584,18 @@ export default function RRHHPage() {
                     <CalendarDays className="h-5 w-5" />
                     Todos los Cumpleañeros del Año
                   </CardTitle>
-                  <div className="relative w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input
-                      type="text"
-                      placeholder="Buscar cumpleañero..."
-                      value={birthdaySearch}
-                      onChange={(e) => setBirthdaySearch(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
+                  <div className="flex items-center gap-3">
+                    <BirthdayPoster empleados={empleados} />
+                    <div className="relative w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <input
+                        type="text"
+                        placeholder="Buscar cumpleañero..."
+                        value={birthdaySearch}
+                        onChange={(e) => setBirthdaySearch(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
                   </div>
                 </div>
               </CardHeader>
