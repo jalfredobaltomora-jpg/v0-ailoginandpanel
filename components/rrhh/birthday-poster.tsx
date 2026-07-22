@@ -498,17 +498,17 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
   const generate = useCallback(async () => {
     setGenerating(true);
     try {
-      const MARGIN = 140;
-      const COLS = 4;
-      const COL_GAP = 50;
+      const MARGIN = 100;
+      const COLS = 5;
+      const COL_GAP = 25;
       const CONTENT_W = PW - MARGIN * 2;
       const CARD_W = (CONTENT_W - COL_GAP * (COLS - 1)) / COLS;
-      const CARD_H = 200;
-      const CARD_GAP_Y = 30;
-      const MONTH_HEADER_H = 150;
-      const SECTION_GAP = 50;
-      const HEADER_H = 160;
-      const FOOTER_H = 120;
+      const CARD_H = 155;
+      const CARD_GAP_Y = 12;
+      const MONTH_HEADER_H = 100;
+      const SECTION_GAP = 25;
+      const HEADER_H = 130;
+      const FOOTER_H = 100;
 
       const validEmps = empleados.filter(e => e.fechaNac && e.activo !== false);
 
@@ -606,36 +606,36 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       // ─── Compact header ───
       // Top line
       ctx.strokeStyle = 'rgba(255,107,157,0.3)';
-      ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.moveTo(MARGIN, 35); ctx.lineTo(PW - MARGIN, 35); ctx.stroke();
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(MARGIN, 25); ctx.lineTo(PW - MARGIN, 25); ctx.stroke();
 
       ctx.strokeStyle = 'rgba(196,77,255,0.15)';
       ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(MARGIN, 48); ctx.lineTo(PW - MARGIN, 48); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(MARGIN, 36); ctx.lineTo(PW - MARGIN, 36); ctx.stroke();
 
       // Compact title
       ctx.textAlign = 'center';
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 72px "Segoe UI", Arial, sans-serif';
+      ctx.font = 'bold 56px "Segoe UI", Arial, sans-serif';
       ctx.shadowColor = 'rgba(255,107,157,0.4)';
-      ctx.shadowBlur = 30;
-      ctx.fillText('CUMPLEAÑEROS', PW / 2, 105);
+      ctx.shadowBlur = 25;
+      ctx.fillText('CUMPLEAÑEROS', PW / 2, 80);
       ctx.shadowBlur = 0;
 
       // Year subtle
       const year = new Date().getFullYear();
-      ctx.font = 'bold 40px "Segoe UI", Arial, sans-serif';
+      ctx.font = 'bold 32px "Segoe UI", Arial, sans-serif';
       ctx.fillStyle = 'rgba(255,107,157,0.35)';
-      ctx.fillText(String(year), PW / 2, 145);
+      ctx.fillText(String(year), PW / 2, 115);
 
       // Bottom header lines
       ctx.strokeStyle = 'rgba(196,77,255,0.12)';
       ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(MARGIN, HEADER_H - 12); ctx.lineTo(PW - MARGIN, HEADER_H - 12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(MARGIN, HEADER_H - 8); ctx.lineTo(PW - MARGIN, HEADER_H - 8); ctx.stroke();
 
       ctx.strokeStyle = 'rgba(255,107,157,0.3)';
-      ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.moveTo(MARGIN, HEADER_H - 2); ctx.lineTo(PW - MARGIN, HEADER_H - 2); ctx.stroke();
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(MARGIN, HEADER_H - 1); ctx.lineTo(PW - MARGIN, HEADER_H - 1); ctx.stroke();
 
       ctx.textAlign = 'left';
 
@@ -680,23 +680,23 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
 
         // Month name (full, no abbreviation)
         ctx.fillStyle = mc;
-        ctx.font = 'bold 72px "Segoe UI", Arial, sans-serif';
+        ctx.font = 'bold 52px "Segoe UI", Arial, sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText(MONTHS[mi], MARGIN + 30, yPos + 88);
+        ctx.fillText(MONTHS[mi], MARGIN + 25, yPos + 60);
 
         // Employee count
         ctx.fillStyle = `${mc}80`;
-        ctx.font = '30px "Segoe UI", Arial, sans-serif';
+        ctx.font = '24px "Segoe UI", Arial, sans-serif';
         ctx.fillText(
           `${group.length} cumpleañero${group.length > 1 ? 's' : ''}`,
-          MARGIN + 30, yPos + 125
+          MARGIN + 25, yPos + 90
         );
 
         // Decorative dots
         ctx.fillStyle = `${mc}30`;
         for (let d = 0; d < 4; d++) {
           ctx.beginPath();
-          ctx.arc(PW - MARGIN - 40 - d * 35, yPos + 65, 6, 0, Math.PI * 2);
+          ctx.arc(PW - MARGIN - 30 - d * 28, yPos + 50, 5, 0, Math.PI * 2);
           ctx.fill();
         }
 
@@ -716,13 +716,13 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
           cardGrad.addColorStop(0, 'rgba(18,10,40,0.88)');
           cardGrad.addColorStop(1, 'rgba(10,6,25,0.82)');
           ctx.fillStyle = cardGrad;
-          roundRect(ctx, x, y, CARD_W, CARD_H, 14);
+          roundRect(ctx, x, y, CARD_W, CARD_H, 10);
           ctx.fill();
 
           // Card border
           ctx.strokeStyle = isToday ? 'rgba(255,171,64,0.4)' : `${mc}25`;
           ctx.lineWidth = isToday ? 2.5 : 1.5;
-          roundRect(ctx, x, y, CARD_W, CARD_H, 14);
+          roundRect(ctx, x, y, CARD_W, CARD_H, 10);
           ctx.stroke();
 
           // Left accent
@@ -731,8 +731,8 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
           ctx.fill();
 
           // Photo
-          const photoR = 56;
-          const photoX = x + 100;
+          const photoR = 48;
+          const photoX = x + 80;
           const photoY = y + CARD_H / 2;
 
           ctx.beginPath();
@@ -762,41 +762,41 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
             ctx.fillStyle = fg;
             ctx.fill();
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 40px "Segoe UI", Arial, sans-serif';
+            ctx.font = 'bold 32px "Segoe UI", Arial, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(getInitials(emp), photoX, photoY + 14);
+            ctx.fillText(getInitials(emp), photoX, photoY + 11);
           }
           ctx.restore();
 
           // Text info
-          const textX = x + 180;
+          const textX = x + 148;
           ctx.textAlign = 'left';
 
           // Name
           ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 34px "Segoe UI", Arial, sans-serif';
-          ctx.fillText(truncate(emp.nombres || '', 24), textX, y + 78);
-          ctx.fillText(truncate(emp.apellidos || '', 24), textX, y + 120);
+          ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif';
+          ctx.fillText(truncate(emp.nombres || '', 20), textX, y + 60);
+          ctx.fillText(truncate(emp.apellidos || '', 20), textX, y + 95);
 
           // Date (no age)
           const bdate = parseDateLocal(emp.fechaNac);
           const day = bdate.getDate();
           const dateStr = `${day} de ${MONTHS[bdate.getMonth()]}`;
           ctx.fillStyle = isToday ? '#ffab40' : mc;
-          ctx.font = 'bold 30px "Segoe UI", Arial, sans-serif';
-          ctx.fillText(dateStr, textX, y + 162);
+          ctx.font = 'bold 25px "Segoe UI", Arial, sans-serif';
+          ctx.fillText(dateStr, textX, y + 132);
 
           // Today badge
           if (isToday) {
             const badgeText = '★ HOY';
-            ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
-            const bw = ctx.measureText(badgeText).width + 30;
+            ctx.font = 'bold 18px "Segoe UI", Arial, sans-serif';
+            const bw = ctx.measureText(badgeText).width + 24;
             ctx.fillStyle = '#ffab40';
-            roundRect(ctx, x + CARD_W - bw - 25, y + 15, bw, 40, 10);
+            roundRect(ctx, x + CARD_W - bw - 15, y + 10, bw, 32, 8);
             ctx.fill();
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
-            ctx.fillText(badgeText, x + CARD_W - bw / 2 - 25, y + 42);
+            ctx.fillText(badgeText, x + CARD_W - bw / 2 - 15, y + 32);
             ctx.textAlign = 'left';
           }
         });
