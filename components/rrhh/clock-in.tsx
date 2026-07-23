@@ -78,7 +78,7 @@ function generarMensajeIA(
         msg += '. Espero que hayas resuelto tu asunto pendiente.';
       }
     } else if (hour < 12) {
-      msg += ', que tengas un excelente dia de trabajo hoy';
+      msg += ', que tengas un excelente día de trabajo hoy';
     } else {
       msg += ', gracias por venir';
     }
@@ -191,7 +191,7 @@ export function ClockIn() {
       }
     } else {
       setMarca(todayMarca);
-      setMensajeIA(`Ya registraste entrada y salida el dia de hoy`);
+      setMensajeIA(`Ya registraste entrada y salida el día de hoy`);
     }
   };
 
@@ -237,7 +237,7 @@ export function ClockIn() {
               value={scannedCode}
               onChange={(e) => setScannedCode(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Escanee su carnet o ingrese el codigo del empleado..."
+              placeholder="Escanee su carnet o ingrese el código del empleado..."
               className="border-2 border-primary/30 bg-input pl-10 py-6 text-lg text-center font-mono tracking-widest"
             />
           </div>
@@ -269,9 +269,9 @@ export function ClockIn() {
                     {empleado.nombres} {empleado.apellidos}
                   </h3>
                   <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-sm text-muted-foreground">
-                    <span><strong>Codigo:</strong> {empleado.code}</span>
-                    <span><strong>Cedula:</strong> {empleado.cedula}</span>
-                    <span><strong>Area:</strong> {empleado.area}</span>
+                    <span><strong>Código:</strong> {empleado.code}</span>
+                    <span><strong>Cédula:</strong> {empleado.cedula}</span>
+                    <span><strong>Área:</strong> {empleado.area}</span>
                     <span><strong>Cargo:</strong> {empleado.cargo}</span>
                   </div>
 

@@ -187,6 +187,14 @@ export async function removeAlarmSchedule(userCode: string, date: string, type: 
 
 // ─── TIPOS ───────────────────────────────────────────────────────
 
+export interface HistorialContractual {
+  oldCode: string;
+  newCode: string;
+  oldFechaIng: string;
+  newFechaIng: string;
+  timestamp: number;
+}
+
 export interface Empleado {
   code: string;
   nombres: string;
@@ -209,6 +217,7 @@ export interface Empleado {
   firstHireDate?: string;
   firstEmployeeCode?: string;
   renewalCount?: number;
+  historialContractual?: HistorialContractual[];
 }
 
 export interface UsuarioIT {

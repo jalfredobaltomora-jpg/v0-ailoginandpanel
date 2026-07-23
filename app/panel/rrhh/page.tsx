@@ -21,6 +21,7 @@ const BirthdayCardModal = dynamic(() => import('@/components/rrhh/birthday-card-
 const AsistenciaView = dynamic(() => import('@/components/rrhh/asistencia-view').then(m => m.AsistenciaView), { ssr: false });
 const ClockIn = dynamic(() => import('@/components/rrhh/clock-in').then(m => m.ClockIn), { ssr: false });
 const PermisosManager = dynamic(() => import('@/components/rrhh/permisos-manager').then(m => m.PermisosManager), { ssr: false });
+const BirthdayPoster = dynamic(() => import('@/components/rrhh/birthday-poster').then(m => m.BirthdayPoster), { ssr: false });
 
 interface TileProps {
   title: string;
@@ -61,6 +62,8 @@ export default function RRHHPage() {
   const [isBirthdayModalOpen, setIsBirthdayModalOpen] = useState(false);
   const [infoEmpleado, setInfoEmpleado] = useState<Empleado | null>(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [marcasHoy, setMarcasHoy] = useState<Record<string, any>>({});
+  const [birthdaySearch, setBirthdaySearch] = useState('');
 
   useEffect(() => {
     const user = getStoredUser();
@@ -95,6 +98,15 @@ export default function RRHHPage() {
     return () => {
       if (unsubscribe) unsubscribe();
     };
+  }, [view]);
+
+  // Fetch today's attendance for catalog stats
+  useEffect(() => {
+    if (view !== 'catalogo') return;
+    const today = new Date().toISOString().split('T')[0];
+    import('@/lib/firebase').then(({ getMarcasDelDia }) => {
+      getMarcasDelDia(today).then(setMarcasHoy).catch(() => {});
+    });
   }, [view]);
 
   // Filter by active/inactive status and search term
@@ -184,6 +196,12 @@ export default function RRHHPage() {
       });
   };
 
+  const filteredBirthdays = birthdaySearch
+    ? getAllSortedByBirthday().filter(emp =>
+        `${emp.nombres} ${emp.apellidos}`.toLowerCase().includes(birthdaySearch.toLowerCase())
+      )
+    : getAllSortedByBirthday();
+
   const handleBirthdayClick = (emp: Empleado) => {
     setBirthdayEmpleado(emp);
     setIsBirthdayModalOpen(true);
@@ -225,7 +243,7 @@ export default function RRHHPage() {
   const handleSaved = () => {};
 
   const handleDelete = async (emp: Empleado) => {
-    if (confirm(`Esta seguro de eliminar a ${emp.nombres} ${emp.apellidos} (${emp.code})?`)) {
+    if (confirm(`Está seguro de eliminar a ${emp.nombres} ${emp.apellidos} (${emp.code})?`)) {
       const { deleteEmpleado } = await import('@/lib/firebase');
       await deleteEmpleado(emp.code);
     }
@@ -265,7 +283,7 @@ export default function RRHHPage() {
             )}
             {puedeVer(currentUser, 'rrhh_cumpleanieros') && (
               <Tile
-                title="Cumpleaneros"
+                title="Cumpleañeros"
                 subtitle="Este mes"
                 icon={<Cake className="h-8 w-8" />}
                 color="bg-gradient-to-br from-pink-500 to-pink-700"
@@ -312,8 +330,9 @@ export default function RRHHPage() {
         )}
 
         {view === 'catalogo' && (
-          <Card className="mx-auto max-w-5xl border-primary/20 bg-card/95">
-            <CardHeader className="flex-row items-center justify-between flex-wrap gap-4">
+          <div className="h-[calc(100vh-8rem)] overflow-hidden flex flex-col">
+          <Card className="w-full h-full flex flex-col border-primary/20 bg-card/95">
+            <CardHeader className="flex-row items-center justify-between flex-wrap gap-4 flex-shrink-0">
               <CardTitle className="flex items-center gap-2 text-primary">
                 <Users className="h-5 w-5" />
                 {showInactivos ? 'Catalogo de Personal Inactivos' : 'Catalogo de Personal Activo'}
@@ -348,18 +367,47 @@ export default function RRHHPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="mb-4 text-sm text-muted-foreground">
+            <CardContent className="flex-1 overflow-hidden flex flex-col">
+              <p className="mb-4 text-sm text-muted-foreground flex-shrink-0">
                 Doble click para ver detalles del empleado
               </p>
+              {!showInactivos && (
+                <div className="mb-6 flex flex-wrap items-center gap-6 flex-shrink-0">
+                  <span className="flex items-center gap-3 rounded-xl border-2 border-border bg-card px-6 py-4 shadow-sm">
+                    <Users className="h-8 w-8 text-primary" />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</span>
+                      <strong className="text-2xl font-bold text-primary">{filteredEmpleados.length}</strong>
+                    </div>
+                  </span>
+                  <span className="flex items-center gap-3 rounded-xl border-2 border-green-500/30 bg-green-500/5 px-6 py-4 shadow-sm">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/20">
+                      <span className="h-3 w-3 rounded-full bg-green-500" />
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium uppercase tracking-wide text-green-700">Presentes</span>
+                      <strong className="text-2xl font-bold text-green-600">{filteredEmpleados.filter(e => marcasHoy[e.code]).length}</strong>
+                    </div>
+                  </span>
+                  <span className="flex items-center gap-3 rounded-xl border-2 border-red-500/30 bg-red-500/5 px-6 py-4 shadow-sm">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/20">
+                      <span className="h-3 w-3 rounded-full bg-red-500" />
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium uppercase tracking-wide text-red-700">Ausentes</span>
+                      <strong className="text-2xl font-bold text-red-600">{filteredEmpleados.filter(e => !marcasHoy[e.code]).length}</strong>
+                    </div>
+                  </span>
+                </div>
+              )}
               {loading ? (
-                <div className="py-12 text-center text-muted-foreground">Cargando...</div>
+                <div className="flex-1 flex items-center justify-center text-muted-foreground">Cargando...</div>
               ) : filteredEmpleados.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground">
+                <div className="flex-1 flex items-center justify-center text-muted-foreground">
                   {showInactivos ? 'No hay empleados inactivos' : 'No hay empleados registrados'}
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="flex-1 overflow-y-auto space-y-3">
                   {filteredEmpleados.map((emp) => (
                     <div
                       key={emp.code}
@@ -382,18 +430,27 @@ export default function RRHHPage() {
                           <span className="font-medium text-foreground truncate">
                             {emp.nombres} {emp.apellidos}
                           </span>
-                          {!emp.activo && (
+                          {emp.activo !== false ? (
+                            <span className="rounded bg-green-500/15 px-2 py-0.5 text-xs text-green-400">
+                              Activo
+                            </span>
+                          ) : (
                             <span className="rounded bg-red-500/20 px-2 py-0.5 text-xs text-red-400">
                               Inactivo
                             </span>
                           )}
                         </div>
                         <div className="mt-1 text-xs text-muted-foreground">
-                          <span className="font-medium">Cedula:</span> {emp.cedula} | {' '}
+                          <span className="font-medium">Cédula:</span> {emp.cedula} | {' '}
                           <span className="font-medium">Cargo:</span> {emp.cargo} | {' '}
-                          <span className="font-medium">Area:</span> {emp.area} | {' '}
+                          <span className="font-medium">Área:</span> {emp.area} | {' '}
                           <span className="font-medium">Edad:</span> {calcEdad(emp.fechaNac)}
                           {emp.renewalCount ? ` | Renov.: ${emp.renewalCount}` : ''}
+                        </div>
+                        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{emp.sexo === 'femenino' ? '♀' : '♂'} {emp.sexo}</span>
+                          <span className="text-border">|</span>
+                          <span>Hijos: {emp.hijos ?? 0}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
@@ -422,16 +479,17 @@ export default function RRHHPage() {
               )}
             </CardContent>
           </Card>
+          </div>
         )}
 
         {view === 'cumpleaneros' && (
-          <div className="mx-auto max-w-4xl space-y-8">
-            {/* Section: Cumpleaneros del Mes */}
-            <Card className="border-pink-500/30 bg-card/95">
+          <div className="h-[calc(100vh-8rem)] overflow-hidden flex flex-col mx-auto max-w-4xl space-y-8">
+            {/* Section: Cumpleañeros del Mes */}
+            <Card className="border-pink-500/30 bg-card/95 flex-shrink-0">
               <CardHeader className="border-b border-border">
                 <CardTitle className="flex items-center gap-2 text-pink-500">
                   <Cake className="h-5 w-5" />
-                  Cumpleaneros del Mes
+                  Cumpleañeros del Mes
                   <span className="ml-2 rounded-full bg-pink-500/20 px-3 py-0.5 text-sm font-bold">
                     {new Date().toLocaleDateString('es-ES', { month: 'long' })}
                   </span>
@@ -440,7 +498,7 @@ export default function RRHHPage() {
               <CardContent className="p-6">
                 <p className="mb-6 text-sm text-muted-foreground flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-amber-500" />
-                  Click para crear una tarjeta de cumpleanos personalizada
+                  Click para crear una tarjeta de cumpleaños personalizada
                 </p>
                 
                 {loading ? (
@@ -448,7 +506,7 @@ export default function RRHHPage() {
                 ) : getBirthdayEmpleados().length === 0 ? (
                   <div className="py-8 text-center text-muted-foreground">
                     <Gift className="mx-auto h-10 w-10 mb-3 opacity-50" />
-                    No hay cumpleaneros este mes
+                    No hay cumpleañeros este mes
                   </div>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2">
@@ -500,7 +558,7 @@ export default function RRHHPage() {
                                 {formatBirthdayDate(emp.fechaNac)}
                               </span>
                               <span className="text-xs text-muted-foreground">
-                                ({calcEdad(emp.fechaNac)} anos)
+                                ({calcEdad(emp.fechaNac)} años)
                               </span>
                             </div>
                           </div>
@@ -518,34 +576,47 @@ export default function RRHHPage() {
               </CardContent>
             </Card>
 
-            {/* Section: Todos los Cumpleaneros */}
-            <Card className="border-primary/20 bg-card/95">
-              <CardHeader className="border-b border-border">
-                <CardTitle className="flex items-center gap-2 text-primary">
-                  <CalendarDays className="h-5 w-5" />
-                  Todos los Cumpleaneros del Ano
-                </CardTitle>
+            {/* Section: Todos los Cumpleañeros */}
+            <Card className="border-primary/20 bg-card/95 flex-1 flex flex-col min-h-0">
+              <CardHeader className="border-b border-border flex-shrink-0">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <CardTitle className="flex items-center gap-2 text-primary">
+                    <CalendarDays className="h-5 w-5" />
+                    Todos los Cumpleañeros del Año
+                  </CardTitle>
+                  <div className="flex items-center gap-3">
+                    <BirthdayPoster empleados={empleados} />
+                    <div className="relative w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <input
+                        type="text"
+                        placeholder="Buscar cumpleañero..."
+                        value={birthdaySearch}
+                        onChange={(e) => setBirthdaySearch(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="p-6">
-                <p className="mb-6 text-sm text-muted-foreground flex items-center gap-2">
+              <CardContent className="p-6 flex-1 overflow-y-auto min-h-0">
+                <p className="mb-4 text-sm text-muted-foreground flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-primary" />
-                  Click para ver informacion del trabajador
+                  Click para ver información del trabajador
                 </p>
-                
                 {loading ? (
                   <div className="py-8 text-center text-muted-foreground">Cargando...</div>
-                ) : getAllSortedByBirthday().length === 0 ? (
+                ) : filteredBirthdays.length === 0 ? (
                   <div className="py-8 text-center text-muted-foreground">
-                    No hay empleados registrados
+                    No se encontraron coincidencias
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {getAllSortedByBirthday().map((emp) => (
+                    {filteredBirthdays.map((emp) => (
                       <div
                         key={emp.code}
                         onClick={() => handleEmployeeInfoClick(emp)}
-                        className="flex items-center gap-4 rounded-lg border border-border bg-muted/20 p-3 hover:bg-muted/40 cursor-pointer transition-colors"
-                      >
+                        className="flex items-center gap-4 rounded-lg border border-border bg-muted/20 p-3 hover:bg-muted/40 cursor-pointer transition-colors">
                         <Avatar className="h-12 w-12 border-2 border-primary/30">
                           <AvatarImage src={emp.foto} alt={`${emp.nombres} ${emp.apellidos}`} />
                           <AvatarFallback className="bg-primary/20 text-primary text-sm">
@@ -564,7 +635,7 @@ export default function RRHHPage() {
                             }`}>
                               {formatBirthdayDate(emp.fechaNac)}
                             </span>
-                            <span>{calcEdad(emp.fechaNac)} anos</span>
+                            <span>{calcEdad(emp.fechaNac)} años</span>
                             <span>{emp.cargo}</span>
                           </div>
                         </div>
@@ -597,6 +668,7 @@ export default function RRHHPage() {
           empleado={isCreatingNew ? null : selectedEmpleado}
           onClose={handleCloseModal}
           onSaved={handleSaved}
+          currentUser={currentUser}
         />
       )}
 

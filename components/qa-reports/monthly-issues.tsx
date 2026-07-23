@@ -66,6 +66,20 @@ export function MonthlyIssues() {
   const [statusMsg, setStatusMsg] = useState('');
   const [filterYear, setFilterYear] = useState<string>('all');
   const [filterMonth, setFilterMonth] = useState<string>('all');
+  const [selectedWeek, setSelectedWeek] = useState<Record<string, number>>({});
+
+  const getFilteredData = (group: MonthGroup, key: string): FactoryRow[] => {
+    const weekNum = selectedWeek[key];
+    if (!weekNum) return editKey === key ? editData : group.factories;
+    const week = group.weeks.find(w => w.weekNumber === weekNum);
+    if (!week) return editKey === key ? editData : group.factories;
+    return week.factories.map(f => ({
+      ...f,
+      totalRate: calcularPorcentaje(f.totalFail, f.totalAudit),
+      measRate: calcularPorcentaje(f.measDef, f.measQty),
+      visRate: calcularPorcentaje(f.visDef, f.visQty),
+    }));
+  };
 
   useEffect(() => {
     const unsubscribe = onValue(ref(db, 'qa-reports/weekly-registry'), (snapshot) => {
@@ -230,13 +244,26 @@ export function MonthlyIssues() {
   };
 
   const copyMonthly = async (group: MonthGroup, key: string) => {
-    const data = editKey === key ? editData : group.factories;
-    const lines = ['Factory Buyer\tNo. Audit\tNo. Failure\tFail Rate %\tMeas Qty\tMeas Def\tMeas Rate %\tVis Qty\tVis Def\tVis Rate %'];
-    data.forEach(f => {
-      lines.push(`${f.factoryBuyer}\t${f.totalAudit}\t${f.totalFail}\t${f.totalRate}\t${f.measQty}\t${f.measDef}\t${f.measRate}\t${f.visQty}\t${f.visDef}\t${f.visRate}`);
-    });
-    const t = group.totals;
-    lines.push(`\n${t.factoryBuyer}\t${t.totalAudit}\t${t.totalFail}\t${t.totalRate}\t${t.measQty}\t${t.measDef}\t${t.measRate}\t${t.visQty}\t${t.visDef}\t${t.visRate}`);
+    const data = getFilteredData(group, key);
+    const tAudit = data.reduce((s, f) => s + f.totalAudit, 0);
+    const tFail = data.reduce((s, f) => s + f.totalFail, 0);
+    const tVisQty = data.reduce((s, f) => s + f.visQty, 0);
+    const tVisDef = data.reduce((s, f) => s + f.visDef, 0);
+    const tMeasQty = data.reduce((s, f) => s + f.measQty, 0);
+    const tMeasDef = data.reduce((s, f) => s + f.measDef, 0);
+    const tVisRate = tVisQty ? tVisDef / tVisQty : 0;
+    const tMeasRate = tMeasQty ? tMeasDef / tMeasQty : 0;
+    const tFailRate = tAudit ? tFail / tAudit : 0;
+    const calcScore = (rate: number, threshold: number) =>
+      rate > 0.9 ? "2.5" : rate > 0.7 ? "5" : rate > 0.5 ? "7.5" : rate > threshold ? "10" : "12.5";
+    const totalLine =
+      `${tAudit}\t${tFail}\t=SI.ERROR(E10/D10;0%)\t=SI(F10>0.9%;"2.5";SI(F10>0.7%;"5";SI(F10>0.5%;"7.5";SI(F10>0.3%;"10";SI(F10>=0%;"12.5")))))\t${tVisRate.toFixed(4)}\t=SI(H10>2.9%;"2.5";SI(H10>2.7%;"5";SI(H10>2.5%;"7.5";SI(H10>2.3%;"10";SI(H10>=0%;"12.5")))))\t${tMeasRate.toFixed(4)}`;
+    const lines = [totalLine, ...data.map((f, i) => {
+      const row = 11 + i;
+      const vRate = (parseNum(f.visRate.replace('%', '')) / 100).toFixed(4);
+      const mRate = (parseNum(f.measRate.replace('%', '')) / 100).toFixed(4);
+      return `${f.totalAudit}\t${f.totalFail}\t=SI.ERROR(E${row}/D${row};0%)\t=SI(F${row}>0.9%;"2.5";SI(F${row}>0.7%;"5";SI(F${row}>0.5%;"7.5";SI(F${row}>0.3%;"10";SI(F${row}>=0%;"12.5")))))\t${vRate}\t=SI(H${row}>2.9%;"2.5";SI(H${row}>2.7%;"5";SI(H${row}>2.5%;"7.5";SI(H${row}>2.3%;"10";SI(H${row}>=0%;"12.5")))))\t${mRate}`;
+    })];
     try {
       await navigator.clipboard.writeText(lines.join('\n'));
       setStatusMsg(`✅ Datos de ${group.label} copiados al portapapeles`);
@@ -289,7 +316,7 @@ export function MonthlyIssues() {
           <div>
             <CardTitle className="flex items-center gap-2 text-primary">
               <CalendarRange className="h-5 w-5" />
-              Monthly Issues
+              Incidencias Mensuales
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
               Total acumulado del mes — edición y copia al portapapeles
@@ -366,26 +393,19 @@ export function MonthlyIssues() {
             ) : filteredGroups.map((group) => {
               const key = `${group.year}-${group.month}`;
               const isEditing = editKey === key;
-              const data = isEditing ? editData : group.factories;
-              const total = isEditing
-                ? {
-                    factoryBuyer: 'Total General', buyer: '',
-                    totalAudit: editData.reduce((s, f) => s + f.totalAudit, 0),
-                    totalFail: editData.reduce((s, f) => s + f.totalFail, 0),
-                    totalRate: '',
-                    measQty: editData.reduce((s, f) => s + f.measQty, 0),
-                    measDef: editData.reduce((s, f) => s + f.measDef, 0),
-                    measRate: '',
-                    visQty: editData.reduce((s, f) => s + f.visQty, 0),
-                    visDef: editData.reduce((s, f) => s + f.visDef, 0),
-                    visRate: '',
-                  }
-                : group.totals;
-              if (isEditing) {
-                (total as any).totalRate = calcularPorcentaje(total.totalFail, total.totalAudit);
-                (total as any).measRate = calcularPorcentaje(total.measDef, total.measQty);
-                (total as any).visRate = calcularPorcentaje(total.visDef, total.visQty);
-              }
+              const data = getFilteredData(group, key);
+              const total = {
+                factoryBuyer: 'Total General', buyer: '',
+                totalAudit: data.reduce((s, f) => s + f.totalAudit, 0),
+                totalFail: data.reduce((s, f) => s + f.totalFail, 0),
+                totalRate: calcularPorcentaje(data.reduce((s, f) => s + f.totalFail, 0), data.reduce((s, f) => s + f.totalAudit, 0)),
+                measQty: data.reduce((s, f) => s + f.measQty, 0),
+                measDef: data.reduce((s, f) => s + f.measDef, 0),
+                measRate: calcularPorcentaje(data.reduce((s, f) => s + f.measDef, 0), data.reduce((s, f) => s + f.measQty, 0)),
+                visQty: data.reduce((s, f) => s + f.visQty, 0),
+                visDef: data.reduce((s, f) => s + f.visDef, 0),
+                visRate: calcularPorcentaje(data.reduce((s, f) => s + f.visDef, 0), data.reduce((s, f) => s + f.visQty, 0)),
+              };
 
               return (
                 <div key={key} className="rounded-lg border border-border bg-muted/10 overflow-hidden">
@@ -402,8 +422,30 @@ export function MonthlyIssues() {
                         <span className="ml-3 text-xs text-muted-foreground">{group.factories.length} fábricas · {group.weeks.length} semanas</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      {group.weeks.map((w, wi) => <span key={`${w.id}-${wi}`} className="rounded bg-muted/30 px-2 py-0.5">S{w.weekNumber}</span>)}
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      {group.weeks.map((w, wi) => {
+                        const isActive = selectedWeek[key] === w.weekNumber;
+                        return (
+                          <button
+                            key={`${w.id}-${wi}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedWeek(prev => ({
+                                ...prev,
+                                [key]: isActive ? 0 : w.weekNumber,
+                              }));
+                              if (isEditing) setEditKey(null);
+                            }}
+                            className={`rounded px-2 py-0.5 font-medium transition-colors ${
+                              isActive
+                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+                            }`}
+                          >
+                            S{w.weekNumber}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -435,27 +477,27 @@ export function MonthlyIssues() {
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="bg-slate-800">
-                              <th rowSpan={2} className="border-b border-r border-border px-2 py-1.5 text-left text-white sticky top-0 bg-slate-800 z-10">Factory Buyer</th>
+                              <th rowSpan={2} className="border-b border-r border-border px-2 py-1.5 text-left text-white sticky top-0 bg-slate-800 z-10">Fábrica / Comprador</th>
                               <th colSpan={3} className="border-b border-r border-border px-2 py-1.5 text-center font-semibold text-white sticky top-0 bg-slate-800 z-10">
                                 TOTAL
                               </th>
                               <th colSpan={3} className="border-b border-r border-border px-2 py-1.5 text-center font-semibold text-white sticky top-0 bg-slate-800 z-10">
-                                MEASUREMENT
+                                MEDICIÓN
                               </th>
                               <th colSpan={3} className="border-b border-border px-2 py-1.5 text-center font-semibold text-white sticky top-0 bg-slate-800 z-10">
                                 VISUAL
                               </th>
                             </tr>
                             <tr className="bg-slate-700">
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-cyan-300 sticky top-[33px] bg-slate-700 z-10">No. Audit</th>
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-cyan-300 sticky top-[33px] bg-slate-700 z-10">No. Failure</th>
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-muted-foreground sticky top-[33px] bg-slate-700 z-10">Fail Rate %</th>
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-amber-300 sticky top-[33px] bg-slate-700 z-10">Insp. Qty</th>
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-amber-300 sticky top-[33px] bg-slate-700 z-10">Def. Qty</th>
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-amber-300 sticky top-[33px] bg-slate-700 z-10">Defect Rate %</th>
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-violet-300 sticky top-[33px] bg-slate-700 z-10">Insp. Qty</th>
-                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-violet-300 sticky top-[33px] bg-slate-700 z-10">Def. Qty</th>
-                              <th className="border-b border-border px-2 py-1 text-center text-xs text-violet-300 sticky top-[33px] bg-slate-700 z-10">Defect Rate %</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-cyan-300 sticky top-[33px] bg-slate-700 z-10">No. Auditoría</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-cyan-300 sticky top-[33px] bg-slate-700 z-10">No. Fallos</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-muted-foreground sticky top-[33px] bg-slate-700 z-10">Tasa de Fallo %</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-amber-300 sticky top-[33px] bg-slate-700 z-10">Cant. Insp.</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-amber-300 sticky top-[33px] bg-slate-700 z-10">Cant. Def.</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-amber-300 sticky top-[33px] bg-slate-700 z-10">Tasa de Defecto %</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-violet-300 sticky top-[33px] bg-slate-700 z-10">Cant. Insp.</th>
+                              <th className="border-b border-r border-border px-2 py-1 text-center text-xs text-violet-300 sticky top-[33px] bg-slate-700 z-10">Cant. Def.</th>
+                              <th className="border-b border-border px-2 py-1 text-center text-xs text-violet-300 sticky top-[33px] bg-slate-700 z-10">Tasa de Defecto %</th>
                             </tr>
                           </thead>
                           <tbody>

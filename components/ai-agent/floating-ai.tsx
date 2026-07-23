@@ -17,8 +17,11 @@ import { useLang } from '@/lib/lang-context';
 import { EVARobotComponent, type EVAExpression } from './eva-design';
 import { executeJARVISCommand } from '@/lib/jarvis-commands';
 import { askAI } from '@/lib/ai-client';
+import { detectIntent } from './system-knowledge';
 import { transcribeAudio } from '@/lib/transcribe-client';
 import { useWakeWord } from '@/lib/use-wake-word';
+import { getEmpleadoByCodigo, getUserSchedule, saveUserSchedule, type UserSchedule, type Empleado } from '@/lib/firebase';
+import { getWeekNumber, getDayEndTime, getDayEndAdjusted, setStoredLunchTime, setLunchPromptWeek, getLunchPromptWeek, scheduleTodayAlarms, getStoredLunchTime, setStoredSatExitTime, setStoredSatEatCompany, setStoredSatLunchTime, setSatPromptWeek, getSatPromptWeek, scheduleSaturdayAlarms, getStoredSatExitTime, getStoredSatEatCompany } from '@/lib/alarm-engine';
 
 declare global {
   interface Window {
@@ -48,15 +51,28 @@ export function FloatingAI() {
   const { lang, toggleLang } = useLang();
   const [expression, setExpression] = useState<EVAExpression>('idle');
   const [isListening, setIsListening] = useState(false);
+  const [isMicActive, setIsMicActive] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [userName, setUserName] = useState('User');
   const [isMobile, setIsMobile] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [voiceActivated, setVoiceActivated] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const processingRef = useRef(false);
+  const sessionPromptShown = useRef(false);
+  const [userCode, setUserCode] = useState<string | null>(null);
+  const [empleado, setEmpleado] = useState<Empleado | null>(null);
+  const [schedule, setSchedule] = useState<UserSchedule | null | undefined>(undefined);
+  const [dayEndInfo, setDayEndInfo] = useState<{ base: string; label: string; offsetMin: number } | null>(null);
+  const [greetComplete, setGreetComplete] = useState(false);
+  const [awaitingLunchResponse, setAwaitingLunchResponse] = useState(false);
+  const [awaitingSatResponse, setAwaitingSatResponse] = useState(false);
+  const buttonRef = useRef<HTMLDivElement>(null);
+  const [posOverrides, setPosOverrides] = useState<{ right?: number; bottom?: number }>({});
+  const posIndexRef = useRef(0);
 
   // ─── Setup ───
   useEffect(() => {
@@ -66,16 +82,18 @@ export function FloatingAI() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Load user
+  // Load user, employee, and schedule
   useEffect(() => {
     try {
       const user = getStoredUser();
       if (user) {
-        import('@/lib/firebase').then(({ getEmpleadoByCodigo }) => {
-          getEmpleadoByCodigo(user.codigo).then((emp: any) => {
-            setUserName(emp?.nombres?.split(' ')[0] || 'User');
-          });
+        setUserCode(user.codigo);
+        getEmpleadoByCodigo(user.codigo).then((emp) => {
+          setEmpleado(emp);
+          setDayEndInfo(emp ? getDayEndAdjusted(emp) : { base: getDayEndTime(), label: `Salida ${getDayEndTime()}`, offsetMin: 10 });
+          setUserName(emp?.nombres?.split(' ')[0] || 'User');
         });
+        getUserSchedule(user.codigo).then(setSchedule);
       }
     } catch {}
   }, []);
@@ -87,8 +105,9 @@ export function FloatingAI() {
       if (saved) setMessages(JSON.parse(saved));
       const settings = localStorage.getItem(LS_SETTINGS);
       if (settings) {
-        const { sound } = JSON.parse(settings);
-        if (sound !== undefined) setSoundEnabled(sound);
+        const s = JSON.parse(settings);
+        if (s.sound !== undefined) setSoundEnabled(s.sound);
+        if (s.voice !== undefined) setVoiceActivated(s.voice);
       }
     } catch {}
   }, []);
@@ -98,8 +117,8 @@ export function FloatingAI() {
   }, [messages]);
 
   useEffect(() => {
-    localStorage.setItem(LS_SETTINGS, JSON.stringify({ sound: soundEnabled }));
-  }, [soundEnabled]);
+    localStorage.setItem(LS_SETTINGS, JSON.stringify({ sound: soundEnabled, voice: voiceActivated }));
+  }, [soundEnabled, voiceActivated]);
 
   // Auto-expression animation (idle life)
   const exprTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -119,13 +138,20 @@ export function FloatingAI() {
     return () => { if (exprTimeoutRef.current) clearTimeout(exprTimeoutRef.current); };
   }, []);
 
-  // Wake word detection (Capacitor/mobile)
-  const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+  // Wake word detection — always on when voiceActivated is true
+  const wakeSkipRef = useRef(false);
   useWakeWord({
-    enabled: isCapacitor || (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)),
+    enabled: voiceActivated,
     onWake: (text) => {
-      setIsChatOpen(true);
-      setIsVisible(true);
+      if (processingRef.current) { console.log('JAB wake: skip, processing'); return; }
+      if (wakeSkipRef.current) return;
+      if (inputText.trim()) { console.log('JAB wake: skip, user is typing'); return; }
+      wakeSkipRef.current = true;
+      setTimeout(() => { wakeSkipRef.current = false; }, 4000);
+      if (!isChatOpen) {
+        setIsChatOpen(true);
+        setIsVisible(true);
+      }
       setExpression('happy');
       processMessage(text.replace(/\bjabe?\b/i, '').trim());
     },
@@ -152,7 +178,8 @@ export function FloatingAI() {
         return;
       }
 
-      const utterance = new SpeechSynthesisUtterance(text.replace(/\bJAB\b/gi, 'Jab'));
+      const cleanText = text.replace(/\bJAB\b/gi, 'Jab').replace(/\p{Emoji}\s*/gu, '').trim();
+      const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = lang === 'es' ? 'es-CO' : 'en-US';
       utterance.rate = 1.1;
       utterance.pitch = 0.9;
@@ -177,28 +204,152 @@ export function FloatingAI() {
     [lang, soundEnabled]
   );
 
-  // Greeting
+  // Greeting & auto-show on app start
   const greetedRef = useRef(false);
+  const firstRunRef = useRef(false);
+  useEffect(() => {
+    // Check first run
+    try {
+      const val = localStorage.getItem('jab_first_run');
+      if (!val) {
+        firstRunRef.current = true;
+        localStorage.setItem('jab_first_run', 'done');
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    // Auto-show chat after app loads
+    const timer = setTimeout(() => {
+      setIsVisible(true);
+      unlockSpeech();
+    }, 1500);
+    const openTimer = setTimeout(() => {
+      setIsChatOpen(true);
+    }, 2500);
+    return () => { clearTimeout(timer); clearTimeout(openTimer); };
+  }, []);
+
   useEffect(() => {
     if (!isChatOpen) return;
     if (greetedRef.current) return;
     greetedRef.current = true;
+    setGreetComplete(true);
     const hours = new Date().getHours();
-    const greeting = hours >= 6 && hours < 12 ? (lang === 'es' ? 'Buenos días' : 'Good morning')
+    const timeGreeting = hours >= 6 && hours < 12 ? (lang === 'es' ? 'Buenos días' : 'Good morning')
       : hours >= 12 && hours < 18 ? (lang === 'es' ? 'Buenas tardes' : 'Good afternoon')
       : (lang === 'es' ? 'Buenas noches' : 'Good evening');
 
-    const intro = lang === 'es'
-      ? `${greeting} ${userName}! 👋\n\nSoy JAB, tu asistente inteligente 🤖`
-      : `${greeting} ${userName}! 👋\n\nI'm JAB, your intelligent assistant 🤖`;
+    const intro = firstRunRef.current
+      ? (lang === 'es'
+          ? `${timeGreeting} ${userName}! 👋\n\nSoy JAB, tu Asistente Técnico y Analítico del Sistema de Control Administrativo, inspirado en JARVIS de Iron Man.\n\nPuedo ayudarte con:\n• Análisis de datos y reportes\n• Navegación por el sistema\n• Búsqueda en Google\n• Diagnóstico de equipos\n• Y mucho más...\n\nSolo di "jab" y lo que necesitas para activarme por voz, o escríbeme directamente.`
+          : `${timeGreeting} ${userName}! 👋\n\nI'm JAB, your Technical Assistance and Analytical System of the Administrative Control System, inspired by JARVIS from Iron Man.\n\nI can help you with:\n• Data analysis and reports\n• System navigation\n• Google search\n• Equipment diagnostics\n• And much more...\n\nJust say "jab" followed by what you need to activate me by voice, or type directly.`)
+      : (lang === 'es'
+          ? `${timeGreeting} ${userName}! 👋\n\nSoy JAB, tu asistente inteligente 🤖`
+          : `${timeGreeting} ${userName}! 👋\n\nI'm JAB, your intelligent assistant 🤖`);
 
-    setMessages([{ role: 'assistant', content: intro, timestamp: Date.now() }]);
-    setTimeout(() => speak(intro), 300);
+    setMessages((prev) => prev.length === 0 ? [{ role: 'assistant', content: intro, timestamp: Date.now() }] : prev);
+    setTimeout(() => speak(intro), firstRunRef.current ? 500 : 300);
   }, [isChatOpen, lang, userName, speak]);
 
   const addMessage = useCallback((role: 'user' | 'assistant', content: string) => {
     setMessages((prev) => [...prev, { role, content, timestamp: Date.now() }]);
   }, []);
+
+  // ─── Lunch/Saturday prompt after greeting ───
+  useEffect(() => {
+    if (!isChatOpen) return;
+    if (!greetComplete) return;
+    if (schedule === undefined) return;
+    if (sessionPromptShown.current) return;
+    const day = new Date().getDay();
+    const week = getWeekNumber();
+    if (day === 0) return; // Sunday — never prompt
+    if (day === 6) {
+      // Saturday
+      const storedSatWeek = schedule?.satWeek || getSatPromptWeek();
+      if (storedSatWeek !== week && userCode) {
+        sessionPromptShown.current = true;
+        setAwaitingSatResponse(true);
+        const ask = lang === 'es'
+          ? '🕐 Hoy es sábado (horas extras). ¿A qué hora piensas salir? ¿Y almuerzas en la empresa si te quedas después de medio día?'
+          : '🕐 It\'s Saturday (extra hours). What time will you leave? And will you eat at the company if staying after noon?';
+        setTimeout(() => {
+          addMessage('assistant', ask);
+          speak(ask);
+        }, 3000);
+      }
+      return;
+    }
+    // Weekday (Monday-Friday): once per week
+    const storedWeek = schedule?.lunchWeek || getLunchPromptWeek();
+    const storedLunch = schedule?.lunchTime || getStoredLunchTime();
+    if ((!storedLunch || storedWeek !== week) && userCode) {
+      sessionPromptShown.current = true;
+      setAwaitingLunchResponse(true);
+      const ask = lang === 'es'
+        ? '🕐 Antes de comenzar, ¿a qué hora almuerzas esta semana?'
+        : '🕐 Before we start, what time do you have lunch this week?';
+      setTimeout(() => {
+        addMessage('assistant', ask);
+        speak(ask);
+      }, 3000);
+    }
+  }, [isChatOpen, greetComplete, schedule, lang, addMessage, speak, userCode]);
+
+  // ─── Background timer for lunch/exit reminders ───
+  useEffect(() => {
+    if (!isChatOpen) return;
+    const isSaturday = new Date().getDay() === 6;
+    if (!schedule && !getStoredLunchTime() && !isSaturday) return;
+    const lunchTime = isSaturday ? (schedule?.satLunchTime || undefined) : (schedule?.lunchTime || getStoredLunchTime());
+    const exitBase = isSaturday ? (schedule?.satExitTime || undefined) : dayEndInfo?.base;
+    const exitOffset = isSaturday ? 10 : (dayEndInfo?.offsetMin ?? 10);
+    const check = () => {
+      const now = new Date();
+      const currentMin = now.getHours() * 60 + now.getMinutes();
+      const todayStr = now.toISOString().slice(0, 10);
+      const sentKey = `jab-reminder-${todayStr}`;
+      const alreadySent = localStorage.getItem(sentKey);
+      if (lunchTime) {
+        const [lh, lm] = lunchTime.split(':').map(Number);
+        const lunchMin = lh * 60 + lm;
+        if (currentMin >= lunchMin - 10 && currentMin < lunchMin && alreadySent !== 'lunch') {
+          const msg = lang === 'es'
+            ? (isSaturday ? `🍽️ Sábado: 10 min para almuerzo (${lunchTime}).` : `🍽️ Te quedan 10 minutos para ir a almorzar (${lunchTime}).`)
+            : (isSaturday ? `🍽️ Saturday: 10 min until lunch (${lunchTime}).` : `🍽️ You have 10 minutes until lunch (${lunchTime}).`);
+          addMessage('assistant', msg);
+          speak(msg);
+          localStorage.setItem(sentKey, 'lunch');
+        }
+      }
+      if (exitBase && exitBase !== '00:00') {
+        const [eh, em] = exitBase.split(':').map(Number);
+        const exitMin = eh * 60 + em;
+        if (currentMin >= exitMin - exitOffset && currentMin < exitMin && alreadySent !== 'exit') {
+          const msg = lang === 'es'
+            ? (isSaturday ? `🚪 Sábado: 10 min para salir (${exitBase}).` : `🚪 Te quedan ${exitOffset} minutos para salir (${exitBase}).`)
+            : (isSaturday ? `🚪 Saturday: 10 min until exit (${exitBase}).` : `🚪 You have ${exitOffset} minutes until exit (${exitBase}).`);
+          addMessage('assistant', msg);
+          speak(msg);
+          localStorage.setItem(sentKey, 'exit');
+        }
+      }
+    };
+    check();
+    const interval = setInterval(check, 30000);
+    return () => clearInterval(interval);
+  }, [isChatOpen, schedule, dayEndInfo, lang, addMessage, speak]);
+
+  // Safety timeout: auto-reset processingRef and isLoading after 30s
+  useEffect(() => {
+    if (!isLoading) return;
+    const t = setTimeout(() => {
+      processingRef.current = false;
+      setIsLoading(false);
+    }, 30000);
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
   const processMessage = useCallback(
     async (text: string) => {
@@ -212,6 +363,29 @@ export function FloatingAI() {
       setIsLoading(true);
       setExpression('scanning');
 
+      // Voice activation toggle commands
+      const cmd = trimmed.toLowerCase().replace(/\bjabe?\b/gi, '').trim();
+      if (/disconnect|dejar de escuchar|desconectar|stop listening/i.test(cmd)) {
+        setVoiceActivated(false);
+        const msg = lang === 'es' ? 'Entendido. Dejo de escuchar. Di "jab reconnect" o activa la voz en ajustes para volver a activarme.' : 'Understood. I\'ll stop listening. Say "jab reconnect" or enable voice in settings to reactivate me.';
+        addMessage('assistant', msg);
+        setExpression('idle');
+        speak(msg);
+        setIsLoading(false);
+        processingRef.current = false;
+        return;
+      }
+      if (/reconnect|volver a escuchar|reconectar|listen again/i.test(cmd)) {
+        setVoiceActivated(true);
+        const msg = lang === 'es' ? 'Listo. Vuelvo a escuchar. Di "jab" para activarme.' : 'Ready. I\'m listening again. Say "jab" to wake me.';
+        addMessage('assistant', msg);
+        setExpression('happy');
+        speak(msg);
+        setIsLoading(false);
+        processingRef.current = false;
+        return;
+      }
+
       // Auto-response
       const autoResp = AUTO_RESPONSES.find(r => r.pattern.test(trimmed));
       if (autoResp) {
@@ -223,6 +397,126 @@ export function FloatingAI() {
         setIsLoading(false);
         processingRef.current = false;
         return;
+      }
+
+      // Saturday response detection
+      if (awaitingSatResponse && userCode) {
+        const timeMatch = trimmed.match(/(\d{1,2}):(\d{2})/);
+        if (timeMatch) {
+          const exitTime = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
+          const eatCompany = /sí|si\b|yes|claro|ok|sim|almuerz|como|voy a comer/i.test(trimmed);
+          const lunchTime = eatCompany ? '12:00' : undefined;
+          const week = getWeekNumber();
+          setStoredSatExitTime(exitTime);
+          setStoredSatEatCompany(eatCompany);
+          setStoredSatLunchTime(lunchTime || '');
+          setSatPromptWeek(week);
+          scheduleSaturdayAlarms(exitTime, lunchTime);
+          const newSchedule: UserSchedule = {
+            lunchTime: schedule?.lunchTime || undefined,
+            lunchWeek: schedule?.lunchWeek,
+            satExitTime: exitTime,
+            satEatCompany: eatCompany,
+            satLunchTime: lunchTime,
+            satWeek: week,
+          };
+          try { await saveUserSchedule(userCode, newSchedule); } catch {}
+          setSchedule(newSchedule);
+          const confirm = lang === 'es'
+            ? (lunchTime
+              ? `✅ Sábado: salida a las ${exitTime}, almuerzas en la empresa.`
+              : `✅ Sábado: salida a las ${exitTime}, sin almuerzo en empresa.`)
+            : (lunchTime
+              ? `✅ Saturday: exit at ${exitTime}, you eat at the company.`
+              : `✅ Saturday: exit at ${exitTime}, no lunch at company.`);
+          addMessage('assistant', confirm);
+          setExpression('happy');
+          speak(confirm);
+          setIsLoading(false);
+          processingRef.current = false;
+          setAwaitingSatResponse(false);
+          return;
+        }
+        // Recognize natural replies: already gave data, already in database, etc.
+        if (/ya\s*(te\s*)?(di|diste|hab[ií]a|está|tengo|sabes|conoces|registre|guardé)|en\s*tu\s*(base|sistema|bd)|ya\s*est[áa]|ya\s*lo\s*(d[ii]|tengo|sabes|registraste)/i.test(trimmed)) {
+          const existingExit = schedule?.satExitTime || getStoredSatExitTime();
+          const existingEat = schedule?.satEatCompany ?? getStoredSatEatCompany();
+          if (existingExit) {
+            const existConfirm = lang === 'es'
+              ? `✅ Claro, ya tengo tu sábado: salida a las ${existingExit}${existingEat ? ', almuerzas en la empresa.' : ', sin almuerzo.'}`
+              : `✅ Got it, already have your Saturday: exit at ${existingExit}${existingEat ? ', you eat at the company.' : ', no lunch.'}`;
+            addMessage('assistant', existConfirm);
+            setExpression('happy');
+            speak(existConfirm);
+          } else {
+            const ask = lang === 'es'
+              ? '🕐 No encuentro el dato guardado. ¿A qué hora sales hoy sábado?'
+              : '🕐 I can\'t find the saved data. What time do you leave today (Saturday)?';
+            addMessage('assistant', ask);
+            speak(ask);
+            setAwaitingSatResponse(true);
+          }
+          setIsLoading(false);
+          processingRef.current = false;
+          return;
+        }
+        setAwaitingSatResponse(false);
+      }
+
+      // Lunch time response detection
+      if (awaitingLunchResponse && userCode) {
+        const timeMatch = trimmed.match(/(\d{1,2}):(\d{2})/);
+        if (timeMatch) {
+          const time = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
+          const week = getWeekNumber();
+          setStoredLunchTime(time);
+          setLunchPromptWeek(week);
+          scheduleTodayAlarms(time, empleado || undefined);
+          const newSchedule: UserSchedule = {
+            lunchTime: time,
+            lunchWeek: week,
+            satExitTime: schedule?.satExitTime || undefined,
+            satEatCompany: schedule?.satEatCompany,
+            satLunchTime: schedule?.satLunchTime || undefined,
+            satWeek: schedule?.satWeek,
+          };
+          try { await saveUserSchedule(userCode, newSchedule); } catch {}
+          setSchedule(newSchedule);
+          const confirm = lang === 'es'
+            ? `✅ Recordatorio de almuerzo programado a las ${time}.`
+            : `✅ Lunch reminder set for ${time}.`;
+          addMessage('assistant', confirm);
+          setExpression('happy');
+          speak(confirm);
+          setIsLoading(false);
+          processingRef.current = false;
+          setAwaitingLunchResponse(false);
+          return;
+        }
+        // Recognize natural replies: already gave data, already in database, etc.
+        if (/ya\s*(te\s*)?(di|diste|hab[ií]a|está|tengo|sabes|conoces|registre|guardé)|en\s*tu\s*(base|sistema|bd)|ya\s*est[áa]|ya\s*lo\s*(d[ii]|tengo|sabes|registraste)/i.test(trimmed)) {
+          const existingLunch = schedule?.lunchTime || getStoredLunchTime();
+          const existingWeek = schedule?.lunchWeek || getLunchPromptWeek();
+          if (existingLunch && existingWeek === getWeekNumber()) {
+            const existConfirm = lang === 'es'
+              ? `✅ Cierto, ya tengo tu hora: ${existingLunch}.`
+              : `✅ Right, I already have your time: ${existingLunch}.`;
+            addMessage('assistant', existConfirm);
+            setExpression('happy');
+            speak(existConfirm);
+          } else {
+            const ask = lang === 'es'
+              ? '🕐 No encuentro el dato guardado. ¿Puedes decirme la hora de almuerzo (ej. 12:00)?'
+              : '🕐 I can\'t find the saved data. Can you tell me your lunch time (e.g. 12:00)?';
+            addMessage('assistant', ask);
+            speak(ask);
+            setAwaitingLunchResponse(true);
+          }
+          setIsLoading(false);
+          processingRef.current = false;
+          return;
+        }
+        setAwaitingLunchResponse(false);
       }
 
       // JARVIS commands
@@ -239,16 +533,27 @@ export function FloatingAI() {
         }
       } catch (e) { console.warn('JAB: JARVIS command error', e); }
 
+      // Navigate immediately if user asked to go somewhere
+      const intent = detectIntent(trimmed, lang);
+      const navRoute = intent.action === 'navigate' ? intent.params?.route : null;
+      if (navRoute) {
+        setTimeout(() => router.push(navRoute), 500);
+      }
+
       // AI API
       console.log('JAB: calling askAI');
       try {
         const history = messages.slice(-4).map(m => ({ role: m.role, content: m.content }));
-        const aiResponse = await askAI(trimmed, lang, userName, undefined, history);
+        const aiPromise = askAI(trimmed, lang, userName, undefined, history);
+        const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('AI timeout')), 20000));
+        const aiResponse = await Promise.race([aiPromise, timeoutPromise]);
         console.log('JAB: askAI response', aiResponse?.content?.slice(0, 80));
         if (aiResponse?.content) {
-          addMessage('assistant', aiResponse.content);
+          // Strip emojis entirely (both standalone and parenthetical like "🤖 (Cara de Robot)")
+          const clean = aiResponse.content.replace(/\p{Emoji}\s*\([^)]*\)/gu, '').replace(/\p{Emoji}\s*/gu, '').trim();
+          addMessage('assistant', clean);
           setExpression('happy');
-          speak(aiResponse.content);
+          speak(clean);
         } else {
           const fallback = lang === 'es'
             ? 'No entendí bien. Di "Ayuda" para ver todo lo que puedo hacer.'
@@ -269,95 +574,183 @@ export function FloatingAI() {
         processingRef.current = false;
       }
     },
-    [messages, lang, userName, addMessage, speak]
+    [messages, lang, userName, addMessage, speak, setVoiceActivated, awaitingLunchResponse, userCode, empleado, schedule]
   );
 
   const toggleListening = useCallback(() => {
-    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SR || isCapacitor) {
-      if (!isListening) {
-        setIsListening(true);
-        setExpression('scanning');
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-          const mr = new MediaRecorder(stream);
-          const chunks: BlobPart[] = [];
-
-          mr.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
-          mr.onstop = async () => {
-            setIsListening(false);
-            stream.getTracks().forEach(t => t.stop());
-            const blob = new Blob(chunks);
-            if (blob.size < 400) return;
-
-            const text = await transcribeAudio(blob);
-            if (text) {
-              setInputText(text);
-              processMessage(text);
-            }
-          };
-
-          mr.start();
-          setTimeout(() => mr.state === 'recording' && mr.stop(), isCapacitor ? 10000 : 8000);
-        }).catch(() => {
-          setIsListening(false);
-          setExpression('concerned');
-        });
-      } else {
-        setIsListening(false);
-      }
+    if (isMicActive) {
+      setIsMicActive(false);
       return;
     }
 
-    if (isListening) {
-      setIsListening(false);
-      return;
-    }
+    setIsMicActive(true);
+    setExpression('scanning');
 
-    const recognition = new SR();
-    recognition.lang = lang === 'es' ? 'es-CO' : 'en-US';
-    recognition.continuous = false;
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+      const mr = new MediaRecorder(stream, { mimeType });
+      const chunks: BlobPart[] = [];
+      let isStopped = false;
+      let silenceTimer: ReturnType<typeof setTimeout> | null = null;
 
-    recognition.onstart = () => {
-      setIsListening(true);
-      setExpression('scanning');
-    };
+      const stopRecording = () => {
+        if (isStopped) return;
+        isStopped = true;
+        if (silenceTimer) clearTimeout(silenceTimer);
+        if (mr.state === 'recording') mr.stop();
+      };
 
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setInputText(transcript);
-      setIsListening(false);
-      processMessage(transcript);
-    };
+      // Silence detection via AudioContext
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-    recognition.onerror = () => {
-      setIsListening(false);
+      const detectSilence = () => {
+        if (isStopped) return;
+        analyser.getByteFrequencyData(dataArray);
+        const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        if (avg < 5) {
+          if (!silenceTimer) silenceTimer = setTimeout(stopRecording, 1500);
+        } else {
+          if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+        }
+        if (!isStopped) requestAnimationFrame(detectSilence);
+      };
+
+      mr.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
+      mr.onstop = async () => {
+        setIsMicActive(false);
+        stream.getTracks().forEach(t => t.stop());
+        audioCtx.close();
+        const blob = new Blob(chunks, { type: mimeType });
+        if (blob.size < 400) return;
+        const text = await transcribeAudio(blob);
+        if (text) {
+          setInputText(text);
+          processMessage(text);
+        }
+      };
+
+      mr.start(100);
+      detectSilence();
+      setTimeout(stopRecording, 30000);
+    }).catch(() => {
+      setIsMicActive(false);
       setExpression('concerned');
-    };
+    });
+  }, [isMicActive, lang, processMessage]);
 
-    recognition.start();
-  }, [isListening, lang, processMessage]);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const userScrolledUpRef = useRef(false);
   useEffect(() => {
     const el = messagesContainerRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+    if (!userScrolledUpRef.current || isNearBottom) {
+      el.scrollTop = el.scrollHeight;
+      userScrolledUpRef.current = false;
+    }
   }, [messages]);
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+      userScrolledUpRef.current = !isNearBottom;
+    };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // ─── Overlap detection: move JAB to avoid blocking interactive elements ───
+  useEffect(() => {
+    const isInteractive = (el: Element): boolean => {
+      const tag = el.tagName?.toLowerCase();
+      const role = el.getAttribute?.('role');
+      const onclick = el.getAttribute?.('onclick');
+      return ['button', 'a', 'input', 'select', 'textarea'].includes(tag) ||
+             role === 'button' || role === 'link' || onclick !== null;
+    };
+
+    const check = () => {
+      const btn = buttonRef.current;
+      if (!btn || isChatOpen) return;
+      const rect = btn.getBoundingClientRect();
+      const origPE = btn.style.pointerEvents;
+      btn.style.pointerEvents = 'none';
+      let overlap = false;
+      try {
+        const pts: [number, number][] = [
+          [rect.left + rect.width / 2, rect.top + rect.height / 2],
+          [rect.left + 4, rect.top + 4],
+          [rect.right - 4, rect.top + 4],
+          [rect.left + 4, rect.bottom - 4],
+          [rect.right - 4, rect.bottom - 4],
+        ];
+        for (const [x, y] of pts) {
+          const el = document.elementFromPoint(x, y);
+          if (el && el !== btn && el !== document.body && el !== document.documentElement && isInteractive(el)) {
+            overlap = true;
+            break;
+          }
+        }
+      } finally {
+        btn.style.pointerEvents = origPE;
+      }
+
+      if (overlap && posIndexRef.current === 0) {
+        posIndexRef.current = 1;
+        setPosOverrides({ right: 5.5 });
+      } else if (overlap && posIndexRef.current === 1) {
+        posIndexRef.current = 2;
+        setPosOverrides({ right: 5.5, bottom: 5 });
+      } else if (!overlap && posIndexRef.current !== 0) {
+        posIndexRef.current = 0;
+        setPosOverrides({});
+      }
+    };
+
+    const t = setTimeout(check, 800);
+    const interval = setInterval(check, 2000);
+    const handler = () => requestAnimationFrame(check);
+    window.addEventListener('scroll', handler, { passive: true });
+    window.addEventListener('resize', handler, { passive: true });
+    return () => {
+      clearTimeout(t);
+      clearInterval(interval);
+      window.removeEventListener('scroll', handler);
+      window.removeEventListener('resize', handler);
+    };
+  }, [isMobile, isChatOpen]);
 
   if (pathname === '/') return null;
 
   return (
     <>
+      <style>{`
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+.animate-wave {
+  animation: wave 0.8s ease-in-out infinite;
+  transform-origin: bottom;
+}
+`}</style>
       {isVisible && (
         <>
           {/* JAB Robot - Floating Button */}
           <div
+            ref={buttonRef}
             className="fixed z-[60] cursor-pointer group"
             style={{
-              right: isMobile ? '1rem' : '2rem',
-              bottom: isMobile ? '1rem' : '2rem',
+              left: posOverrides.right !== undefined ? `${posOverrides.right}rem` : (isMobile ? '1rem' : '2rem'),
+              bottom: posOverrides.bottom !== undefined ? `${posOverrides.bottom}rem` : (isMobile ? '1rem' : '2rem'),
               filter: 'drop-shadow(0 8px 16px rgba(6, 182, 212, 0.3))',
             }}
             onClick={() => { unlockSpeech(); setIsChatOpen(!isChatOpen); }}
@@ -370,26 +763,31 @@ export function FloatingAI() {
                 scale={isMobile ? 0.9 : 1}
                 interactive
               />
-              <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0d1117] animate-pulse ${
-                isListening ? 'bg-green-400' : isSpeaking ? 'bg-orange-400' : 'bg-cyan-400'
-              }`} />
+              {voiceActivated && (
+                <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0d1117] animate-pulse ${
+                  isListening ? 'bg-green-400' : isSpeaking ? 'bg-orange-400' : 'bg-cyan-400'
+                }`} title={isListening ? 'Escuchando...' : 'Activación por voz activa'} />
+              )}
+              {!voiceActivated && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0d1117] bg-gray-500"
+                     title="Activación por voz desactivada" />
+              )}
             </div>
           </div>
 
           {/* Chat Panel - Premium Design */}
           {isChatOpen && (
             <div
-              className="fixed z-[70] bottom-32 right-4 md:right-6 w-[calc(100vw-2rem)] md:w-96 max-h-[70vh] rounded-3xl shadow-2xl overflow-hidden"
+              className="fixed z-[70] bottom-32 left-4 md:left-6 w-[calc(100vw-2rem)] md:w-96 max-h-[85vh] bg-black/80 backdrop-blur-xl border border-[#00eeff]/20 rounded-3xl shadow-2xl shadow-[#00eeff]/10 flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-gradient-to-b from-[#0d1117] to-[#161b22] border border-cyan-500/20 rounded-3xl flex flex-col h-full">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-b border-cyan-500/20 px-6 py-4">
+                <div className="bg-gradient-to-r from-[#00eeff]/5 to-[#00ffff]/5 border-b border-[#00eeff]/15 px-6 py-4">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <Sparkles className="w-5 h-5 text-cyan-400 animate-pulse" />
+                      <div className="w-2 h-2 rounded-full bg-[#00eeff] shadow-[0_0_8px_#00eeff] animate-pulse" />
                       <div>
-                        <p className="text-sm font-bold text-white">JAB AI Assistant</p>
+                        <p className="text-sm font-bold text-white tracking-wide">JAB</p>
                         <p className="text-xs text-cyan-300">{lang === 'es' ? 'En línea' : 'Online'}</p>
                       </div>
                     </div>
@@ -403,7 +801,7 @@ export function FloatingAI() {
                 </div>
 
                 {/* Messages */}
-                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
+                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4" style={{ scrollbarWidth: 'auto', scrollbarColor: '#4b5563 #1f2937' }}>
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
                       <Sparkles className="w-12 h-12 text-cyan-400 opacity-50" />
@@ -438,7 +836,6 @@ export function FloatingAI() {
                       </div>
                     </div>
                   )}
-                  <div ref={messagesEndRef} />
                 </div>
 
                 {/* Input Section */}
@@ -449,13 +846,23 @@ export function FloatingAI() {
                       onClick={toggleListening}
                       disabled={isLoading}
                       className={`flex-1 p-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 font-medium text-sm ${
-                        isListening
-                          ? 'bg-red-500/20 border border-red-500/50 text-red-400 animate-pulse'
+                        isMicActive
+                          ? 'bg-red-500/20 border border-red-500/50 text-red-400'
                           : 'bg-cyan-600/20 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-600/30'
                       }`}
                     >
-                      {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                      <span className="hidden sm:inline">{lang === 'es' ? 'Escuchar' : 'Listen'}</span>
+                      {isMicActive ? (
+                        <div className="flex items-center gap-0.5 h-4">
+                          <span className="w-0.5 bg-red-400 rounded-full animate-wave" style={{ height: '40%', animationDelay: '0s' }} />
+                          <span className="w-0.5 bg-red-400 rounded-full animate-wave" style={{ height: '70%', animationDelay: '0.15s' }} />
+                          <span className="w-0.5 bg-red-400 rounded-full animate-wave" style={{ height: '100%', animationDelay: '0.3s' }} />
+                          <span className="w-0.5 bg-red-400 rounded-full animate-wave" style={{ height: '50%', animationDelay: '0.45s' }} />
+                          <span className="w-0.5 bg-red-400 rounded-full animate-wave" style={{ height: '80%', animationDelay: '0.6s' }} />
+                        </div>
+                      ) : (
+                        <Mic className="w-4 h-4" />
+                      )}
+                      <span className="hidden sm:inline">{lang === 'es' ? (isMicActive ? 'Grabando...' : 'Escuchar') : (isMicActive ? 'Recording...' : 'Listen')}</span>
                     </button>
                     <button
                       onClick={() => setShowHelp(!showHelp)}
@@ -502,6 +909,15 @@ export function FloatingAI() {
                         {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-gray-500" />}
                       </button>
                       <button
+                        onClick={() => setVoiceActivated(!voiceActivated)}
+                        className="w-full flex items-center justify-between p-3 hover:bg-[#161b22] rounded-lg transition"
+                      >
+                        <span className="text-sm text-gray-300">{lang === 'es' ? 'Activación por voz' : 'Voice Activation'}</span>
+                        {voiceActivated
+                          ? <Mic className="w-4 h-4 text-green-400" />
+                          : <MicOff className="w-4 h-4 text-gray-500" />}
+                      </button>
+                      <button
                         onClick={() => toggleLang()}
                         className="w-full flex items-center justify-between p-3 hover:bg-[#161b22] rounded-lg transition text-sm text-gray-300"
                       >
@@ -517,34 +933,51 @@ export function FloatingAI() {
                   {showHelp && (
                     <div className="bg-[#21262d] border border-blue-500/20 rounded-xl p-4 space-y-2 text-xs text-gray-300 animate-in fade-in max-h-48 overflow-y-auto">
                       <p className="font-bold text-blue-400">💡 {lang === 'es' ? 'Comandos Útiles' : 'Useful Commands'}:</p>
+                      <p>• "{lang === 'es' ? 'di' : 'say'} jab" - {lang === 'es' ? 'Activar JAB' : 'Wake JAB'}</p>
+                      <p>• "jab disconnect" - {lang === 'es' ? 'Desconectar / dejar de escuchar' : 'Disconnect / stop listening'}</p>
+                      <p>• "jab reconnect" - {lang === 'es' ? 'Volver a escuchar' : 'Reconnect / listen again'}</p>
                       <p>• "jab status" - {lang === 'es' ? 'Estado del sistema' : 'System status'}</p>
                       <p>• "jab open google" - {lang === 'es' ? 'Abrir URL' : 'Open URL'}</p>
-                      <p>• "jab battery" - {lang === 'es' ? 'Batería' : 'Battery'}</p>
-                      <p>• "jab screenshot" - {lang === 'es' ? 'Captura' : 'Screenshot'}</p>
                     </div>
                   )}
 
                   {/* Status Bar */}
                   <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-cyan-500/10">
-                    <span>{new Date().toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</span>
-                    {isSpeaking && <span className="text-cyan-400 animate-pulse">🔊 {lang === 'es' ? 'Hablando' : 'Speaking'}</span>}
-                    {isLoading && <span className="text-cyan-400 animate-pulse">⚙️ {lang === 'es' ? 'Procesando' : 'Processing'}</span>}
+                    <div className="flex items-center gap-2">
+                      <span>{new Date().toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                      {voiceActivated && (
+                        <span className={`flex items-center gap-1 ${isListening ? 'text-green-400' : 'text-cyan-400'}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${isListening ? 'bg-green-400 animate-pulse' : 'bg-cyan-400'}`} />
+                          {isListening ? (lang === 'es' ? 'Escuchando...' : 'Listening...') : (lang === 'es' ? 'Voz activa' : 'Voice on')}
+                        </span>
+                      )}
+                      {!voiceActivated && (
+                        <span className="text-gray-500 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+                          {lang === 'es' ? 'Voz off' : 'Voice off'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isSpeaking && <span className="text-cyan-400 animate-pulse">🔊 {lang === 'es' ? 'Hablando' : 'Speaking'}</span>}
+                      {isLoading && <span className="text-cyan-400 animate-pulse">⚙️ {lang === 'es' ? 'Procesando' : 'Processing'}</span>}
+                    </div>
                   </div>
                 </div>
-              </div>
             </div>
           )}
 
-          {/* Hidden Toggle */}
-          {!isVisible && (
-            <button
-              onClick={() => setIsVisible(true)}
-              className="fixed z-[60] bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-cyan-600/40 to-blue-600/40 border border-cyan-500/50 shadow-xl hover:shadow-2xl hover:scale-110 transition-all flex items-center justify-center text-cyan-400 animate-pulse"
-            >
-              <Sparkles className="w-6 h-6" />
-            </button>
-          )}
         </>
+      )}
+
+      {/* Hidden Toggle (always visible, outside isVisible block) */}
+      {!isVisible && (
+        <button
+          onClick={() => setIsVisible(true)}
+          className="fixed z-[60] bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-cyan-600/40 to-blue-600/40 border border-cyan-500/50 shadow-xl hover:shadow-2xl hover:scale-110 transition-all flex items-center justify-center text-cyan-400 animate-pulse"
+        >
+          <Sparkles className="w-6 h-6" />
+        </button>
       )}
 
       {/* Visibility Toggle in Chat */}

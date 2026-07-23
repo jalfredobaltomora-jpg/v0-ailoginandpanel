@@ -101,42 +101,42 @@ const tools: ToolItem[] = [
     name: 'Input',
     icon: <FormInput className="h-5 w-5" />,
     category: 'inputs',
-    codeSnippet: `<Input placeholder="Escribe aqui..." />`,
+    codeSnippet: `<Input placeholder="Escribe aquí..." />`,
   },
   {
     id: 'textarea',
     name: 'TextArea',
     icon: <AlignLeft className="h-5 w-5" />,
     category: 'inputs',
-    codeSnippet: `<Textarea placeholder="Escribe aqui..." />`,
+    codeSnippet: `<Textarea placeholder="Escribe aquí..." />`,
   },
   {
     id: 'select',
     name: 'Select',
     icon: <ChevronDown className="h-5 w-5" />,
     category: 'inputs',
-    codeSnippet: `<Select>\n  <SelectTrigger>\n    <SelectValue placeholder="Seleccionar" />\n  </SelectTrigger>\n  <SelectContent>\n    <SelectItem value="1">Opcion 1</SelectItem>\n    <SelectItem value="2">Opcion 2</SelectItem>\n  </SelectContent>\n</Select>`,
+    codeSnippet: `<Select>\n  <SelectTrigger>\n    <SelectValue placeholder="Seleccionar" />\n  </SelectTrigger>\n  <SelectContent>\n    <SelectItem value="1">Opción 1</SelectItem>\n    <SelectItem value="2">Opción 2</SelectItem>\n  </SelectContent>\n</Select>`,
   },
   {
     id: 'checkbox',
     name: 'Checkbox',
     icon: <CheckSquare className="h-5 w-5" />,
     category: 'inputs',
-    codeSnippet: `<div className="flex items-center space-x-2">\n  <Checkbox id="terms" />\n  <label htmlFor="terms">Acepto los terminos</label>\n</div>`,
+    codeSnippet: `<div className="flex items-center space-x-2">\n  <Checkbox id="terms" />\n  <label htmlFor="terms">Acepto los términos</label>\n</div>`,
   },
   {
     id: 'switch',
     name: 'Switch',
     icon: <ToggleLeft className="h-5 w-5" />,
     category: 'inputs',
-    codeSnippet: `<div className="flex items-center space-x-2">\n  <Switch id="airplane" />\n  <label htmlFor="airplane">Modo avion</label>\n</div>`,
+    codeSnippet: `<div className="flex items-center space-x-2">\n  <Switch id="airplane" />\n  <label htmlFor="airplane">Modo avión</label>\n</div>`,
   },
   {
     id: 'radio',
     name: 'Radio Group',
     icon: <CircleDot className="h-5 w-5" />,
     category: 'inputs',
-    codeSnippet: `<RadioGroup defaultValue="option-1">\n  <div className="flex items-center space-x-2">\n    <RadioGroupItem value="option-1" id="option-1" />\n    <label htmlFor="option-1">Opcion 1</label>\n  </div>\n  <div className="flex items-center space-x-2">\n    <RadioGroupItem value="option-2" id="option-2" />\n    <label htmlFor="option-2">Opcion 2</label>\n  </div>\n</RadioGroup>`,
+    codeSnippet: `<RadioGroup defaultValue="option-1">\n  <div className="flex items-center space-x-2">\n    <RadioGroupItem value="option-1" id="option-1" />\n    <label htmlFor="option-1">Opción 1</label>\n  </div>\n  <div className="flex items-center space-x-2">\n    <RadioGroupItem value="option-2" id="option-2" />\n    <label htmlFor="option-2">Opción 2</label>\n  </div>\n</RadioGroup>`,
   },
   {
     id: 'slider',
@@ -231,7 +231,7 @@ const tools: ToolItem[] = [
     name: 'Button',
     icon: <RectangleHorizontal className="h-5 w-5" />,
     category: 'actions',
-    codeSnippet: `<Button>Click aqui</Button>`,
+    codeSnippet: `<Button>Click aquí</Button>`,
   },
   {
     id: 'button-icon',
@@ -282,14 +282,14 @@ const tools: ToolItem[] = [
     name: 'Breadcrumb',
     icon: <Home className="h-5 w-5" />,
     category: 'navigation',
-    codeSnippet: `<Breadcrumb>\n  <BreadcrumbList>\n    <BreadcrumbItem>\n      <BreadcrumbLink href="/">Inicio</BreadcrumbLink>\n    </BreadcrumbItem>\n    <BreadcrumbSeparator />\n    <BreadcrumbItem>\n      <BreadcrumbPage>Pagina actual</BreadcrumbPage>\n    </BreadcrumbItem>\n  </BreadcrumbList>\n</Breadcrumb>`,
+    codeSnippet: `<Breadcrumb>\n  <BreadcrumbList>\n    <BreadcrumbItem>\n      <BreadcrumbLink href="/">Inicio</BreadcrumbLink>\n    </BreadcrumbItem>\n    <BreadcrumbSeparator />\n    <BreadcrumbItem>\n      <BreadcrumbPage>Página actual</BreadcrumbPage>\n    </BreadcrumbItem>\n  </BreadcrumbList>\n</Breadcrumb>`,
   },
   {
     id: 'dropdown',
     name: 'Dropdown Menu',
     icon: <MoreHorizontal className="h-5 w-5" />,
     category: 'navigation',
-    codeSnippet: `<DropdownMenu>\n  <DropdownMenuTrigger asChild>\n    <Button variant="outline">Abrir</Button>\n  </DropdownMenuTrigger>\n  <DropdownMenuContent>\n    <DropdownMenuItem>Opcion 1</DropdownMenuItem>\n    <DropdownMenuItem>Opcion 2</DropdownMenuItem>\n  </DropdownMenuContent>\n</DropdownMenu>`,
+    codeSnippet: `<DropdownMenu>\n  <DropdownMenuTrigger asChild>\n    <Button variant="outline">Abrir</Button>\n  </DropdownMenuTrigger>\n  <DropdownMenuContent>\n    <DropdownMenuItem>Opción 1</DropdownMenuItem>\n    <DropdownMenuItem>Opción 2</DropdownMenuItem>\n  </DropdownMenuContent>\n</DropdownMenu>`,
   },
 
   // Feedback
@@ -312,7 +312,7 @@ const tools: ToolItem[] = [
     name: 'Toast',
     icon: <Bell className="h-5 w-5" />,
     category: 'feedback',
-    codeSnippet: `toast({\n  title: "Exito",\n  description: "La accion se completo correctamente.",\n})`,
+    codeSnippet: `toast({\n  title: "Éxito",\n  description: "La acción se completó correctamente.",\n})`,
   },
   {
     id: 'progress',
@@ -414,7 +414,7 @@ export function Toolbox({ onInsertCode }: ToolboxProps) {
                   variant="ghost"
                   onClick={() => handleCopyCode(tool)}
                   className="h-7 w-7 p-0"
-                  title="Copiar codigo"
+                  title="Copiar código"
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
@@ -427,7 +427,7 @@ export function Toolbox({ onInsertCode }: ToolboxProps) {
       {/* Code preview for selected tool */}
       {draggedTool && (
         <div className="p-2 border-t border-border bg-muted/30">
-          <p className="text-xs text-muted-foreground mb-1">Codigo a insertar:</p>
+          <p className="text-xs text-muted-foreground mb-1">Código a insertar:</p>
           <pre className="text-xs text-primary font-mono bg-background p-2 rounded overflow-x-auto max-h-20">
             {draggedTool.codeSnippet}
           </pre>

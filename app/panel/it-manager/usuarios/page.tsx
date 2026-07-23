@@ -53,7 +53,7 @@ export default function UsuariosPage() {
   }, [router]);
 
   const handleDelete = async (codigo: string) => {
-    if (confirm('Esta seguro de eliminar este usuario?')) {
+    if (confirm('¿Está seguro de eliminar este usuario?')) {
       const { deleteUsuarioIT } = await import('@/lib/firebase');
       await deleteUsuarioIT(codigo);
     }
@@ -162,7 +162,7 @@ export default function UsuariosPage() {
                 <thead>
                   <tr className="border-b border-border bg-muted/30 text-left text-xs uppercase tracking-wider text-muted-foreground">
                     <th className="p-3">Foto</th>
-                    <th className="p-3">Codigo</th>
+                    <th className="p-3">Código</th>
                     <th className="p-3">Usuario</th>
                     <th className="p-3">Empleado</th>
                     <th className="p-3">Rol / Permisos</th>

@@ -104,12 +104,12 @@ const cardTemplates = [
 ];
 
 const getMessagesForEmployee = (name: string, area?: string) => [
-  `Querido(a) ${name}, en este dia tan especial celebramos tu vida y todo lo que aportas a nuestro equipo${area ? ` en ${area}` : ''}. Que este nuevo ano este lleno de exitos, salud y momentos inolvidables. ¡Felicidades!`,
-  `¡Feliz cumpleanos, ${name}! Hoy es un dia para celebrar a una persona increible. Gracias por tu dedicacion y alegria${area ? ` en el area de ${area}` : ''}. Que todos tus suenos se hagan realidad.`,
-  `${name}, tu presencia ilumina nuestros dias${area ? ` en ${area}` : ''}. En este nuevo aniversario de vida, te deseamos lo mejor: salud, prosperidad y mucha felicidad. ¡Disfruta tu dia!`,
-  `Hoy celebramos a ${name}! Eres una parte fundamental de nuestro equipo${area ? ` en ${area}` : ''}. Que este nuevo ciclo este lleno de bendiciones y que cada meta que te propongas la puedas alcanzar. ¡Felicidades!`,
-  `Para ${name}: en tu cumpleanos queremos agradecerte por ser parte de nuestra familia laboral. Tu esfuerzo y dedicacion hacen la diferencia. ¡Que tengas un dia maravilloso lleno de amor y alegria!`,
-  `¡${name}, hoy es tu dia! Que la felicidad te acompanne siempre y que este nuevo ano de vida este lleno de sorpresas agradables. Disfruta cada momento. ¡Felicidades de parte de todo el equipo!`,
+  `Querido(a) ${name}, en este día tan especial celebramos tu vida y todo lo que aportas a nuestro equipo${area ? ` en ${area}` : ''}. Que este nuevo año esté lleno de éxitos, salud y momentos inolvidables. ¡Felicidades!`,
+  `¡Feliz cumpleaños, ${name}! Hoy es un día para celebrar a una persona increíble. Gracias por tu dedicación y alegría${area ? ` en el área de ${area}` : ''}. Que todos tus sueños se hagan realidad.`,
+  `${name}, tu presencia ilumina nuestros días${area ? ` en ${area}` : ''}. En este nuevo aniversario de vida, te deseamos lo mejor: salud, prosperidad y mucha felicidad. ¡Disfruta tu día!`,
+  `Hoy celebramos a ${name}! Eres una parte fundamental de nuestro equipo${area ? ` en ${area}` : ''}. Que este nuevo ciclo esté lleno de bendiciones y que cada meta que te propongas la puedas alcanzar. ¡Felicidades!`,
+  `Para ${name}: en tu cumpleaños queremos agradecerte por ser parte de nuestra familia laboral. Tu esfuerzo y dedicación hacen la diferencia. ¡Que tengas un día maravilloso lleno de amor y alegría!`,
+  `¡${name}, hoy es tu día! Que la felicidad te acompañe siempre y que este nuevo año de vida esté lleno de sorpresas agradables. Disfruta cada momento. ¡Felicidades de parte de todo el equipo!`,
 ];
 
 export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps) {
@@ -118,7 +118,7 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [messages] = useState(() => getMessagesForEmployee(empleado.nombres?.split(' ')[0] || 'amigo', empleado.area));
   const [message, setMessage] = useState(messages[Math.floor(Math.random() * messages.length)]);
-  const [title, setTitle] = useState('¡Feliz Cumpleanos!');
+  const [title, setTitle] = useState('¡Feliz Cumpleaños!');
   const [isEditing, setIsEditing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -354,7 +354,7 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
     // Convert to blob and download
     canvas.toBlob((blob) => {
       if (!blob) {
-        alert('Error al generar la imagen. Usa la opcion Imprimir.');
+        alert('Error al generar la imagen. Usa la opción Imprimir.');
         setDownloading(false);
         return;
       }
@@ -383,7 +383,7 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
     printWindow.document.write(`
       <html>
         <head>
-          <title>Cumpleanos - ${empleado.nombres} ${empleado.apellidos}</title>
+          <title>Cumpleaños - ${empleado.nombres} ${empleado.apellidos}</title>
           <style>${styles}
             body { display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #fff; }
             @page { margin: 0; size: landscape; }
@@ -430,7 +430,7 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
         <CardHeader className="flex-row items-center justify-between border-b border-border no-print">
           <CardTitle className="flex items-center gap-2 text-primary">
             <Gift className="h-5 w-5" />
-            Tarjeta de Cumpleanos - {empleado.nombres} {empleado.apellidos}
+            Tarjeta de Cumpleaños - {empleado.nombres} {empleado.apellidos}
           </CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-5 w-5" />

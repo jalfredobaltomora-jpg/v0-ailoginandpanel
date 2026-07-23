@@ -32,15 +32,15 @@ interface AiMessage {
 type AiContext = 'greeting' | 'awaiting_intent' | 'awaiting_confirmation' | 'done';
 
 const aiResponses: { pattern: RegExp; reply: string }[] = [
-  { pattern: /(hola|buenas|buen[ao]s|saludos)/i, reply: 'Hola! Soy el asistente virtual de IT. En que puedo ayudarte hoy?' },
-  { pattern: /(ayuda|soporte|asistencia|problema)/i, reply: 'Claro, estoy aqui para ayudarte. Puedes consultarme sobre:\n- Problemas de acceso\n- Restablecimiento de credenciales\n- Dudas sobre el sistema\n\nDescribe tu situacion y te orientare.' },
-  { pattern: /(gracias|ok|vale|perfecto|excelente)/i, reply: 'De nada! Si necesitas ayuda adicional, no dudes en escribirme. Si el problema persiste, un tecnico de IT se comunicara contigo pronto.' },
-  { pattern: /(cedula|cedula|\d{3}-\d{6}-\d{4}[A-Z]?)/i, reply: 'Gracias. Ahora, para confirmar tu identidad, podrias decirme cual es tu area de trabajo y tu cargo actual?' },
-  { pattern: /(tecnico|humano|persona|agente|escalar)/i, reply: 'Entiendo. Voy a escalar tu caso a un tecnico de IT humano. Ellos revisaran tu solicitud y te atenderan a la brevedad. Mientras tanto, quedate atento a este chat.' },
-  { pattern: /(no puedo|no funciona|error|falla|bug)/i, reply: 'Lamento escuchar eso. Describe el error exacto que ves en pantalla y desde cuando ocurre para poder ayudarte mejor.' },
-  { pattern: /(acceso|permiso|bloqueado|restringido)/i, reply: 'Parece que tienes un problema de permisos. Puedo ayudarte con tus credenciales de acceso. Que necesitas exactamente, tu usuario o tu contraseña?' },
-  { pattern: /(fecha|cumpleaños|feliz|birthday)/i, reply: 'Si necesitas informacion sobre fechas especiales o cumpleaños, puedes consultarlo en el modulo de RRHH del panel.' },
-  { pattern: /(foto|fotografia|imagen|subir)/i, reply: 'Para subir o actualizar tu foto de perfil, ve a RRHH > Catalogo, busca tu registro y haz doble clic. Ahi podras cambiar tu foto.' },
+  { pattern: /(hola|buenas|buen[ao]s|saludos)/i, reply: 'Hola! Soy el asistente virtual de IT. ¿En qué puedo ayudarte hoy?' },
+  { pattern: /(ayuda|soporte|asistencia|problema)/i, reply: 'Claro, estoy aquí para ayudarte. Puedes consultarme sobre:\n- Problemas de acceso\n- Restablecimiento de credenciales\n- Dudas sobre el sistema\n\nDescribe tu situación y te orientaré.' },
+  { pattern: /(gracias|ok|vale|perfecto|excelente)/i, reply: 'De nada! Si necesitas ayuda adicional, no dudes en escribirme. Si el problema persiste, un técnico de IT se comunicará contigo pronto.' },
+  { pattern: /(cedula|cedula|\d{3}-\d{6}-\d{4}[A-Z]?)/i, reply: 'Gracias. Ahora, para confirmar tu identidad, ¿podrías decirme cuál es tu área de trabajo y tu cargo actual?' },
+  { pattern: /(tecnico|humano|persona|agente|escalar)/i, reply: 'Entiendo. Voy a escalar tu caso a un técnico de IT humano. Ellos revisarán tu solicitud y te atenderán a la brevedad. Mientras tanto, quédate atento a este chat.' },
+  { pattern: /(no puedo|no funciona|error|falla|bug)/i, reply: 'Lamento escuchar eso. Describe el error exacto que ves en pantalla y desde cuándo ocurre para poder ayudarte mejor.' },
+  { pattern: /(acceso|permiso|bloqueado|restringido)/i, reply: 'Parece que tienes un problema de permisos. Puedo ayudarte con tus credenciales de acceso. ¿Qué necesitas exactamente, tu usuario o tu contraseña?' },
+  { pattern: /(fecha|cumpleaños|feliz|birthday)/i, reply: 'Si necesitas información sobre fechas especiales o cumpleaños, puedes consultarlo en el módulo de RRHH del panel.' },
+  { pattern: /(foto|fotografia|imagen|subir)/i, reply: 'Para subir o actualizar tu foto de perfil, ve a RRHH > Catálogo, busca tu registro y haz doble clic. Ahí podrás cambiar tu foto.' },
 ];
 
 function getGenericReply(message: string): string | null {

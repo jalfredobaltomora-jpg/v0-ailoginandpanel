@@ -176,7 +176,7 @@ const dict: Record<DictKey, { es: string; en: string }> = {
   // RRHH
   'rrhh.title': { es: 'Recursos Humanos', en: 'Human Resources' },
   'rrhh.catalog': { es: 'Catálogo de Personal', en: 'Employee Catalog' },
-  'rrhh.catalog_title': { es: 'Catalogo', en: 'Catalog' },
+  'rrhh.catalog_title': { es: 'Catálogo', en: 'Catalog' },
   'rrhh.catalog_sub': { es: 'Empleados', en: 'Employees' },
   'rrhh.birthdays': { es: 'Cumpleañeros', en: 'Birthdays' },
   'rrhh.birthdays_sub': { es: 'Este mes', en: 'This month' },
