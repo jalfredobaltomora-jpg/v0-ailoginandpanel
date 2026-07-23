@@ -115,6 +115,13 @@ export async function getDownloadURL(ref: any) {
   await _init(); return _storageMod.getDownloadURL(ref);
 }
 
+// ─── Path sanitization ────────────────────────────────────────────
+function sanitizeFirebasePath(segment: string): string {
+  const clean = segment.replace(/[.#$\[\]]/g, '_').trim();
+  if (!clean || clean.length > 200) throw new Error('Invalid path segment');
+  return clean;
+}
+
 // ─── FCM — Firebase Cloud Messaging ──────────────────────────────
 
 let _messaging: any = null;
@@ -326,9 +333,13 @@ export async function getUsuariosIT(): Promise<UsuarioIT[]> {
   try {
     await _init();
     const snapshot = await get(ref(db, 'usuarios-it'));
-    return snapshot.val() ? Object.values(snapshot.val()) : [];
+    const raw = snapshot.val();
+    if (!raw) return [];
+    return Object.values(raw).map((u: any) => ({
+      ...u,
+      pin: '***', // Never expose PINs to client
+    }));
   } catch (e) {
-    console.error('Firebase getUsuariosIT error:', e);
     return [];
   }
 }
@@ -337,7 +348,8 @@ export function listenToUsuariosIT(callback: (usuarios: UsuarioIT[]) => void): (
   const r = ref(db, 'usuarios-it');
   const unsub = onValue(r, (snap) => {
     const raw = snap.val();
-    callback(raw ? Object.values(raw) : []);
+    const users = raw ? Object.values(raw) : [];
+    callback(users.map((u: any) => ({ ...u, pin: '***' })));
   });
   return unsub;
 }
@@ -347,13 +359,15 @@ export async function getUsuarioByUsername(username: string): Promise<UsuarioIT 
   return usuarios.find(u => u.username.toLowerCase() === username.toLowerCase()) || null;
 }
 
-export async function saveUsuarioIT(codigo: string, usuario: UsuarioIT): Promise<boolean> {
+export async function saveUsuarioIT(codigo: string, usuario: Omit<UsuarioIT, 'pin'> & { pin?: string }): Promise<boolean> {
   try {
     await _init();
-    await set(ref(db, `usuarios-it/${codigo}`), usuario);
+    const safeCodigo = sanitizeFirebasePath(codigo);
+    // Never store PINs through client-side — PIN management must go through server API
+    const { pin: _, ...safeData } = usuario as any;
+    await set(ref(db, `usuarios-it/${safeCodigo}`), safeData);
     return true;
   } catch (e) {
-    console.error('Firebase saveUsuarioIT error:', e, 'codigo:', codigo);
     return false;
   }
 }
@@ -681,11 +695,14 @@ export async function buscarAgendaNotes(userCode: string, query: string): Promis
 export async function updateUsuarioIT(codigo: string, updates: Partial<UsuarioIT>): Promise<boolean> {
   try {
     await _init();
-    const r = ref(db, `usuarios-it/${codigo}`);
+    const safeCodigo = sanitizeFirebasePath(codigo);
+    const r = ref(db, `usuarios-it/${safeCodigo}`);
     const snap = await get(r);
     if (!snap.exists()) return false;
     const existing = snap.val() as UsuarioIT;
-    await set(r, { ...existing, ...updates });
+    // Never allow PIN changes through client-side
+    const { pin: _, ...safeUpdates } = updates as any;
+    await set(r, { ...existing, ...safeUpdates });
     return true;
   } catch { return false; }
 }

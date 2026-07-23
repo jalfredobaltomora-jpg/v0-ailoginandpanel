@@ -3,11 +3,11 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getStoredUser } from '@/lib/auth-store';
+import { getStoredUser, type SafeUser } from '@/lib/auth-store';
 import { ArrowLeft, Users, MessageSquare, Bell, Code2, Package } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import type { SupportRequest, UsuarioIT } from '@/lib/firebase';
+import type { SupportRequest } from '@/lib/firebase';
 import { tienePermiso } from '@/lib/permisos';
 
 const SupportQueue = dynamic(() => import('@/components/it-manager/support-queue').then(m => m.SupportQueue), { ssr: false });
@@ -44,7 +44,7 @@ function Tile({ title, subtitle, icon, color, onClick, badge }: TileProps) {
 
 export default function ITManagerPage() {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<UsuarioIT | null>(null);
+  const [currentUser, setCurrentUser] = useState<SafeUser | null>(null);
   const [view, setView] = useState<'tiles' | 'support'>('tiles');
   const [pendingRequests, setPendingRequests] = useState<SupportRequest[]>([]);
 

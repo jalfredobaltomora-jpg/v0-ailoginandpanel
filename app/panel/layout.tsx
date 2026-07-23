@@ -6,7 +6,6 @@ import { ErrorBoundary } from '@/components/panel/error-boundary';
 import { PageTranslator } from '@/components/panel/page-translator';
 import { getStoredUser } from '@/lib/auth-store';
 import { tienePermiso } from '@/lib/permisos';
-import type { UsuarioIT } from '@/lib/firebase';
 import { LangProvider } from '@/lib/lang-context';
 
 const SupportNotifications = dynamic(

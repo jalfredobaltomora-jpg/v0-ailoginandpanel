@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getStoredUser } from '@/lib/auth-store';
+import { getStoredUser, type SafeUser } from '@/lib/auth-store';
 import { ArrowLeft, Code2, Bot, Wrench, PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
@@ -13,13 +13,12 @@ import { Toolbox } from '@/components/ide/toolbox';
 import { AIAssistant } from '@/components/ide/ai-assistant';
 import { cn } from '@/lib/utils';
 import { tienePermiso } from '@/lib/permisos';
-import type { UsuarioIT } from '@/lib/firebase';
 
 type BottomPanel = 'toolbox' | 'ai' | null;
 
 export default function IDEPage() {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<UsuarioIT | null>(null);
+  const [currentUser, setCurrentUser] = useState<SafeUser | null>(null);
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
   const [currentCode, setCurrentCode] = useState('');
   const [bottomPanel, setBottomPanel] = useState<BottomPanel>('toolbox');

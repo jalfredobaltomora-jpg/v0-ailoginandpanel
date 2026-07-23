@@ -6,9 +6,8 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, ScanLine, CalendarDays, CalendarRange, BarChart3, Database, LineChart, ClipboardList, BookOpen, Trash2, Pencil, Bug, Upload, Search, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getStoredUser } from '@/lib/auth-store';
+import { getStoredUser, type SafeUser } from '@/lib/auth-store';
 import { tienePermisoEnGrupo, puedeVer } from '@/lib/permisos';
-import type { UsuarioIT } from '@/lib/firebase';
 
 const CodeExtractor = dynamic(() => import('@/components/qa-reports/code-extractor').then(m => m.CodeExtractor), { ssr: false });
 const WeeklyIssues = dynamic(() => import('@/components/qa-reports/weekly-issues').then(m => m.WeeklyIssues), { ssr: false });
@@ -45,7 +44,7 @@ function Tile({ title, subtitle, icon, color, onClick }: TileProps) {
 
 export default function QAReportsPage() {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<UsuarioIT | null>(null);
+  const [currentUser, setCurrentUser] = useState<SafeUser | null>(null);
   const [view, setView] = useState<'tiles' | 'extractor' | 'weekly' | 'monthly' | 'kpi' | 'registry' | 'dhu'>('tiles');
   const [oqlTab, setDhuTab] = useState<'inline' | 'defect' | 'catalog'>('inline');
   const [qaOqlOpen, setQaDhuOpen] = useState(false);

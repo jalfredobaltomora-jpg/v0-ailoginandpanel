@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle, Circle, Plus, Trash2, Star, CalendarDays, ChevronRight, ChevronDown, AlertCircle, Sparkles, ListTodo } from 'lucide-react';
-import { getStoredUser } from '@/lib/auth-store';
+import { getStoredUser, type SafeUser } from '@/lib/auth-store';
 import { listenToAgendaNotes } from '@/lib/firebase';
-import type { UsuarioIT, AgendaNote } from '@/lib/firebase';
+import type { AgendaNote } from '@/lib/firebase';
 import { getWeekNumber } from '@/lib/alarm-engine';
 
 type ViewMode = 'today' | 'history';
@@ -13,7 +13,7 @@ type HistoryLevel = 'years' | 'months' | 'weeks' | 'days';
 
 export default function AgendaPage() {
   const router = useRouter();
-  const [user, setUser] = useState<UsuarioIT | null>(null);
+  const [user, setUser] = useState<SafeUser | null>(null);
   const [notes, setNotes] = useState<AgendaNote[]>([]);
   const [newNote, setNewNote] = useState('');
   const [view, setView] = useState<ViewMode>('today');

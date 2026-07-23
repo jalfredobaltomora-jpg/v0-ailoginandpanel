@@ -1,0 +1,70 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "usuarios-it": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('usuarios-it').child(auth.uid).child('rol').val() === 'admin'",
+      "$uid": {
+        ".validate": "newData.hasChildren(['codigo', 'username', 'rol', 'activo'])",
+        "pin": { ".validate": false }
+      }
+    },
+    "empleados": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('usuarios-it').child(auth.uid).child('rol').val() === 'admin'"
+    },
+    "asistencia": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "permisos": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "fcm-tokens": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "alarms": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "preferences": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "agenda": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "qa-issues": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "qa-dhu-records": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "qa-dhu-catalog": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "qa-dhu-defect-catalog": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "in-line-defect-records": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "equipos-inventario": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "support-requests": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}

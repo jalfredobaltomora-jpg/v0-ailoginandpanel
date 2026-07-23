@@ -8,8 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getStoredUser } from '@/lib/auth-store';
-import type { EquipoInventario, UsuarioIT } from '@/lib/firebase';
+import { getStoredUser, type SafeUser } from '@/lib/auth-store';
+import type { EquipoInventario } from '@/lib/firebase';
 import { tienePermiso } from '@/lib/permisos';
 
 const EquipmentFormModal = dynamic(() => import('@/components/inventario/equipment-form-modal').then(m => m.EquipmentFormModal), { ssr: false });
@@ -19,7 +19,7 @@ const MonthlyAuditModal = dynamic(() => import('@/components/inventario/monthly-
 
 export default function InventarioPage() {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<UsuarioIT | null>(null);
+  const [currentUser, setCurrentUser] = useState<SafeUser | null>(null);
   const [equipos, setEquipos] = useState<EquipoInventario[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);

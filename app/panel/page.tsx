@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Settings, LogOut, Shield, BarChart3, Notebook } from 'lucide-react';
-import { getStoredUser, removeStoredUser } from '@/lib/auth-store';
-import type { UsuarioIT, Empleado } from '@/lib/firebase';
+import { getStoredUser, removeStoredUser, type SafeUser } from '@/lib/auth-store';
+import type { Empleado } from '@/lib/firebase';
 import { tienePermiso, tienePermisoEnGrupo } from '@/lib/permisos';
 import { useLang } from '@/lib/lang-context';
 
@@ -39,7 +39,7 @@ function Tile({ title, subtitle, icon, color, onClick }: TileProps) {
 export default function PanelPage() {
   const router = useRouter();
   const { t } = useLang();
-  const [currentUser, setCurrentUser] = useState<UsuarioIT | null>(null);
+  const [currentUser, setCurrentUser] = useState<SafeUser | null>(null);
   const [empleadoData, setEmpleadoData] = useState<Empleado | null>(null);
   const [displayName, setDisplayName] = useState('');
 

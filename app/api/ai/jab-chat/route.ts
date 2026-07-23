@@ -114,7 +114,7 @@ export async function POST(req: Request) {
       return null;
     }
 
-    const groqKey = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY;
+    const groqKey = process.env.GROQ_API_KEY;
     if (groqKey) {
       const resp = await processAndRespond(groqKey, 'https://api.groq.com/openai/v1', 'llama-3.3-70b-versatile', fullMessages);
       if (resp) return resp;

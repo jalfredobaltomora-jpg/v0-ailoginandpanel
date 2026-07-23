@@ -234,10 +234,6 @@ registerTool('diagnosticar_sistema', async () => {
       checks.firebase = { ok: fbRes.ok, status: fbRes.status };
     } catch { checks.firebase = { ok: false, error: 'No se pudo conectar a Firebase' }; }
     checks.entorno = { vercel: !!process.env.VERCEL, node_version: process.version };
-    checks.api_keys = {
-      groq: !!process.env.GROQ_API_KEY || !!process.env.NEXT_PUBLIC_GROQ_API_KEY,
-      openai: !!process.env.OPENAI_API_KEY, gemini: !!process.env.GEMINI_API_KEY,
-    };
     const healthy = Object.values(checks).every((c: any) => c.ok !== false);
     return {
       success: true,

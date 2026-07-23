@@ -1,35 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { extractAuth, checkRateLimit, rateLimitResponse } from '@/lib/security';
 
-export const dynamic = 'force-static';
+export const dynamic = 'force-dynamic';
 
-const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || process.env.GROQ_API_KEY || '';
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 
-/**
- * Transcribe audio using Groq Whisper API
- * Supports multiple audio formats and languages
- */
 export async function POST(req: NextRequest) {
   try {
+    // Require auth
+    const user = extractAuth(req);
+    if (!user) {
+      return NextResponse.json({ error: 'No autenticado', text: '' }, { status: 401 });
+    }
+
+    // Rate limiting: 20 per minute
+    const rl = checkRateLimit(`transcribe:${user.uid}`, { windowMs: 60_000, maxRequests: 20 });
+    if (!rl.allowed) return rateLimitResponse(rl.resetAt);
+
     const formData = await req.formData();
     const audio = formData.get('audio') as Blob;
     const language = formData.get('language') as string || 'auto';
 
     if (!audio) {
-      return NextResponse.json(
-        { error: 'No audio file provided', text: '' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No audio file provided', text: '' }, { status: 400 });
     }
 
     if (!GROQ_API_KEY) {
-      console.error('GROQ_API_KEY not configured');
-      return NextResponse.json(
-        { error: 'API key not configured', text: '' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Servicio no disponible', text: '' }, { status: 500 });
     }
 
-    // Determine file extension and MIME type
     const buffer = await audio.arrayBuffer();
     let fileExt = 'webm';
     
@@ -38,7 +37,6 @@ export async function POST(req: NextRequest) {
     else if (audio.type.includes('ogg')) fileExt = 'ogg';
     else if (audio.type.includes('aac')) fileExt = 'aac';
     
-    // Create FormData for Groq API
     const groqFormData = new FormData();
     const blob = new Blob([buffer], { type: audio.type || 'audio/webm' });
     groqFormData.append('file', blob, `audio.${fileExt}`);
@@ -48,54 +46,27 @@ export async function POST(req: NextRequest) {
       groqFormData.append('language', language);
     }
 
-    // Call Groq Whisper API
     const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
-      },
+      headers: { 'Authorization': `Bearer ${GROQ_API_KEY}` },
       body: groqFormData,
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Groq API error:', response.status, errorData);
-      return NextResponse.json(
-        {
-          error: 'Transcription failed',
-          text: '',
-          details: errorData,
-        },
-        { status: response.status }
-      );
+      return NextResponse.json({ error: 'Error de transcripción', text: '' }, { status: 500 });
     }
 
     const data = await response.json();
-    const transcript = data.text || '';
-
     return NextResponse.json({
-      text: transcript,
+      text: data.text || '',
       language: data.language || language,
       duration: data.duration,
     });
-  } catch (error) {
-    console.error('Transcription error:', error);
-    return NextResponse.json(
-      {
-        error: 'Internal server error',
-        text: '',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Error interno', text: '' }, { status: 500 });
   }
 }
 
-// Health check endpoint
 export async function GET() {
-  return NextResponse.json({
-    status: 'ok',
-    service: 'transcription-api',
-    timestamp: new Date().toISOString(),
-  });
+  return NextResponse.json({ status: 'ok', service: 'transcription-api' });
 }

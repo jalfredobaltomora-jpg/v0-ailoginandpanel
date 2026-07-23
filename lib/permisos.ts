@@ -1,4 +1,7 @@
 import type { UsuarioIT } from './firebase';
+import type { SafeUser } from './auth-store';
+
+type UserLike = { rol?: string; permisos?: Record<string, boolean> } | null;
 
 export type PermisoKey = string;
 
@@ -238,7 +241,7 @@ export function todosPermisos(): PermisosMap {
 
 // ─── Check permission ───
 
-export function tienePermiso(user: UsuarioIT | null, permKey: string): boolean {
+export function tienePermiso(user: UserLike, permKey: string): boolean {
   if (!user) return false;
   if (user.rol === 'admin') return true;
   if (user.rol === 'it-manager' && !user.permisos) return true;
@@ -246,18 +249,18 @@ export function tienePermiso(user: UsuarioIT | null, permKey: string): boolean {
   return user.permisos?.[permKey] === true;
 }
 
-export function tieneAlgunPermiso(user: UsuarioIT | null, permKeys: string[]): boolean {
+export function tieneAlgunPermiso(user: UserLike, permKeys: string[]): boolean {
   return permKeys.some(k => tienePermiso(user, k));
 }
 
-export function tienePermisoEnGrupo(user: UsuarioIT | null, prefix: string): boolean {
+export function tienePermisoEnGrupo(user: UserLike, prefix: string): boolean {
   if (!user) return false;
   if (tienePermiso(user, 'itManager')) return true;
   const allKeys = getAllPermisoKeys();
   return allKeys.some(k => k.startsWith(prefix) && tienePermiso(user, k));
 }
 
-export function puedeVer(user: UsuarioIT | null, moduleKey: string): boolean {
+export function puedeVer(user: UserLike, moduleKey: string): boolean {
   if (!user) return false;
   if (tienePermiso(user, 'itManager')) return true;
   return tienePermiso(user, moduleKey + '_ver');

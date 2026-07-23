@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getEmpleadoByCodigo, onValue, ref, db, saveUserSchedule, type Empleado, type UsuarioIT, type UserSchedule } from '@/lib/firebase';
+import type { SafeUser } from '@/lib/auth-store';
 import {
   getGreeting, getMotivationalPhrase, getDayEndTime, getDayEndAdjusted,
   getStoredLunchTime, setStoredLunchTime,
@@ -20,7 +21,7 @@ import {
 } from '@/lib/alarm-engine';
 
 interface WelcomeScreenProps {
-  user: UsuarioIT;
+  user: SafeUser;
   onEnter: () => void;
 }
 

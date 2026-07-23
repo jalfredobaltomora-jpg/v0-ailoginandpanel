@@ -31,7 +31,7 @@ interface EmployeeFormModalProps {
   empleado: Empleado | null;
   onClose: () => void;
   onSaved: () => void;
-  currentUser?: UsuarioIT | null;
+  currentUser?: { rol?: string; permisos?: Record<string, boolean> } | null;
 }
 
 // Formatear cedula con letra opcional: 000-000000-0000X

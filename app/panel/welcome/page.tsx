@@ -3,14 +3,13 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getStoredUser, removeStoredUser } from '@/lib/auth-store';
-import type { UsuarioIT } from '@/lib/firebase';
+import { getStoredUser, removeStoredUser, type SafeUser } from '@/lib/auth-store';
 
 const WelcomeScreen = dynamic(() => import('@/components/panel/welcome-screen').then(m => m.WelcomeScreen), { ssr: false });
 
 export default function WelcomePage() {
   const router = useRouter();
-  const [user, setUser] = useState<UsuarioIT | null>(null);
+  const [user, setUser] = useState<SafeUser | null>(null);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {

@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/generate-pwa-icons.js && node scripts/build-file-index.mjs && next build",
-    "build:cap": "set CAPACITOR_BUILD=1 && node scripts/generate-pwa-icons.js && node scripts/build-file-index.mjs && next build && node scripts/fix-capacitor-paths.js && cap sync",
+    "build": "node scripts/generate-pwa-icons.js && next build",
+    "build:cap": "set CAPACITOR_BUILD=1 && node scripts/generate-pwa-icons.js && next build && node scripts/fix-capacitor-paths.js && cap sync",
     "cap:open": "cap open android",
     "start": "next start",
     "lint": "eslint ."

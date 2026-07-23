@@ -9,9 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getStoredUser } from '@/lib/auth-store';
+import { getStoredUser, type SafeUser } from '@/lib/auth-store';
 import { parseDateLocal } from '@/lib/utils';
-import type { Empleado, UsuarioIT } from '@/lib/firebase';
+import type { Empleado } from '@/lib/firebase';
 import { tienePermisoEnGrupo, puedeVer } from '@/lib/permisos';
 import { useLang } from '@/lib/lang-context';
 
@@ -49,7 +49,7 @@ function Tile({ title, subtitle, icon, color, onClick }: TileProps) {
 export default function RRHHPage() {
   const router = useRouter();
   const { t } = useLang();
-  const [currentUser, setCurrentUser] = useState<UsuarioIT | null>(null);
+  const [currentUser, setCurrentUser] = useState<SafeUser | null>(null);
   const [view, setView] = useState<'tiles' | 'catalogo' | 'cumpleaneros' | 'reloj' | 'permisos' | 'asistencia'>('tiles');
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [search, setSearch] = useState('');

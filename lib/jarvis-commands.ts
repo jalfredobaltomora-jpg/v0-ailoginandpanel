@@ -135,15 +135,9 @@ export const appCommands = {
     return success ? `🚀 Launched: ${appName}` : `❌ Failed to launch: ${appName}`;
   },
 
-  // Execute system command (Electron only)
-  exec: async (command: string): Promise<string> => {
-    const result = await executeCommand(command);
-    if (!result) return '❌ Command execution not available on this platform';
-    
-    if (result.exitCode !== 0) {
-      return `❌ Command failed (exit code: ${result.exitCode})\n${result.stderr}`;
-    }
-    return `✅ Command executed:\n${result.stdout}`;
+  // Execute system command (DISABLED for security)
+  exec: async (_command: string): Promise<string> => {
+    return '❌ Ejecución de comandos del sistema deshabilitada por razones de seguridad.';
   },
 };
 

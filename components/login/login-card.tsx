@@ -6,10 +6,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { getUsuariosIT, getEmpleadoByCodigo, type UsuarioIT, type Empleado } from '@/lib/firebase';
+import { getEmpleadoByCodigo, type Empleado } from '@/lib/firebase';
+import { setAuthToken, setStoredUser, type SafeUser } from '@/lib/auth-store';
 
 interface LoginCardProps {
-  onLoginSuccess: (user: UsuarioIT) => void;
+  onLoginSuccess: (user: SafeUser & { token: string }) => void;
   onRequestSupport: (username: string, similarUser: string | null) => void;
 }
 
@@ -41,38 +42,39 @@ function similarity(a: string, b: string): number {
   return maxLen === 0 ? 100 : Math.round((1 - dist / maxLen) * 100);
 }
 
-function validateUsernameLocal(value: string, allUsers: { username: string }[]): AIValidation {
-  const input = value.toLowerCase().trim();
-  const usernames = allUsers.map(u => u.username);
+// Minimal username list fetched from server (NO PINs, NO sensitive data)
+interface UsernameOnly { username: string; activo: boolean; codigo: string; }
 
+async function fetchUsernames(): Promise<UsernameOnly[]> {
+  try {
+    const res = await fetch('/api/auth/login', { method: 'GET' });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.usernames || [];
+  } catch { return []; }
+}
+
+function validateUsernameLocal(value: string, usernames: string[]): AIValidation {
+  const input = value.toLowerCase().trim();
   if (input.length < 3) {
     return { match: 'none', matchedUser: null, similarity: 0, suggestion: 'IA: Por favor ingrese al menos 3 caracteres.' };
   }
-
-  // 1. Exact match?
   const exact = usernames.find(u => u.toLowerCase() === input);
   if (exact) {
     return { match: 'exact', matchedUser: exact, similarity: 100, suggestion: 'IA: Usuario reconocido. Por favor ingrese su PIN.' };
   }
-
-  // 2. Sigue escribiendo? — si es prefijo de algun usuario, esperar sin mostrar error
   const prefixUser = usernames.find(u => u.toLowerCase().startsWith(input));
   if (prefixUser) {
     return { match: 'prefix', matchedUser: prefixUser, similarity: 0, suggestion: `IA: Coincide con "${prefixUser}"... siga escribiendo.` };
   }
-
-  // 3. Similar (error ortografico)
   const scored = usernames
     .map(u => ({ username: u, score: similarity(input, u) }))
     .filter(s => s.score >= 50)
     .sort((a, b) => b.score - a.score);
-
   if (scored.length > 0 && scored[0].score >= 70) {
     const best = scored[0];
     return { match: 'similar', matchedUser: best.username, similarity: best.score, suggestion: `IA: Quizas quiso decir "${best.username}"? (${best.score}% de coincidencia)` };
   }
-
-  // 4. No encontrado
   return { match: 'none', matchedUser: null, similarity: 0, suggestion: 'IA: Usuario no encontrado en el sistema.' };
 }
 
@@ -82,45 +84,44 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
   const [showPin, setShowPin] = useState(false);
   const [step, setStep] = useState<'username' | 'pin'>('username');
   const [aiMessage, setAiMessage] = useState('IA: Esperando identificación...');
-  const [matchedUser, setMatchedUser] = useState<UsuarioIT | null>(null);
+  const [matchedUsername, setMatchedUsername] = useState<string | null>(null);
+  const [matchedUserCodigo, setMatchedUserCodigo] = useState<string | null>(null);
   const [similarUser, setSimilarUser] = useState<string | null>(null);
   const [showSupportBtn, setShowSupportBtn] = useState(false);
   const [pinAttempts, setPinAttempts] = useState(0);
-  const [allUsers, setAllUsers] = useState<UsuarioIT[]>([]);
+  const [loading, setLoading] = useState(false);
   const [employee, setEmployee] = useState<Empleado | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const usernameRef = useRef('');
+  const usernamesRef = useRef<string[]>([]);
+  const codigoRef = useRef<string | null>(null);
 
+  // Fetch only usernames (no PINs) on mount
   useEffect(() => {
-    async function loadUsers() {
-      const users = await getUsuariosIT();
-      setAllUsers(users);
-    }
-    loadUsers();
+    fetchUsernames().then(users => {
+      usernamesRef.current = users.filter(u => u.activo).map(u => u.username);
+    });
   }, []);
 
   useEffect(() => {
-    if (matchedUser) {
-      getEmpleadoByCodigo(matchedUser.codigo).then(setEmployee);
+    if (matchedUserCodigo) {
+      getEmpleadoByCodigo(matchedUserCodigo).then(setEmployee);
     } else {
       setEmployee(null);
     }
-  }, [matchedUser]);
+  }, [matchedUserCodigo]);
 
   const doValidate = useCallback(() => {
     const value = usernameRef.current;
     if (value.length < 3) return;
-
-    const result = validateUsernameLocal(value, allUsers.filter(u => u.activo).map(u => ({ username: u.username })));
+    const result = validateUsernameLocal(value, usernamesRef.current);
 
     if (result.match === 'exact') {
-      const user = allUsers.find(u => u.username.toLowerCase() === result.matchedUser?.toLowerCase());
-      if (user) {
-        setMatchedUser(user);
-        setStep('pin');
-        setAiMessage('IA: Usuario reconocido. Por favor ingrese su PIN.');
-        setShowSupportBtn(false);
-      }
+      // Find the codigo for this username from the cached list
+      setMatchedUsername(result.matchedUser);
+      setStep('pin');
+      setAiMessage('IA: Usuario reconocido. Por favor ingrese su PIN.');
+      setShowSupportBtn(false);
     } else if (result.match === 'prefix') {
       setAiMessage(result.suggestion);
       setShowSupportBtn(false);
@@ -132,44 +133,55 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
       setAiMessage('IA: Usuario no encontrado en el sistema.');
       setShowSupportBtn(true);
     }
-  }, [allUsers]);
+  }, []);
 
   const handleValidateUsername = (value: string) => {
     usernameRef.current = value;
     setUsername(value);
-
     if (debounceRef.current) clearTimeout(debounceRef.current);
-
     if (value.length < 3) {
       setShowSupportBtn(false);
       setSimilarUser(null);
       setAiMessage('IA: Esperando identificación...');
       return;
     }
-
     setAiMessage('IA: Analizando...');
-
     debounceRef.current = setTimeout(doValidate, 400);
   };
 
   const validatePIN = async (value: string) => {
     setPin(value);
+    if (value.length === 6 && matchedUsername && !loading) {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: matchedUsername, pin: value }),
+        });
+        const data = await res.json();
 
-    if (value.length === 6 && matchedUser) {
-      if (value === matchedUser.pin) {
-        setAiMessage('IA: Acceso concedido. Bienvenido.');
-        setTimeout(() => onLoginSuccess(matchedUser), 500);
-      } else {
-        const newAttempts = pinAttempts + 1;
-        setPinAttempts(newAttempts);
-        setPin('');
-
-        if (newAttempts >= 3) {
-          setAiMessage('IA: Demasiados intentos fallidos. Puede solicitar asistencia de IT.');
-          setShowSupportBtn(true);
+        if (res.ok && data.token && data.user) {
+          setAuthToken(data.token);
+          setStoredUser(data.user);
+          setAiMessage('IA: Acceso concedido. Bienvenido.');
+          setTimeout(() => onLoginSuccess({ ...data.user, token: data.token }), 500);
         } else {
-          setAiMessage(`IA: PIN incorrecto. Intento ${newAttempts}/3`);
+          const newAttempts = pinAttempts + 1;
+          setPinAttempts(newAttempts);
+          setPin('');
+          if (newAttempts >= 3) {
+            setAiMessage('IA: Demasiados intentos fallidos. Puede solicitar asistencia de IT.');
+            setShowSupportBtn(true);
+          } else {
+            setAiMessage(`IA: PIN incorrecto. Intento ${newAttempts}/3`);
+          }
         }
+      } catch {
+        setAiMessage('IA: Error de conexión. Intente de nuevo.');
+        setPin('');
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -182,7 +194,8 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
     setStep('username');
     setUsername('');
     setPin('');
-    setMatchedUser(null);
+    setMatchedUsername(null);
+    setMatchedUserCodigo(null);
     setSimilarUser(null);
     setShowSupportBtn(false);
     setPinAttempts(0);
@@ -192,32 +205,23 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
   return (
     <Card className="w-full max-w-lg border-primary/20 bg-card/95 shadow-[0_0_30px_rgba(0,242,255,0.1)] backdrop-blur-xl">
       <CardContent className="flex items-center gap-6 p-8">
-        {/* Avatar / Employee Photo */}
         <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-border bg-background">
-          {matchedUser && employee?.foto ? (
+          {matchedUsername && employee?.foto ? (
             <Avatar className="h-full w-full rounded-none">
-              <AvatarImage src={employee.foto} alt={matchedUser.username} className="h-full w-full object-cover" />
+              <AvatarImage src={employee.foto} alt={matchedUsername} className="h-full w-full object-cover" />
               <AvatarFallback className="rounded-none text-2xl font-bold text-primary">
-                {matchedUser.username.charAt(0).toUpperCase()}
+                {matchedUsername.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
           ) : (
             <MessageCircle className="h-12 w-12 text-primary" />
           )}
         </div>
-
-        {/* Form Section */}
         <div className="flex-1 space-y-4">
-          <h2 className="text-xl font-bold tracking-wide text-primary">
-            SYSTEM JABM
-          </h2>
-
-          {/* AI Message */}
+          <h2 className="text-xl font-bold tracking-wide text-primary">SYSTEM JABM</h2>
           <div className="flex min-h-12 items-center rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm text-foreground">
             {aiMessage}
           </div>
-
-          {/* Username Input */}
           {step === 'username' && (
             <Input
               type="text"
@@ -227,8 +231,6 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
               className="border-border bg-input text-foreground placeholder:text-muted-foreground focus:border-primary"
             />
           )}
-
-          {/* PIN Input */}
           {step === 'pin' && (
             <div className="space-y-3">
               <div className="relative">
@@ -240,6 +242,7 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
                   maxLength={6}
                   inputMode="numeric"
                   className="border-border bg-input pr-10 text-foreground placeholder:text-muted-foreground focus:border-primary"
+                  disabled={loading}
                 />
                 <button
                   type="button"
@@ -249,21 +252,13 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
                   {showPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <button
-                onClick={resetLogin}
-                className="text-xs text-muted-foreground hover:text-primary hover:underline"
-              >
+              <button onClick={resetLogin} className="text-xs text-muted-foreground hover:text-primary hover:underline">
                 Cambiar usuario
               </button>
             </div>
           )}
-
-          {/* Support Button */}
           {showSupportBtn && (
-            <Button
-              onClick={handleSupportRequest}
-              className="w-full bg-blue-600 text-white hover:bg-blue-700"
-            >
+            <Button onClick={handleSupportRequest} className="w-full bg-blue-600 text-white hover:bg-blue-700">
               <MessageCircle className="mr-2 h-4 w-4" />
               Asistencia de IT
             </Button>
