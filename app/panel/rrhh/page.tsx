@@ -21,6 +21,7 @@ const BirthdayCardModal = dynamic(() => import('@/components/rrhh/birthday-card-
 const AsistenciaView = dynamic(() => import('@/components/rrhh/asistencia-view').then(m => m.AsistenciaView), { ssr: false });
 const ClockIn = dynamic(() => import('@/components/rrhh/clock-in').then(m => m.ClockIn), { ssr: false });
 const PermisosManager = dynamic(() => import('@/components/rrhh/permisos-manager').then(m => m.PermisosManager), { ssr: false });
+const QABirthdayMural = dynamic(() => import('@/components/rrhh/qa-birthday-mural').then(m => m.QABirthdayMural), { ssr: false });
 
 interface TileProps {
   title: string;
@@ -49,9 +50,10 @@ export default function RRHHPage() {
   const router = useRouter();
   const { t } = useLang();
   const [currentUser, setCurrentUser] = useState<UsuarioIT | null>(null);
-  const [view, setView] = useState<'tiles' | 'catalogo' | 'cumpleaneros' | 'reloj' | 'permisos' | 'asistencia'>('tiles');
+  const [view, setView] = useState<'tiles' | 'catalogo' | 'cumpleaneros' | 'reloj' | 'permisos' | 'asistencia' | 'mural'>('tiles');
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [search, setSearch] = useState('');
+  const [birthdaySearch, setBirthdaySearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [showInactivos, setShowInactivos] = useState(false);
   const [selectedEmpleado, setSelectedEmpleado] = useState<Empleado | null>(null);
@@ -76,7 +78,7 @@ export default function RRHHPage() {
 
   // Real-time Firebase listener for empleados
   useEffect(() => {
-    if (view !== 'catalogo' && view !== 'cumpleaneros' && view !== 'reloj' && view !== 'permisos' && view !== 'asistencia') return;
+    if (view !== 'catalogo' && view !== 'cumpleaneros' && view !== 'reloj' && view !== 'permisos' && view !== 'asistencia' && view !== 'mural') return;
 
     let unsubscribe: () => void;
 
@@ -166,7 +168,11 @@ export default function RRHHPage() {
     const currentDay = today.getDate();
 
     return empleados
-      .filter(e => e.fechaNac && e.activo !== false)
+      .filter(e => {
+        if (!e.fechaNac || e.activo !== false) return false;
+        const full = `${e.nombres} ${e.apellidos}`.toLowerCase();
+        return full.includes(birthdaySearch.toLowerCase()) || e.code.includes(birthdaySearch);
+      })
       .sort((a, b) => {
         const dateA = parseDateLocal(a.fechaNac);
         const dateB = parseDateLocal(b.fechaNac);
@@ -521,10 +527,30 @@ export default function RRHHPage() {
             {/* Section: Todos los Cumpleaneros */}
             <Card className="border-primary/20 bg-card/95">
               <CardHeader className="border-b border-border">
-                <CardTitle className="flex items-center gap-2 text-primary">
-                  <CalendarDays className="h-5 w-5" />
-                  Todos los Cumpleaneros del Ano
-                </CardTitle>
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <CardTitle className="flex items-center gap-2 text-primary">
+                    <CalendarDays className="h-5 w-5" />
+                    Todos los Cumpleaneros del Año
+                  </CardTitle>
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={birthdaySearch}
+                        onChange={(e) => setBirthdaySearch(e.target.value)}
+                        placeholder="Buscar empleado..."
+                        className="w-56 border-border bg-input pl-9 h-9"
+                      />
+                    </div>
+                    <Button
+                      onClick={() => setView('mural')}
+                      className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold h-9"
+                    >
+                      <PartyPopper className="mr-2 h-4 w-4" />
+                      Mural QA
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="p-6">
                 <p className="mb-6 text-sm text-muted-foreground flex items-center gap-2">
@@ -539,14 +565,14 @@ export default function RRHHPage() {
                     No hay empleados registrados
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="overflow-y-auto max-h-[600px] space-y-2 pr-3" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(79, 70, 229, 0.5) rgba(51, 65, 85, 0.2)' }}>
                     {getAllSortedByBirthday().map((emp) => (
                       <div
                         key={emp.code}
                         onClick={() => handleEmployeeInfoClick(emp)}
-                        className="flex items-center gap-4 rounded-lg border border-border bg-muted/20 p-3 hover:bg-muted/40 cursor-pointer transition-colors"
+                        className="flex items-center gap-4 rounded-lg border border-border bg-muted/20 p-3 hover:bg-muted/40 cursor-pointer transition-colors flex-shrink-0"
                       >
-                        <Avatar className="h-12 w-12 border-2 border-primary/30">
+                        <Avatar className="h-12 w-12 border-2 border-primary/30 flex-shrink-0">
                           <AvatarImage src={emp.foto} alt={`${emp.nombres} ${emp.apellidos}`} />
                           <AvatarFallback className="bg-primary/20 text-primary text-sm">
                             {getInitials(emp)}
@@ -568,7 +594,7 @@ export default function RRHHPage() {
                             <span>{emp.cargo}</span>
                           </div>
                         </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       </div>
                     ))}
                   </div>
@@ -576,6 +602,10 @@ export default function RRHHPage() {
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {view === 'mural' && (
+          <QABirthdayMural />
         )}
 
         {view === 'reloj' && (
