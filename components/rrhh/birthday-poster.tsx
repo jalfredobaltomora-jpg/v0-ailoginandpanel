@@ -490,40 +490,37 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       canvas.height = totalH;
       const ctx = canvas.getContext('2d')!;
 
-      // ─── Background ───
+      // ─── Background (light for print) ───
       const bgGrad = ctx.createLinearGradient(0, 0, 0, totalH);
-      bgGrad.addColorStop(0, '#0a0520');
-      bgGrad.addColorStop(0.15, '#0f0a2a');
-      bgGrad.addColorStop(0.3, '#150d28');
-      bgGrad.addColorStop(0.5, '#120a25');
-      bgGrad.addColorStop(0.7, '#0e0822');
-      bgGrad.addColorStop(1, '#080418');
+      bgGrad.addColorStop(0, '#f8f6fb');
+      bgGrad.addColorStop(0.3, '#f5f0fa');
+      bgGrad.addColorStop(0.5, '#faf5f8');
+      bgGrad.addColorStop(0.7, '#f0edf5');
+      bgGrad.addColorStop(1, '#f5f2f9');
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, PW, totalH);
 
-      // Warm radial glows
+      // Subtle warm radial glows
       const g1 = ctx.createRadialGradient(PW * 0.15, totalH * 0.08, 0, PW * 0.15, totalH * 0.08, PW * 0.5);
-      g1.addColorStop(0, 'rgba(255,107,157,0.15)');
-      g1.addColorStop(0.5, 'rgba(196,77,255,0.05)');
+      g1.addColorStop(0, 'rgba(255,107,157,0.06)');
       g1.addColorStop(1, 'transparent');
       ctx.fillStyle = g1;
       ctx.fillRect(0, 0, PW, totalH);
 
       const g2 = ctx.createRadialGradient(PW * 0.85, totalH * 0.05, 0, PW * 0.85, totalH * 0.05, PW * 0.45);
-      g2.addColorStop(0, 'rgba(255,171,64,0.12)');
-      g2.addColorStop(0.5, 'rgba(255,215,64,0.04)');
+      g2.addColorStop(0, 'rgba(255,171,64,0.05)');
       g2.addColorStop(1, 'transparent');
       ctx.fillStyle = g2;
       ctx.fillRect(0, 0, PW, totalH);
 
       const g3 = ctx.createRadialGradient(PW * 0.9, totalH * 0.95, 0, PW * 0.9, totalH * 0.95, PW * 0.5);
-      g3.addColorStop(0, 'rgba(0,229,255,0.10)');
+      g3.addColorStop(0, 'rgba(0,229,255,0.04)');
       g3.addColorStop(1, 'transparent');
       ctx.fillStyle = g3;
       ctx.fillRect(0, 0, PW, totalH);
 
       const g4 = ctx.createRadialGradient(PW * 0.5, totalH * 0.5, 0, PW * 0.5, totalH * 0.5, PW * 0.6);
-      g4.addColorStop(0, 'rgba(196,77,255,0.06)');
+      g4.addColorStop(0, 'rgba(196,77,255,0.03)');
       g4.addColorStop(1, 'transparent');
       ctx.fillStyle = g4;
       ctx.fillRect(0, 0, PW, totalH);
@@ -531,12 +528,12 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       // Confetti
       drawConfetti(ctx, PW, totalH, 150);
 
-      // Bokeh circles
+      // Bokeh circles (lighter for print)
       for (let i = 0; i < 25; i++) {
         const bx = ((i * 2654435761) >>> 0) % PW;
         const by = ((i * 2654435761 * 7) >>> 0) % totalH;
         const br = 30 + ((i * 2654435761 * 13) >>> 0) % 60;
-        const bAlpha = 0.02 + ((i * 2654435761 * 17) >>> 0) % 25 / 1000;
+        const bAlpha = 0.03 + ((i * 2654435761 * 17) >>> 0) % 20 / 1000;
         const bgc = i % 3 === 0 ? '255,107,157' : i % 3 === 1 ? '0,229,255' : '196,77,255';
         const bg2 = ctx.createRadialGradient(bx, by, 0, bx, by, br);
         bg2.addColorStop(0, `rgba(${bgc},${bAlpha * 3})`);
@@ -547,12 +544,12 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
         ctx.fill();
       }
 
-      // Sparkles
+      // Sparkles (subtle for print)
       for (let i = 0; i < 60; i++) {
         const sx = ((i * 2654435761 * 3) >>> 0) % PW;
         const sy = ((i * 2654435761 * 11) >>> 0) % totalH;
         const ss = 4 + ((i * 2654435761 * 19) >>> 0) % 10;
-        const so = 0.10 + ((i * 2654435761 * 23) >>> 0) % 20 / 100;
+        const so = 0.05 + ((i * 2654435761 * 23) >>> 0) % 10 / 100;
         drawSparkle(ctx, sx, sy, ss, so);
       }
 
@@ -560,11 +557,11 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       drawOfficeItems(ctx, PW, totalH);
 
       // ─── Header ───
-      ctx.strokeStyle = 'rgba(255,107,157,0.3)';
+      ctx.strokeStyle = 'rgba(196,77,255,0.3)';
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(MARGIN, 20); ctx.lineTo(PW - MARGIN, 20); ctx.stroke();
 
-      ctx.strokeStyle = 'rgba(196,77,255,0.15)';
+      ctx.strokeStyle = 'rgba(255,107,157,0.15)';
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(MARGIN, 30); ctx.lineTo(PW - MARGIN, 30); ctx.stroke();
 
@@ -573,40 +570,27 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       const titleY = 78;
       const year = new Date().getFullYear();
 
-      // Outer glow layer
-      ctx.shadowColor = 'rgba(255,107,157,0.6)';
-      ctx.shadowBlur = 60;
-      ctx.fillStyle = 'rgba(255,107,157,0.15)';
-      ctx.font = 'bold 62px "Segoe UI", Arial, sans-serif';
-      ctx.fillText('CUMPLEAÑEROS', PW / 2, titleY);
-
-      // Mid glow layer
-      ctx.shadowColor = 'rgba(196,77,255,0.5)';
+      // Shadow glow
+      ctx.shadowColor = 'rgba(196,77,255,0.3)';
       ctx.shadowBlur = 40;
-      ctx.fillStyle = 'rgba(196,77,255,0.2)';
-      ctx.fillText('CUMPLEAÑEROS', PW / 2, titleY);
-
-      // Main text
-      ctx.shadowColor = 'rgba(255,107,157,0.4)';
-      ctx.shadowBlur = 25;
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#2a1548';
       ctx.font = 'bold 62px "Segoe UI", Arial, sans-serif';
       ctx.fillText('CUMPLEAÑEROS', PW / 2, titleY);
       ctx.shadowBlur = 0;
 
       // Gradient color overlay on text
       const tg = ctx.createLinearGradient(PW / 2 - 450, titleY - 50, PW / 2 + 450, titleY);
-      tg.addColorStop(0, 'rgba(255,107,157,0.0)');
-      tg.addColorStop(0.25, 'rgba(255,107,157,0.35)');
-      tg.addColorStop(0.5, 'rgba(196,77,255,0.3)');
-      tg.addColorStop(0.75, 'rgba(255,171,64,0.35)');
-      tg.addColorStop(1, 'rgba(255,107,157,0.0)');
+      tg.addColorStop(0, '#c44dff');
+      tg.addColorStop(0.25, '#ff6b9d');
+      tg.addColorStop(0.5, '#c44dff');
+      tg.addColorStop(0.75, '#ff6b9d');
+      tg.addColorStop(1, '#c44dff');
       ctx.fillStyle = tg;
       ctx.fillText('CUMPLEAÑEROS', PW / 2, titleY);
 
       // Decorative lines flanking the title
       const titleW = 450;
-      ctx.strokeStyle = 'rgba(255,107,157,0.25)';
+      ctx.strokeStyle = 'rgba(196,77,255,0.3)';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(PW / 2 - titleW - 80, titleY - 15);
@@ -618,21 +602,21 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       ctx.stroke();
 
       // Small decorative stars near title
-      drawStarShape(ctx, PW / 2 - titleW - 100, titleY - 15, 8, '#ff6b9d', 0.4);
-      drawStarShape(ctx, PW / 2 + titleW + 100, titleY - 15, 8, '#ff6b9d', 0.4);
-      drawStarShape(ctx, PW / 2 - titleW - 130, titleY - 15, 5, '#ffd740', 0.3);
-      drawStarShape(ctx, PW / 2 + titleW + 130, titleY - 15, 5, '#ffd740', 0.3);
+      drawStarShape(ctx, PW / 2 - titleW - 100, titleY - 15, 8, '#ff6b9d', 0.5);
+      drawStarShape(ctx, PW / 2 + titleW + 100, titleY - 15, 8, '#ff6b9d', 0.5);
+      drawStarShape(ctx, PW / 2 - titleW - 130, titleY - 15, 5, '#ffd740', 0.4);
+      drawStarShape(ctx, PW / 2 + titleW + 130, titleY - 15, 5, '#ffd740', 0.4);
 
       // Year
       ctx.font = 'bold 34px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = 'rgba(255,107,157,0.4)';
+      ctx.fillStyle = 'rgba(196,77,255,0.5)';
       ctx.fillText(String(year), PW / 2, 115);
 
       // Bottom header lines
-      ctx.strokeStyle = 'rgba(196,77,255,0.12)';
+      ctx.strokeStyle = 'rgba(196,77,255,0.15)';
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(MARGIN, HEADER_H - 8); ctx.lineTo(PW - MARGIN, HEADER_H - 8); ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,107,157,0.3)';
+      ctx.strokeStyle = 'rgba(196,77,255,0.3)';
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(MARGIN, HEADER_H - 1); ctx.lineTo(PW - MARGIN, HEADER_H - 1); ctx.stroke();
 
@@ -665,15 +649,15 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
 
         // Month header bar
         const mGrad = ctx.createLinearGradient(MARGIN, yPos, PW - MARGIN, yPos);
-        mGrad.addColorStop(0, `${mc}22`);
-        mGrad.addColorStop(0.3, `${mc}10`);
+        mGrad.addColorStop(0, `${mc}15`);
+        mGrad.addColorStop(0.3, `${mc}0a`);
         mGrad.addColorStop(1, `${mc}03`);
         ctx.fillStyle = mGrad;
         roundRect(ctx, MARGIN, yPos, CONTENT_W, MONTH_HEADER_H - 10, 12);
         ctx.fill();
 
         // Left accent bar
-        ctx.fillStyle = `${mc}99`;
+        ctx.fillStyle = mc;
         roundRect(ctx, MARGIN, yPos, 8, MONTH_HEADER_H - 10, 4);
         ctx.fill();
 
@@ -710,39 +694,39 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
 
           const isToday = isBirthdayToday(emp.fechaNac);
 
-          // Card bg
+          // Card bg (light for print)
           const cardGrad = ctx.createLinearGradient(x, y, x + CARD_W, y + CARD_H);
-          cardGrad.addColorStop(0, 'rgba(18,10,40,0.88)');
-          cardGrad.addColorStop(1, 'rgba(10,6,25,0.82)');
+          cardGrad.addColorStop(0, '#ffffff');
+          cardGrad.addColorStop(1, '#f9f7fc');
           ctx.fillStyle = cardGrad;
           roundRect(ctx, x, y, CARD_W, CARD_H, 10);
           ctx.fill();
 
           // Card border
-          ctx.strokeStyle = isToday ? 'rgba(255,171,64,0.4)' : `${mc}25`;
-          ctx.lineWidth = isToday ? 2.5 : 1.5;
+          ctx.strokeStyle = isToday ? '#ffab40' : `${mc}35`;
+          ctx.lineWidth = isToday ? 3 : 1.5;
           roundRect(ctx, x, y, CARD_W, CARD_H, 10);
           ctx.stroke();
 
           // Left accent
-          ctx.fillStyle = isToday ? '#ffab40' : `${mc}80`;
-          roundRect(ctx, x, y + 8, 5, CARD_H - 16, 2.5);
+          ctx.fillStyle = isToday ? '#ffab40' : mc;
+          roundRect(ctx, x, y + 6, 5, CARD_H - 12, 2.5);
           ctx.fill();
 
-          // Photo
-          const photoR = 56;
-          const photoX = x + 75;
+          // Photo (bigger)
+          const photoR = 62;
+          const photoX = x + 78;
           const photoY = y + CARD_H / 2;
 
           ctx.beginPath();
           ctx.arc(photoX, photoY, photoR + 5, 0, Math.PI * 2);
-          ctx.strokeStyle = isToday ? 'rgba(255,171,64,0.4)' : `${mc}30`;
-          ctx.lineWidth = 2;
+          ctx.strokeStyle = isToday ? '#ffab40' : `${mc}40`;
+          ctx.lineWidth = 2.5;
           ctx.stroke();
 
           ctx.beginPath();
           ctx.arc(photoX, photoY, photoR + 2, 0, Math.PI * 2);
-          ctx.strokeStyle = isToday ? 'rgba(255,171,64,0.2)' : `${mc}15`;
+          ctx.strokeStyle = isToday ? 'rgba(255,171,64,0.3)' : `${mc}20`;
           ctx.lineWidth = 1;
           ctx.stroke();
 
@@ -757,7 +741,7 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
           } else {
             const fg = ctx.createRadialGradient(photoX, photoY, 0, photoX, photoY, photoR);
             fg.addColorStop(0, mc);
-            fg.addColorStop(1, '#120a28');
+            fg.addColorStop(1, `${mc}60`);
             ctx.fillStyle = fg;
             ctx.fill();
             ctx.fillStyle = '#ffffff';
@@ -768,11 +752,11 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
           ctx.restore();
 
           // Text info
-          const textX = x + 145;
+          const textX = x + 155;
           ctx.textAlign = 'left';
 
           // Name
-          ctx.fillStyle = '#ffffff';
+          ctx.fillStyle = '#1a1a2e';
           ctx.font = 'bold 24px "Segoe UI", Arial, sans-serif';
           ctx.fillText(truncate(emp.nombres || '', 18), textX, y + 58);
           ctx.fillText(truncate(emp.apellidos || '', 18), textX, y + 88);
@@ -781,7 +765,7 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
           const bdate = parseDateLocal(emp.fechaNac);
           const day = bdate.getDate();
           const dateStr = `${day} de ${MONTHS[bdate.getMonth()]}`;
-          ctx.fillStyle = isToday ? '#ffab40' : mc;
+          ctx.fillStyle = isToday ? '#ff8c00' : mc;
           ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
           ctx.fillText(dateStr, textX, y + 122);
 
@@ -805,15 +789,15 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       }
 
       // ─── Footer ───
-      ctx.strokeStyle = 'rgba(196,77,255,0.12)';
+      ctx.strokeStyle = 'rgba(196,77,255,0.15)';
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(MARGIN, totalH - FOOTER_H + 15); ctx.lineTo(PW - MARGIN, totalH - FOOTER_H + 15); ctx.stroke();
 
       ctx.textAlign = 'center';
-      ctx.fillStyle = 'rgba(255,107,157,0.3)';
+      ctx.fillStyle = 'rgba(42,21,72,0.4)';
       ctx.font = '24px "Segoe UI", Arial, sans-serif';
       ctx.fillText('SCA — Sistema de Control Administrativo', PW / 2, totalH - 48);
-      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.fillStyle = 'rgba(42,21,72,0.3)';
       ctx.font = '18px "Segoe UI", Arial, sans-serif';
       ctx.fillText(
         `Generado el ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}`,
