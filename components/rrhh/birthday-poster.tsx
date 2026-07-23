@@ -478,14 +478,15 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
         group.sort((a, b) => parseDateLocal(a.fechaNac).getDate() - parseDateLocal(b.fechaNac).getDate());
       });
 
-      let totalH = HEADER_H;
+      let contentH = HEADER_H;
       monthGroups.forEach(group => {
         if (group.length > 0) {
           const rows = Math.ceil(group.length / COLS);
-          totalH += MONTH_HEADER_H + rows * (CARD_H + CARD_GAP_Y) + SECTION_GAP;
+          contentH += MONTH_HEADER_H + rows * (CARD_H + CARD_GAP_Y) + SECTION_GAP;
         }
       });
-      totalH += FOOTER_H;
+      contentH += FOOTER_H;
+      const totalH = Math.max(contentH, PW);
 
       const canvas = document.createElement('canvas');
       canvas.width = PW;
