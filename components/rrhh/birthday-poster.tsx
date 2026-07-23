@@ -110,7 +110,7 @@ function drawConfetti(
     const ci = (seed >>> 16) % colors.length;
     const size = 4 + (seed >>> 8) % 8;
     const rot = ((seed >>> 4) % 360) * Math.PI / 180;
-    const alpha = 0.12 + ((seed >>> 12) % 15) / 100;
+    const alpha = 0.18 + ((seed >>> 12) % 18) / 100;
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(rot);
@@ -145,9 +145,11 @@ function drawSparkle(
   ctx: CanvasRenderingContext2D,
   x: number, y: number, size: number, opacity: number,
 ) {
+  const sparkleColors = ['#c44dff', '#e91e63', '#ffab40', '#2979ff', '#00e5ff', '#4caf50'];
+  const sc = sparkleColors[(x | 0) % sparkleColors.length];
   ctx.save();
   ctx.globalAlpha = opacity;
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = sc;
   ctx.beginPath();
   ctx.moveTo(x, y - size);
   ctx.quadraticCurveTo(x + size * 0.15, y - size * 0.15, x + size, y);
@@ -166,17 +168,17 @@ function drawCakeIcon(
   ctx.globalAlpha = opacity;
   ctx.translate(cx, cy);
   ctx.scale(scale, scale);
-  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  ctx.fillStyle = 'rgba(196,77,255,0.08)';
   ctx.beginPath();
   ctx.ellipse(0, 40, 70, 12, 0, 0, Math.PI * 2);
   ctx.fill();
   const cg = ctx.createLinearGradient(-50, -10, 50, 40);
-  cg.addColorStop(0, '#2a1a4e');
-  cg.addColorStop(1, '#1a0d3b');
+  cg.addColorStop(0, '#f3e5f5');
+  cg.addColorStop(1, '#e1bee7');
   ctx.fillStyle = cg;
   roundRect(ctx, -50, -10, 100, 50, 8);
   ctx.fill();
-  ctx.fillStyle = '#ff6b9d';
+  ctx.fillStyle = '#e91e63';
   ctx.beginPath();
   for (let i = 0; i <= 100; i += 5) {
     const fx = -50 + i;
@@ -187,7 +189,7 @@ function drawCakeIcon(
   ctx.lineTo(-50, -10);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = '#00e5ff';
+  ctx.fillStyle = '#7c4dff';
   ctx.fillRect(-3, -35, 6, 28);
   ctx.fillStyle = '#ffab40';
   ctx.beginPath();
@@ -367,21 +369,21 @@ function drawOfficeItems(
   const balloonColors = ['#ff6b9d', '#c44dff', '#00e5ff', '#ffab40', '#69f0ae', '#ea80fc', '#ffd740', '#ff5252'];
   // Balloons distributed along the full height
   const balloonPositions = [
-    { x: 120, yF: 0.02, r: 55, ci: 0, op: 0.30 },
-    { x: 300, yF: 0.01, r: 42, ci: 1, op: 0.25 },
-    { x: 480, yF: 0.025, r: 35, ci: 2, op: 0.22 },
-    { x: w - 120, yF: 0.02, r: 52, ci: 3, op: 0.28 },
-    { x: w - 300, yF: 0.012, r: 40, ci: 4, op: 0.24 },
-    { x: w - 480, yF: 0.022, r: 38, ci: 5, op: 0.22 },
+    { x: 120, yF: 0.02, r: 55, ci: 0, op: 0.40 },
+    { x: 300, yF: 0.01, r: 42, ci: 1, op: 0.35 },
+    { x: 480, yF: 0.025, r: 35, ci: 2, op: 0.32 },
+    { x: w - 120, yF: 0.02, r: 52, ci: 3, op: 0.38 },
+    { x: w - 300, yF: 0.012, r: 40, ci: 4, op: 0.34 },
+    { x: w - 480, yF: 0.022, r: 38, ci: 5, op: 0.32 },
     // Scattered down the sides
-    { x: 100, yF: 0.15, r: 30, ci: 6, op: 0.18 },
-    { x: w - 100, yF: 0.18, r: 28, ci: 7, op: 0.18 },
-    { x: 130, yF: 0.35, r: 25, ci: 0, op: 0.15 },
-    { x: w - 130, yF: 0.38, r: 26, ci: 2, op: 0.15 },
-    { x: 90, yF: 0.55, r: 22, ci: 4, op: 0.12 },
-    { x: w - 90, yF: 0.58, r: 24, ci: 1, op: 0.12 },
-    { x: 110, yF: 0.75, r: 20, ci: 3, op: 0.10 },
-    { x: w - 110, yF: 0.78, r: 22, ci: 5, op: 0.10 },
+    { x: 100, yF: 0.15, r: 30, ci: 6, op: 0.25 },
+    { x: w - 100, yF: 0.18, r: 28, ci: 7, op: 0.25 },
+    { x: 130, yF: 0.35, r: 25, ci: 0, op: 0.20 },
+    { x: w - 130, yF: 0.38, r: 26, ci: 2, op: 0.20 },
+    { x: 90, yF: 0.55, r: 22, ci: 4, op: 0.18 },
+    { x: w - 90, yF: 0.58, r: 24, ci: 1, op: 0.18 },
+    { x: 110, yF: 0.75, r: 20, ci: 3, op: 0.15 },
+    { x: w - 110, yF: 0.78, r: 22, ci: 5, op: 0.15 },
   ];
   balloonPositions.forEach(b => {
     drawBalloon(ctx, b.x, h * b.yF, b.r, balloonColors[b.ci], b.op);
@@ -394,45 +396,45 @@ function drawOfficeItems(
     size?: number; color?: string;
   }> = [
     // Left edge
-    { type: 'hat', xF: 0.03, yF: 0.04, scale: 1.0, opacity: 0.22 },
-    { type: 'coffee', xF: 0.02, yF: 0.12, scale: 1.0, opacity: 0.18 },
-    { type: 'gift', xF: 0.025, yF: 0.22, scale: 0.9, opacity: 0.16 },
-    { type: 'star', xF: 0.015, yF: 0.30, size: 12, color: '#ffd740', opacity: 0.20 },
-    { type: 'hat', xF: 0.02, yF: 0.40, scale: 0.8, opacity: 0.15 },
-    { type: 'coffee', xF: 0.025, yF: 0.50, scale: 0.85, opacity: 0.14 },
-    { type: 'star', xF: 0.015, yF: 0.58, size: 10, color: '#00e5ff', opacity: 0.16 },
-    { type: 'gift', xF: 0.02, yF: 0.66, scale: 0.75, opacity: 0.12 },
-    { type: 'hat', xF: 0.025, yF: 0.76, scale: 0.7, opacity: 0.12 },
-    { type: 'star', xF: 0.015, yF: 0.84, size: 9, color: '#c44dff', opacity: 0.14 },
-    { type: 'coffee', xF: 0.02, yF: 0.92, scale: 0.7, opacity: 0.10 },
+    { type: 'hat', xF: 0.03, yF: 0.04, scale: 1.0, opacity: 0.35 },
+    { type: 'coffee', xF: 0.02, yF: 0.12, scale: 1.0, opacity: 0.30 },
+    { type: 'gift', xF: 0.025, yF: 0.22, scale: 0.9, opacity: 0.28 },
+    { type: 'star', xF: 0.015, yF: 0.30, size: 12, color: '#ffd740', opacity: 0.32 },
+    { type: 'hat', xF: 0.02, yF: 0.40, scale: 0.8, opacity: 0.25 },
+    { type: 'coffee', xF: 0.025, yF: 0.50, scale: 0.85, opacity: 0.24 },
+    { type: 'star', xF: 0.015, yF: 0.58, size: 10, color: '#00e5ff', opacity: 0.28 },
+    { type: 'gift', xF: 0.02, yF: 0.66, scale: 0.75, opacity: 0.20 },
+    { type: 'hat', xF: 0.025, yF: 0.76, scale: 0.7, opacity: 0.22 },
+    { type: 'star', xF: 0.015, yF: 0.84, size: 9, color: '#c44dff', opacity: 0.25 },
+    { type: 'coffee', xF: 0.02, yF: 0.92, scale: 0.7, opacity: 0.18 },
 
     // Right edge
-    { type: 'laptop', xF: 0.97, yF: 0.05, scale: 0.9, opacity: 0.20 },
-    { type: 'star', xF: 0.98, yF: 0.13, size: 11, color: '#ea80fc', opacity: 0.18 },
-    { type: 'gift', xF: 0.975, yF: 0.23, scale: 0.85, opacity: 0.16 },
-    { type: 'hat', xF: 0.97, yF: 0.33, scale: 0.8, opacity: 0.14 },
-    { type: 'star', xF: 0.985, yF: 0.41, size: 10, color: '#ff5252', opacity: 0.16 },
-    { type: 'laptop', xF: 0.975, yF: 0.51, scale: 0.75, opacity: 0.12 },
-    { type: 'star', xF: 0.98, yF: 0.59, size: 9, color: '#448aff', opacity: 0.14 },
-    { type: 'gift', xF: 0.97, yF: 0.67, scale: 0.7, opacity: 0.11 },
-    { type: 'hat', xF: 0.975, yF: 0.77, scale: 0.65, opacity: 0.10 },
-    { type: 'star', xF: 0.985, yF: 0.85, size: 8, color: '#18ffff', opacity: 0.12 },
-    { type: 'coffee', xF: 0.98, yF: 0.93, scale: 0.65, opacity: 0.09 },
+    { type: 'laptop', xF: 0.97, yF: 0.05, scale: 0.9, opacity: 0.32 },
+    { type: 'star', xF: 0.98, yF: 0.13, size: 11, color: '#ea80fc', opacity: 0.30 },
+    { type: 'gift', xF: 0.975, yF: 0.23, scale: 0.85, opacity: 0.28 },
+    { type: 'hat', xF: 0.97, yF: 0.33, scale: 0.8, opacity: 0.24 },
+    { type: 'star', xF: 0.985, yF: 0.41, size: 10, color: '#ff5252', opacity: 0.28 },
+    { type: 'laptop', xF: 0.975, yF: 0.51, scale: 0.75, opacity: 0.22 },
+    { type: 'star', xF: 0.98, yF: 0.59, size: 9, color: '#448aff', opacity: 0.25 },
+    { type: 'gift', xF: 0.97, yF: 0.67, scale: 0.7, opacity: 0.20 },
+    { type: 'hat', xF: 0.975, yF: 0.77, scale: 0.65, opacity: 0.18 },
+    { type: 'star', xF: 0.985, yF: 0.85, size: 8, color: '#18ffff', opacity: 0.22 },
+    { type: 'coffee', xF: 0.98, yF: 0.93, scale: 0.65, opacity: 0.16 },
 
     // Mid-area scattered
-    { type: 'cake', xF: 0.20, yF: 0.10, scale: 0.8, opacity: 0.14 },
-    { type: 'cake', xF: 0.80, yF: 0.12, scale: 0.75, opacity: 0.13 },
-    { type: 'star', xF: 0.35, yF: 0.18, size: 12, color: '#ff6b9d', opacity: 0.16 },
-    { type: 'star', xF: 0.65, yF: 0.20, size: 10, color: '#c44dff', opacity: 0.15 },
-    { type: 'gift', xF: 0.12, yF: 0.45, scale: 0.6, opacity: 0.10 },
-    { type: 'gift', xF: 0.88, yF: 0.47, scale: 0.6, opacity: 0.10 },
-    { type: 'coffee', xF: 0.25, yF: 0.60, scale: 0.6, opacity: 0.10 },
-    { type: 'laptop', xF: 0.75, yF: 0.62, scale: 0.55, opacity: 0.09 },
-    { type: 'star', xF: 0.50, yF: 0.70, size: 11, color: '#ffab40', opacity: 0.12 },
-    { type: 'hat', xF: 0.15, yF: 0.80, scale: 0.55, opacity: 0.09 },
-    { type: 'hat', xF: 0.85, yF: 0.82, scale: 0.55, opacity: 0.09 },
-    { type: 'star', xF: 0.40, yF: 0.88, size: 9, color: '#69f0ae', opacity: 0.11 },
-    { type: 'star', xF: 0.60, yF: 0.90, size: 8, color: '#ea80fc', opacity: 0.10 },
+    { type: 'cake', xF: 0.20, yF: 0.10, scale: 0.8, opacity: 0.22 },
+    { type: 'cake', xF: 0.80, yF: 0.12, scale: 0.75, opacity: 0.20 },
+    { type: 'star', xF: 0.35, yF: 0.18, size: 12, color: '#ff6b9d', opacity: 0.28 },
+    { type: 'star', xF: 0.65, yF: 0.20, size: 10, color: '#c44dff', opacity: 0.25 },
+    { type: 'gift', xF: 0.12, yF: 0.45, scale: 0.6, opacity: 0.18 },
+    { type: 'gift', xF: 0.88, yF: 0.47, scale: 0.6, opacity: 0.18 },
+    { type: 'coffee', xF: 0.25, yF: 0.60, scale: 0.6, opacity: 0.18 },
+    { type: 'laptop', xF: 0.75, yF: 0.62, scale: 0.55, opacity: 0.16 },
+    { type: 'star', xF: 0.50, yF: 0.70, size: 11, color: '#ffab40', opacity: 0.20 },
+    { type: 'hat', xF: 0.15, yF: 0.80, scale: 0.55, opacity: 0.16 },
+    { type: 'hat', xF: 0.85, yF: 0.82, scale: 0.55, opacity: 0.16 },
+    { type: 'star', xF: 0.40, yF: 0.88, size: 9, color: '#69f0ae', opacity: 0.18 },
+    { type: 'star', xF: 0.60, yF: 0.90, size: 8, color: '#ea80fc', opacity: 0.18 },
   ];
 
   officeItems.forEach(item => {
@@ -454,16 +456,16 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
   const generate = useCallback(async () => {
     setGenerating(true);
     try {
-      const MARGIN = 100;
+      const MARGIN = 55;
       const COLS = 6;
-      const COL_GAP = 18;
+      const COL_GAP = 16;
       const CONTENT_W = PW - MARGIN * 2;
       const CARD_W = (CONTENT_W - COL_GAP * (COLS - 1)) / COLS;
-      const CARD_H = 160;
+      const CARD_H = 165;
       const CARD_GAP_Y = 10;
       const MONTH_HEADER_H = 95;
-      const SECTION_GAP = 20;
-      const HEADER_H = 130;
+      const SECTION_GAP = 18;
+      const HEADER_H = 220;
       const FOOTER_H = 100;
 
       const validEmps = empleados.filter(e => e.fechaNac && e.activo !== false);
@@ -526,14 +528,14 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       ctx.fillRect(0, 0, PW, totalH);
 
       // Confetti
-      drawConfetti(ctx, PW, totalH, 150);
+      drawConfetti(ctx, PW, totalH, 200);
 
-      // Bokeh circles (lighter for print)
+      // Bokeh circles (visible on light background)
       for (let i = 0; i < 25; i++) {
         const bx = ((i * 2654435761) >>> 0) % PW;
         const by = ((i * 2654435761 * 7) >>> 0) % totalH;
         const br = 30 + ((i * 2654435761 * 13) >>> 0) % 60;
-        const bAlpha = 0.03 + ((i * 2654435761 * 17) >>> 0) % 20 / 1000;
+        const bAlpha = 0.06 + ((i * 2654435761 * 17) >>> 0) % 20 / 1000;
         const bgc = i % 3 === 0 ? '255,107,157' : i % 3 === 1 ? '0,229,255' : '196,77,255';
         const bg2 = ctx.createRadialGradient(bx, by, 0, bx, by, br);
         bg2.addColorStop(0, `rgba(${bgc},${bAlpha * 3})`);
@@ -549,7 +551,7 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
         const sx = ((i * 2654435761 * 3) >>> 0) % PW;
         const sy = ((i * 2654435761 * 11) >>> 0) % totalH;
         const ss = 4 + ((i * 2654435761 * 19) >>> 0) % 10;
-        const so = 0.05 + ((i * 2654435761 * 23) >>> 0) % 10 / 100;
+        const so = 0.12 + ((i * 2654435761 * 23) >>> 0) % 15 / 100;
         drawSparkle(ctx, sx, sy, ss, so);
       }
 
@@ -557,67 +559,89 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       drawOfficeItems(ctx, PW, totalH);
 
       // ─── Header ───
-      ctx.strokeStyle = 'rgba(196,77,255,0.3)';
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(MARGIN, 20); ctx.lineTo(PW - MARGIN, 20); ctx.stroke();
+      // Background header band
+      const hdrGrad = ctx.createLinearGradient(0, 0, 0, HEADER_H);
+      hdrGrad.addColorStop(0, 'rgba(196,77,255,0.12)');
+      hdrGrad.addColorStop(1, 'rgba(196,77,255,0)');
+      ctx.fillStyle = hdrGrad;
+      ctx.fillRect(MARGIN, 0, PW - MARGIN * 2, HEADER_H);
 
-      ctx.strokeStyle = 'rgba(255,107,157,0.15)';
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(MARGIN, 30); ctx.lineTo(PW - MARGIN, 30); ctx.stroke();
+      ctx.strokeStyle = 'rgba(196,77,255,0.4)';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(MARGIN, 22); ctx.lineTo(PW - MARGIN, 22); ctx.stroke();
 
-      // Title with multi-layer glow
+      ctx.strokeStyle = 'rgba(255,107,157,0.2)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(MARGIN, 34); ctx.lineTo(PW - MARGIN, 34); ctx.stroke();
+
+      // Title with multi-layer glow — BIG
       ctx.textAlign = 'center';
-      const titleY = 78;
+      const titleY = 120;
       const year = new Date().getFullYear();
 
-      // Shadow glow
-      ctx.shadowColor = 'rgba(196,77,255,0.3)';
-      ctx.shadowBlur = 40;
+      // Cake icon left of title
+      drawCakeIcon(ctx, PW / 2 - 480, titleY - 45, 1.3, 0.8);
+
+      // Balloon icon left
+      drawBalloon(ctx, PW / 2 - 380, titleY - 55, 22, '#ea80fc', 0.7);
+
+      // Shadow glow layers
+      ctx.shadowColor = 'rgba(196,77,255,0.5)';
+      ctx.shadowBlur = 60;
       ctx.fillStyle = '#2a1548';
-      ctx.font = 'bold 62px "Segoe UI", Arial, sans-serif';
+      ctx.font = 'bold 120px "Segoe UI", Arial, sans-serif';
       ctx.fillText('CUMPLEAÑEROS', PW / 2, titleY);
       ctx.shadowBlur = 0;
 
       // Gradient color overlay on text
-      const tg = ctx.createLinearGradient(PW / 2 - 450, titleY - 50, PW / 2 + 450, titleY);
+      const tg = ctx.createLinearGradient(PW / 2 - 500, titleY - 90, PW / 2 + 500, titleY);
       tg.addColorStop(0, '#c44dff');
-      tg.addColorStop(0.25, '#ff6b9d');
-      tg.addColorStop(0.5, '#c44dff');
-      tg.addColorStop(0.75, '#ff6b9d');
-      tg.addColorStop(1, '#c44dff');
+      tg.addColorStop(0.2, '#ff6b9d');
+      tg.addColorStop(0.4, '#ffd740');
+      tg.addColorStop(0.6, '#ff6b9d');
+      tg.addColorStop(0.8, '#c44dff');
+      tg.addColorStop(1, '#ff6b9d');
       ctx.fillStyle = tg;
       ctx.fillText('CUMPLEAÑEROS', PW / 2, titleY);
 
+      // Year below title — big
+      ctx.font = 'bold 56px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#c44dff';
+      ctx.shadowColor = 'rgba(196,77,255,0.4)';
+      ctx.shadowBlur = 20;
+      ctx.fillText(String(year), PW / 2, titleY + 65);
+      ctx.shadowBlur = 0;
+
       // Decorative lines flanking the title
-      const titleW = 450;
-      ctx.strokeStyle = 'rgba(196,77,255,0.3)';
-      ctx.lineWidth = 2;
+      const titleW = 520;
+      ctx.strokeStyle = 'rgba(196,77,255,0.35)';
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(PW / 2 - titleW - 80, titleY - 15);
-      ctx.lineTo(PW / 2 - titleW + 20, titleY - 15);
+      ctx.moveTo(PW / 2 - titleW - 120, titleY - 20);
+      ctx.lineTo(PW / 2 - titleW + 40, titleY - 20);
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(PW / 2 + titleW - 20, titleY - 15);
-      ctx.lineTo(PW / 2 + titleW + 80, titleY - 15);
+      ctx.moveTo(PW / 2 + titleW - 40, titleY - 20);
+      ctx.lineTo(PW / 2 + titleW + 120, titleY - 20);
       ctx.stroke();
 
-      // Small decorative stars near title
-      drawStarShape(ctx, PW / 2 - titleW - 100, titleY - 15, 8, '#ff6b9d', 0.5);
-      drawStarShape(ctx, PW / 2 + titleW + 100, titleY - 15, 8, '#ff6b9d', 0.5);
-      drawStarShape(ctx, PW / 2 - titleW - 130, titleY - 15, 5, '#ffd740', 0.4);
-      drawStarShape(ctx, PW / 2 + titleW + 130, titleY - 15, 5, '#ffd740', 0.4);
+      // Stars
+      drawStarShape(ctx, PW / 2 - titleW - 140, titleY - 20, 14, '#ffd740', 0.8);
+      drawStarShape(ctx, PW / 2 + titleW + 140, titleY - 20, 14, '#ffd740', 0.8);
+      drawStarShape(ctx, PW / 2 - titleW - 170, titleY - 20, 8, '#ff6b9d', 0.6);
+      drawStarShape(ctx, PW / 2 + titleW + 170, titleY - 20, 8, '#ff6b9d', 0.6);
+      drawStarShape(ctx, PW / 2 - 480, titleY + 20, 10, '#ea80fc', 0.5);
 
-      // Year
-      ctx.font = 'bold 34px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = 'rgba(196,77,255,0.5)';
-      ctx.fillText(String(year), PW / 2, 115);
+      // Balloon icon right
+      drawBalloon(ctx, PW / 2 + 380, titleY - 55, 22, '#69f0ae', 0.7);
+      drawCakeIcon(ctx, PW / 2 + 430, titleY - 45, 1.3, 0.8);
 
       // Bottom header lines
-      ctx.strokeStyle = 'rgba(196,77,255,0.15)';
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(MARGIN, HEADER_H - 8); ctx.lineTo(PW - MARGIN, HEADER_H - 8); ctx.stroke();
-      ctx.strokeStyle = 'rgba(196,77,255,0.3)';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(196,77,255,0.2)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(MARGIN, HEADER_H - 10); ctx.lineTo(PW - MARGIN, HEADER_H - 10); ctx.stroke();
+      ctx.strokeStyle = 'rgba(196,77,255,0.4)';
+      ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(MARGIN, HEADER_H - 1); ctx.lineTo(PW - MARGIN, HEADER_H - 1); ctx.stroke();
 
       ctx.textAlign = 'left';
@@ -627,9 +651,9 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       const photoCache = new Map<string, HTMLImageElement>();
 
       const monthColors = [
-        '#ff6b9d', '#c44dff', '#69f0ae', '#ffab40',
-        '#00e5ff', '#ea80fc', '#ff6e40', '#448aff',
-        '#ffd740', '#18ffff', '#b388ff', '#ff5252',
+        '#e91e63', '#9c27b0', '#4caf50', '#ff9800',
+        '#00bcd4', '#e040fb', '#ff5722', '#2979ff',
+        '#ffc107', '#00e5ff', '#7c4dff', '#f44336',
       ];
 
       for (let mi = 0; mi < 12; mi++) {
