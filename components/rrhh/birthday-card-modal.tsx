@@ -32,6 +32,16 @@ interface BirthdayCardModalProps {
 
 const cardTemplates = [
   {
+    id: 'professional',
+    name: 'Profesional',
+    bgGradient: 'from-slate-900 via-slate-800 to-blue-900',
+    borderColor: 'border-blue-400',
+    textColor: 'text-slate-100',
+    accentColor: 'text-blue-300',
+    titleFont: 'font-serif',
+    pattern: 'radial-gradient(circle at 20% 50%, rgba(59,130,246,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(30,144,255,0.1) 0%, transparent 50%)',
+  },
+  {
     id: 'elegant',
     name: 'Elegante',
     bgGradient: 'from-amber-100 via-orange-50 to-rose-100',
@@ -79,7 +89,7 @@ const cardTemplates = [
     textColor: 'text-yellow-900',
     accentColor: 'text-amber-500',
     titleFont: 'font-serif',
-    pattern: 'radial-gradient(circle at 50% 50%, rgba(251,191,36,0.15) 0%, transparent 50%), repeating-linear-gradient(45deg, transparent 0px, transparent 10px, rgba(251,191,36,0.03) 10px, rgba(251,191,36,0.03) 12px)',
+    pattern: 'radial-gradient(circle at 50% 50%, rgba(251,191,36,0.15) 0%, transparent 50%), repeating-linear-gradient(45deg, transparent 0px, transparent 10px, rgba(251,191,36,0.03) 10px, rgba(251,191,36,0.03) 20px)',
   },
   {
     id: 'classic',
@@ -104,12 +114,12 @@ const cardTemplates = [
 ];
 
 const getMessagesForEmployee = (name: string, area?: string) => [
-  `Querido(a) ${name}, en este dia tan especial celebramos tu vida y todo lo que aportas a nuestro equipo${area ? ` en ${area}` : ''}. Que este nuevo ano este lleno de exitos, salud y momentos inolvidables. ¡Felicidades!`,
-  `¡Feliz cumpleanos, ${name}! Hoy es un dia para celebrar a una persona increible. Gracias por tu dedicacion y alegria${area ? ` en el area de ${area}` : ''}. Que todos tus suenos se hagan realidad.`,
-  `${name}, tu presencia ilumina nuestros dias${area ? ` en ${area}` : ''}. En este nuevo aniversario de vida, te deseamos lo mejor: salud, prosperidad y mucha felicidad. ¡Disfruta tu dia!`,
-  `Hoy celebramos a ${name}! Eres una parte fundamental de nuestro equipo${area ? ` en ${area}` : ''}. Que este nuevo ciclo este lleno de bendiciones y que cada meta que te propongas la puedas alcanzar. ¡Felicidades!`,
-  `Para ${name}: en tu cumpleanos queremos agradecerte por ser parte de nuestra familia laboral. Tu esfuerzo y dedicacion hacen la diferencia. ¡Que tengas un dia maravilloso lleno de amor y alegria!`,
-  `¡${name}, hoy es tu dia! Que la felicidad te acompanne siempre y que este nuevo ano de vida este lleno de sorpresas agradables. Disfruta cada momento. ¡Felicidades de parte de todo el equipo!`,
+  `Querido(a) ${name}, en este día tan especial celebramos tu vida y todo lo que aportas a nuestro equipo${area ? ` en ${area}` : ''}. Que este nuevo año esté lleno de éxitos, salud y momentos inolvidables.`,
+  `¡Feliz cumpleaños, ${name}! Hoy es un día para celebrar a una persona increíble. Gracias por tu dedicación y alegría${area ? ` en el área de ${area}` : ''}. Que todos tus sueños se hagan realidad.`,
+  `${name}, tu presencia ilumina nuestros días${area ? ` en ${area}` : ''}. En este nuevo aniversario de vida, te deseamos lo mejor: salud, prosperidad y mucha felicidad. ¡Disfruta tu día!`,
+  `Hoy celebramos a ${name}! Eres una parte fundamental de nuestro equipo${area ? ` en ${area}` : ''}. Que este nuevo ciclo esté lleno de bendiciones y que cada meta que te propongas la puedas alcanzar.`,
+  `Para ${name}: en tu cumpleaños queremos agradecerte por ser parte de nuestra familia laboral. Tu esfuerzo y dedicación hacen la diferencia. ¡Que tengas un día maravilloso lleno de amor y alegría!`,
+  `¡${name}, hoy es tu día! Que la felicidad te acompañe siempre y que este nuevo año de vida esté lleno de sorpresas agradables. Disfruta cada momento. ¡Felicidades de parte de todo el equipo!`,
 ];
 
 export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps) {
@@ -118,7 +128,7 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [messages] = useState(() => getMessagesForEmployee(empleado.nombres?.split(' ')[0] || 'amigo', empleado.area));
   const [message, setMessage] = useState(messages[Math.floor(Math.random() * messages.length)]);
-  const [title, setTitle] = useState('¡Feliz Cumpleanos!');
+  const [title, setTitle] = useState('¡Feliz Cumpleaños!');
   const [isEditing, setIsEditing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -202,15 +212,16 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
     };
 
     const canvas = document.createElement('canvas');
-    const W = 800, H = 560;
+    const W = 1024, H = 720; // A3 resolution
     canvas.width = W;
     canvas.height = H;
     const ctx = canvas.getContext('2d')!;
 
     const template = selectedTemplate;
 
-    // Helper: parse tailwind gradient classes to canvas gradient
+    // Enhanced gradient colors for professional look
     const gradColors: Record<string, [string, string, string]> = {
+      'from-slate-900 via-slate-800 to-blue-900': ['#0f172a', '#1e293b', '#1e3a8a'],
       'from-amber-100 via-orange-50 to-rose-100': ['#fef3c7', '#fff7ed', '#ffe4e6'],
       'from-indigo-100 via-purple-50 to-fuchsia-100': ['#e0e7ff', '#faf5ff', '#fae8ff'],
       'from-pink-100 via-rose-50 to-purple-100': ['#fce7f3', '#fff1f2', '#f3e8ff'],
@@ -221,7 +232,7 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
     };
     const colors = gradColors[template.bgGradient] || ['#fff', '#fff', '#fff'];
 
-    // Background
+    // Professional background gradient
     const bgGrad = ctx.createLinearGradient(0, 0, W, H);
     bgGrad.addColorStop(0, colors[0]);
     bgGrad.addColorStop(0.5, colors[1]);
@@ -229,80 +240,126 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, W, H);
 
-    // Border accent
-    ctx.strokeStyle = '#fcd34d';
-    ctx.lineWidth = 6;
-    ctx.strokeRect(12, 12, W - 24, H - 24);
+    // Subtle pattern overlay for texture
+    if (selectedTemplate.id === 'professional') {
+      for (let i = 0; i < W; i += 40) {
+        for (let j = 0; j < H; j += 40) {
+          ctx.strokeStyle = 'rgba(59, 130, 246, 0.05)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(i, j, 40, 40);
+        }
+      }
+    }
 
-    // Corner decorations
-    ctx.strokeStyle = '#fbbf24';
-    ctx.lineWidth = 4;
-    const cl = 40;
-    ctx.beginPath(); ctx.moveTo(20, 20 + cl); ctx.lineTo(20, 20); ctx.lineTo(20 + cl, 20); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(W - 20 - cl, 20); ctx.lineTo(W - 20, 20); ctx.lineTo(W - 20, 20 + cl); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(20, H - 20 - cl); ctx.lineTo(20, H - 20); ctx.lineTo(20 + cl, H - 20); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(W - 20 - cl, H - 20); ctx.lineTo(W - 20, H - 20); ctx.lineTo(W - 20, H - 20 - cl); ctx.stroke();
+    // Premium border with gradient
+    const borderGrad = ctx.createLinearGradient(0, 0, W, H);
+    borderGrad.addColorStop(0, '#60a5fa');
+    borderGrad.addColorStop(1, '#3b82f6');
+    ctx.strokeStyle = borderGrad;
+    ctx.lineWidth = 8;
+    ctx.strokeRect(20, 20, W - 40, H - 40);
 
-    // Confetti
+    // Inner accent line
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(26, 26, W - 52, H - 52);
+
+    // Decorative corners
+    const cornerColor = selectedTemplate.id === 'professional' ? '#60a5fa' : '#fbbf24';
+    ctx.fillStyle = cornerColor;
+    const cl = 50;
+    [
+      [30, 30, 30 + cl, 30, 30, 30 + cl],
+      [W - 30, 30, W - 30 - cl, 30, W - 30, 30 + cl],
+      [30, H - 30, 30 + cl, H - 30, 30, H - 30 - cl],
+      [W - 30, H - 30, W - 30 - cl, H - 30, W - 30, H - 30 - cl],
+    ].forEach(([x1, y1, x2, y2, x3, y3]) => {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.lineTo(x3, y3);
+      ctx.stroke();
+    });
+
+    // Enhanced confetti with better distribution
     const confetti = [
-      { x: 80, y: 40, color: '#f472b6', w: 10, h: 14, rot: 12 },
-      { x: 200, y: 60, color: '#fbbf24', w: 12, h: 10, rot: -8 },
-      { x: 320, y: 30, color: '#a78bfa', w: 10, h: 16, rot: 20 },
-      { x: 440, y: 50, color: '#22d3ee', w: 14, h: 10, rot: -15 },
-      { x: 560, y: 35, color: '#fb7185', w: 10, h: 14, rot: 5 },
-      { x: 680, y: 55, color: '#34d399', w: 12, h: 12, rot: -10 },
-      { x: 120, y: 500, color: '#38bdf8', w: 10, h: 10, rot: 25 },
-      { x: 500, y: 520, color: '#fb923c', w: 14, h: 12, rot: -20 },
+      { x: 100, y: 80, color: '#f472b6', w: 12, h: 18, rot: 12 },
+      { x: 250, y: 100, color: '#fbbf24', w: 14, h: 12, rot: -8 },
+      { x: 420, y: 60, color: '#a78bfa', w: 12, h: 20, rot: 20 },
+      { x: 600, y: 90, color: '#22d3ee', w: 16, h: 12, rot: -15 },
+      { x: 800, y: 70, color: '#fb7185', w: 12, h: 18, rot: 5 },
+      { x: 920, y: 100, color: '#34d399', w: 14, h: 14, rot: -10 },
+      { x: 150, y: 680, color: '#38bdf8', w: 12, h: 12, rot: 25 },
+      { x: 750, y: 700, color: '#fb923c', w: 16, h: 14, rot: -20 },
     ];
     confetti.forEach(c => {
       ctx.save();
       ctx.translate(c.x, c.y);
       ctx.rotate(c.rot * Math.PI / 180);
       ctx.fillStyle = c.color;
-      ctx.globalAlpha = 0.7;
+      ctx.globalAlpha = 0.8;
       ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
       ctx.restore();
     });
 
-    // Title
+    // Professional title
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#d97706';
-    ctx.font = 'bold 40px Georgia, serif';
-    ctx.fillText(title, W / 2, 100);
-    ctx.font = '24px sans-serif';
-    ctx.fillText('🎉', W / 2 + ctx.measureText(title).width / 2 + 10, 100);
+    ctx.fillStyle = selectedTemplate.id === 'professional' ? '#60a5fa' : '#d97706';
+    ctx.font = 'bold 56px Georgia, serif';
+    ctx.fillText(title, W / 2, 140);
 
-    // Photo
-    const photoX = W / 2, photoY = 200, photoR = 75;
+    // Decorative line under title
+    ctx.strokeStyle = ctx.fillStyle;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - 200, 160);
+    ctx.lineTo(W / 2 + 200, 160);
+    ctx.stroke();
+
+    // High-quality photo with enhanced clarity
+    const photoX = W / 2, photoY = 340, photoR = 110;
     try {
       const img = await loadImage(photoToUse || '');
       ctx.save();
+
+      // Glow effect for clarity
       ctx.beginPath();
-      ctx.arc(photoX, photoY, photoR + 4, 0, Math.PI * 2);
-      const glow = ctx.createRadialGradient(photoX, photoY, photoR - 10, photoX, photoY, photoR + 8);
-      glow.addColorStop(0, '#f472b6');
-      glow.addColorStop(0.5, '#a78bfa');
-      glow.addColorStop(1, '#f59e0b');
+      ctx.arc(photoX, photoY, photoR + 6, 0, Math.PI * 2);
+      const glow = ctx.createRadialGradient(photoX, photoY, photoR - 20, photoX, photoY, photoR + 10);
+      glow.addColorStop(0, selectedTemplate.id === 'professional' ? '#60a5fa' : '#f472b6');
+      glow.addColorStop(0.5, selectedTemplate.id === 'professional' ? '#3b82f6' : '#a78bfa');
+      glow.addColorStop(1, selectedTemplate.id === 'professional' ? '#1e3a8a' : '#f59e0b');
       ctx.fillStyle = glow;
       ctx.fill();
 
+      // High-quality clipping
       ctx.beginPath();
       ctx.arc(photoX, photoY, photoR, 0, Math.PI * 2);
       ctx.clip();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, photoX - photoR, photoY - photoR, photoR * 2, photoR * 2);
       ctx.restore();
 
+      // Professional white border
       ctx.beginPath();
       ctx.arc(photoX, photoY, photoR, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.lineWidth = 6;
+      ctx.stroke();
+
+      // Subtle shadow
+      ctx.beginPath();
+      ctx.arc(photoX, photoY, photoR, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+      ctx.lineWidth = 1;
       ctx.stroke();
     } catch {
-      // Fallback: draw circle with initials
+      // Fallback with initials
       ctx.save();
       ctx.beginPath();
-      ctx.arc(photoX, photoY, photoR + 4, 0, Math.PI * 2);
-      const glow = ctx.createRadialGradient(photoX, photoY, 0, photoX, photoY, photoR + 8);
+      ctx.arc(photoX, photoY, photoR + 6, 0, Math.PI * 2);
+      const glow = ctx.createRadialGradient(photoX, photoY, 0, photoX, photoY, photoR + 10);
       glow.addColorStop(0, '#f472b6');
       glow.addColorStop(1, '#f59e0b');
       ctx.fillStyle = glow;
@@ -317,55 +374,55 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
       ctx.fill();
 
       ctx.fillStyle = '#92400e';
-      ctx.font = `bold 48px sans-serif`;
+      ctx.font = `bold 60px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(getInitials(), photoX, photoY);
       ctx.restore();
     }
 
-    // Name
-    ctx.fillStyle = '#78350f';
-    ctx.font = 'bold 28px sans-serif';
+    // Professional name styling
+    ctx.fillStyle = selectedTemplate.id === 'professional' ? '#e0e7ff' : '#78350f';
+    ctx.font = 'bold 38px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`${empleado.nombres} ${empleado.apellidos}`, W / 2, 310);
+    ctx.fillText(`${empleado.nombres} ${empleado.apellidos}`, W / 2, 490);
 
-    // Birthday date
-    ctx.fillStyle = '#d97706';
-    ctx.font = '20px sans-serif';
-    ctx.fillText(formatBirthday(), W / 2, 342);
+    // Birthday date with accent
+    ctx.fillStyle = selectedTemplate.id === 'professional' ? '#60a5fa' : '#d97706';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.fillText(formatBirthday(), W / 2, 530);
 
-    // Message
-    ctx.fillStyle = '#78350f';
-    ctx.font = '16px sans-serif';
+    // Message with better formatting
+    ctx.fillStyle = selectedTemplate.id === 'professional' ? '#e0e7ff' : '#78350f';
+    ctx.font = '18px sans-serif';
     ctx.textAlign = 'center';
-    const msgMaxW = W - 120;
-    const msgY = wrapText(ctx, `"${message}"`, W / 2, 390, msgMaxW, 24);
+    const msgMaxW = W - 160;
+    const msgY = wrapText(ctx, `"${message}"`, W / 2, 580, msgMaxW, 28);
 
     // Footer decorations
-    const footerY = Math.min(msgY + 50, H - 40);
+    const footerY = Math.min(msgY + 60, H - 50);
     const icons = ['★', '♥', '◆', '♥', '★'];
-    ctx.font = '24px sans-serif';
+    ctx.font = '28px sans-serif';
     icons.forEach((icon, i) => {
-      ctx.fillStyle = i % 2 === 0 ? '#fbbf24' : '#f472b6';
-      ctx.fillText(icon, W / 2 - 100 + i * 50, footerY);
+      ctx.fillStyle = i % 2 === 0 ? (selectedTemplate.id === 'professional' ? '#60a5fa' : '#fbbf24') : '#f472b6';
+      ctx.fillText(icon, W / 2 - 120 + i * 60, footerY);
     });
 
     // Convert to blob and download
     canvas.toBlob((blob) => {
       if (!blob) {
-        alert('Error al generar la imagen. Usa la opcion Imprimir.');
+        alert('Error al generar la imagen. Usa la opción Imprimir.');
         setDownloading(false);
         return;
       }
       const link = document.createElement('a');
       const namePart = `${empleado.nombres}_${empleado.apellidos}`.replace(/\s+/g, '_');
-      link.download = `cumpleanos_${namePart}.png`;
+      link.download = `cumpleanos_${namePart}_A3.png`;
       link.href = URL.createObjectURL(blob);
       link.click();
       URL.revokeObjectURL(link.href);
       setDownloading(false);
-    }, 'image/png');
+    }, 'image/png', 0.95);
   };
 
   const handlePrint = () => {
@@ -386,7 +443,7 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
           <title>Cumpleanos - ${empleado.nombres} ${empleado.apellidos}</title>
           <style>${styles}
             body { display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #fff; }
-            @page { margin: 0; size: landscape; }
+            @page { margin: 0; size: A3 landscape; }
             @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
           </style>
         </head>
@@ -430,7 +487,7 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
         <CardHeader className="flex-row items-center justify-between border-b border-border no-print">
           <CardTitle className="flex items-center gap-2 text-primary">
             <Gift className="h-5 w-5" />
-            Tarjeta de Cumpleanos - {empleado.nombres} {empleado.apellidos}
+            Tarjeta de Cumpleaños - {empleado.nombres} {empleado.apellidos}
           </CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-5 w-5" />
@@ -471,7 +528,7 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
                 <div className="absolute bottom-3 right-3 w-12 h-12 border-b-4 border-r-4 rounded-br-xl" style={{ borderColor: c, opacity: 0.2 }} /></>); })()}
 
                 {/* Ribbon top */}
-                {(() => { const c = TAILWIND_COLORS[selectedTemplate.accentColor.replace('text-', '')] || '#d97706'; return <div className="absolute top-6 left-1/2 -translate-x-1/2 w-32 h-7 rounded-full blur-sm" style={{ background: `linear-gradient(90deg, transparent, ${c}33, transparent)` }} />; })()}
+                {(() => { const c = TAILWIND_COLORS[selectedTemplate.accentColor.replace('text-', '')] || '#d97706'; return <div className="absolute top-6 left-1/2 -translate-x-1/2 w-32 h-7 rounded-b-lg shadow-lg opacity-40" style={{ backgroundColor: c }} />; })()}
 
                 {/* Card content */}
                 <div className="relative z-10 text-center space-y-4 w-full max-w-md">
@@ -481,7 +538,7 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className={`text-3xl md:text-4xl font-bold ${selectedTemplate.accentColor} ${selectedTemplate.titleFont} bg-transparent border-b-2 border-dashed border-current text-center w-full outline-none`}
+                      className={`text-3xl md:text-4xl font-bold ${selectedTemplate.accentColor} ${selectedTemplate.titleFont} bg-transparent border-b-2 border-dashed border-current text-center w-full`}
                     />
                   ) : (
                     <h2 className={`text-3xl md:text-4xl font-bold ${selectedTemplate.accentColor} ${selectedTemplate.titleFont}`}>
@@ -638,14 +695,14 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
                 <Button
                   onClick={handleDownload}
                   disabled={downloading}
-                  className="w-full bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white h-10"
+                  className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white h-10 font-semibold"
                 >
                   {downloading ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <Download className="mr-2 h-4 w-4" />
                   )}
-                  {downloading ? 'Generando...' : 'Descargar PNG'}
+                  {downloading ? 'Generando...' : 'Descargar A3'}
                 </Button>
                 <Button
                   onClick={handlePrint}
@@ -653,7 +710,7 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
                   className="w-full h-10"
                 >
                   <Printer className="mr-2 h-4 w-4" />
-                  Imprimir
+                  Imprimir A3
                 </Button>
               </div>
             </div>
