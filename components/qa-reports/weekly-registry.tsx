@@ -482,7 +482,7 @@ export function WeeklyRegistry() {
                             <div className="flex items-center justify-between px-4 py-2 cursor-pointer hover:bg-muted/20 transition-colors"
                               onClick={() => toggleExpand(record.id)}
                             >
-                              <div className="flex items-center gap-3">
+                              <div className="flex flex-wrap items-center gap-3">
                                 {expanded[record.id] ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                                 <CalendarDays className="h-4 w-4 text-primary" />
                                 <span className="text-sm font-medium text-foreground">Semana {record.weekNumber}</span>

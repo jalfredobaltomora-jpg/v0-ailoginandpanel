@@ -73,9 +73,9 @@ export default function PanelPage() {
   const tieneQA = currentUser ? tienePermisoEnGrupo(currentUser, 'qa_') : false;
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 p-8">
+    <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 p-4 md:p-8">
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-center text-2xl font-black tracking-wider text-primary">
           {t('dashboard.title')}
         </h1>
@@ -96,7 +96,7 @@ export default function PanelPage() {
       )}
 
       {/* Tiles */}
-      <div className="flex flex-wrap justify-center gap-10">
+      <div className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-10">
         {tieneRRHH && (
           <Tile
             title={t('dashboard.rrhh')}

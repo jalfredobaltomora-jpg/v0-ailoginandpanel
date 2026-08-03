@@ -252,8 +252,8 @@ export default function RRHHPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border bg-card/50 p-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card/50 p-4">
+        <div className="flex flex-wrap items-center gap-4">
           <Button
             variant="outline"
             onClick={() => view === 'tiles' ? router.push('/panel') : setView('tiles')}
@@ -269,9 +269,9 @@ export default function RRHHPage() {
         </div>
       </div>
 
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         {view === 'tiles' && (
-          <div className="flex flex-wrap justify-center gap-6">
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
             {puedeVer(currentUser, 'rrhh_catalogo') && (
               <Tile
                 title="Catalogo"
@@ -358,7 +358,7 @@ export default function RRHHPage() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Buscar..."
-                    className="w-64 border-border bg-input pl-9"
+                    className="w-full sm:w-64 border-border bg-input pl-9"
                   />
                 </div>
                 <Button onClick={handleCreateNew} className="bg-primary text-primary-foreground">
@@ -584,9 +584,9 @@ export default function RRHHPage() {
                     <CalendarDays className="h-5 w-5" />
                     Todos los Cumpleañeros del Año
                   </CardTitle>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <BirthdayPoster empleados={empleados} />
-                    <div className="relative w-64">
+                    <div className="relative w-full sm:w-64">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <input
                         type="text"

@@ -191,7 +191,7 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
 
   return (
     <Card className="w-full max-w-lg border-primary/20 bg-card/95 shadow-[0_0_30px_rgba(0,242,255,0.1)] backdrop-blur-xl">
-      <CardContent className="flex items-center gap-6 p-8">
+      <CardContent className="flex flex-col items-center gap-6 p-5 sm:flex-row sm:items-center sm:p-8">
         {/* Avatar / Employee Photo */}
         <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-border bg-background">
           {matchedUser && employee?.foto ? (

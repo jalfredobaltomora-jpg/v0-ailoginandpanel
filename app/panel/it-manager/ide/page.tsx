@@ -27,6 +27,14 @@ export default function IDEPage() {
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
 
   useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    if (mq.matches) {
+      setLeftPanelCollapsed(true);
+      setRightPanelCollapsed(true);
+    }
+  }, []);
+
+  useEffect(() => {
     const user = getStoredUser();
     if (!user) {
       router.push('/');

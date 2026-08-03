@@ -628,8 +628,8 @@ function formatMonth(dateStr: string): string {
 
   return (
     <main className={`${view === 'dhu' ? 'h-dvh flex flex-col overflow-hidden' : 'min-h-screen'} bg-gradient-to-br from-background via-background to-secondary/20`}>
-      <div className={`${view === 'dhu' ? '' : 'sticky top-0 z-30'} flex items-center justify-between border-b border-border bg-card p-4 shadow-sm`}>
-        <div className="flex items-center gap-4">
+      <div className={`${view === 'dhu' ? '' : 'sticky top-0 z-30'} flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card p-4 shadow-sm`}>
+        <div className="flex flex-wrap items-center gap-4">
           <Button
             variant="outline"
             onClick={() => view === 'tiles' ? router.push('/panel') : setView('tiles')}
@@ -645,7 +645,7 @@ function formatMonth(dateStr: string): string {
         </div>
       </div>
 
-      <div className={`${view === 'dhu' ? 'flex-1 overflow-hidden' : ''} p-8 bg-background`}>
+      <div className={`${view === 'dhu' ? 'flex-1 overflow-hidden' : ''} p-4 md:p-8 bg-background`}>
         {view === 'tiles' && (
           <div className="flex flex-wrap justify-center gap-6">
             {puedeVer(currentUser, 'qa_extractor') && (
@@ -684,11 +684,11 @@ function formatMonth(dateStr: string): string {
         {view === 'dhu' && (
           <div className="h-full flex flex-col gap-6">
             <div className="bg-background pb-2">
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
               <h3 className="text-lg font-bold text-foreground">
                 {oqlTab === 'catalog' ? 'Catálogo de defectos' : 'QA - OQL % SAE - Indicador'}
               </h3>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {(oqlTab === 'inline' || oqlTab === 'defect') && puedeVer(currentUser, 'qa_analytics') && (
                   <>
                     <Button size="sm" variant="outline" onClick={() => setAnalyticsOpen(true)}
@@ -698,7 +698,7 @@ function formatMonth(dateStr: string): string {
                   </>
                 )}
                 {oqlTab === 'inline' && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <input ref={inlineFileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImportInline} className="hidden" id="inline-excel-upload" />
                     <Button size="sm" variant="outline" disabled={importingInline} onClick={() => document.getElementById('inline-excel-upload')?.click()}>
                       <Upload className="mr-2 h-4 w-4" />{importingInline ? 'Importando...' : 'Importar Excel'}
@@ -709,7 +709,7 @@ function formatMonth(dateStr: string): string {
                   </div>
                 )}
                 {oqlTab === 'defect' && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <input ref={defectFileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImportDefect} className="hidden" id="defect-excel-upload" />
                     <Button size="sm" variant="outline" disabled={importingDefect} onClick={() => document.getElementById('defect-excel-upload')?.click()}>
                       <Upload className="mr-2 h-4 w-4" />{importingDefect ? 'Importando...' : 'Importar Excel'}
@@ -723,17 +723,17 @@ function formatMonth(dateStr: string): string {
             </div>
 
             {/* Sub-tabs */}
-            <div className="flex gap-4 border-b border-border">
+            <div className="flex gap-4 border-b border-border overflow-x-auto">
               <button onClick={() => setDhuTab('inline')}
-                className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${oqlTab === 'inline' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+                className={`flex items-center gap-2 pb-2 text-sm font-medium whitespace-nowrap transition-colors ${oqlTab === 'inline' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
                 <ClipboardList className="h-4 w-4" /> EN LÍNEA
               </button>
               <button onClick={() => setDhuTab('defect')}
-                className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${oqlTab === 'defect' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+                className={`flex items-center gap-2 pb-2 text-sm font-medium whitespace-nowrap transition-colors ${oqlTab === 'defect' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
                 <Bug className="h-4 w-4" /> Defecto en Línea
               </button>
               <button onClick={() => setDhuTab('catalog')}
-                className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${oqlTab === 'catalog' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+                className={`flex items-center gap-2 pb-2 text-sm font-medium whitespace-nowrap transition-colors ${oqlTab === 'catalog' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
                 <BookOpen className="h-4 w-4" /> Catálogo de defectos
               </button>
             </div>
@@ -914,7 +914,7 @@ function formatMonth(dateStr: string): string {
                             </p>
                           </div>
                         )}
-                        <div className="min-w-[260px] max-w-[360px]">
+                        <div className="w-full min-w-[220px] max-w-[360px]">
                           <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">1. Rango de Fechas</label>
                           <DateRangePicker dateFrom={top3DateFrom} dateTo={top3DateTo} onDateFromChange={setTop3DateFrom} onDateToChange={setTop3DateTo} />
                         </div>
@@ -1071,7 +1071,7 @@ function formatMonth(dateStr: string): string {
               <div className="flex-1 overflow-hidden flex flex-col gap-4">
                 <div className="flex-shrink-0 rounded-lg border border-border p-4">
                   <h4 className="mb-3 text-sm font-semibold text-foreground">Catálogo de Defectos</h4>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <input className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground" placeholder="Código de Defecto *" value={newDefectCat.defectCode} onChange={e => setNewDefectCat(p => ({ ...p, defectCode: e.target.value }))} />
                     <input className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground" placeholder="Descripción de Defecto" value={newDefectCat.defectDescription} onChange={e => setNewDefectCat(p => ({ ...p, defectDescription: e.target.value }))} />
                     <input className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground" placeholder="CAT ENGLISH" value={newDefectCat.catEnglish} onChange={e => setNewDefectCat(p => ({ ...p, catEnglish: e.target.value }))} />

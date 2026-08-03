@@ -419,7 +419,7 @@ export default function InventarioPage() {
         </div>
       </div>
 
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <Card className="mx-auto max-w-6xl border-primary/20 bg-card/95">
           <CardHeader className="flex-row items-center justify-between flex-wrap gap-4">
             <CardTitle className="flex items-center gap-2 text-primary">
@@ -428,16 +428,16 @@ export default function InventarioPage() {
                activeTab === 'scanner' ? 'Inventario de Escáner' :
                 'Inspección Mensual'}
             </CardTitle>
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex flex-wrap items-center gap-4">
               {activeTab !== 'agregar' && activeTab !== 'inspection' && (
-                <div className="relative">
+                <div className="relative w-full sm:w-auto">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className="w-64 border-border bg-input pl-9" />
+                  <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className="w-full sm:w-64 border-border bg-input pl-9" />
                 </div>
               )}
               {activeTab === 'inspection' && (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <span className="text-xs text-muted-foreground whitespace-nowrap">Filtrar por mes:</span>
                     <Select value={filterMes} onValueChange={setFilterMes}>
                       <SelectTrigger className="h-8 w-36 border-border bg-input text-xs">
@@ -458,7 +458,7 @@ export default function InventarioPage() {
                       </Button>
                     )}
                   </div>
-                  <div className="flex gap-2 ml-auto">
+                  <div className="flex flex-wrap gap-2 ml-auto">
                     <Button variant="outline" size="sm" className="border-border" onClick={handlePrintReport}>
                       <Printer className="mr-2 h-4 w-4" /> Imprimir
                     </Button>
@@ -474,8 +474,8 @@ export default function InventarioPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="px-6 pt-0">
-              <div className="flex border-b border-border">
+            <div className="px-4 pt-0 sm:px-6">
+              <div className="flex border-b border-border overflow-x-auto">
                 {([
                   { key: 'agregar', label: 'Agregar equipo', icon: Plus },
                   { key: 'tablet', label: 'Inventario Tablet', icon: Tablet },
@@ -505,13 +505,13 @@ export default function InventarioPage() {
               </div>
             </div>
 
-            <div className="border-t border-border p-6">
+            <div className="border-t border-border p-4 sm:p-6">
               {activeTab === 'agregar' && (
                 <div className="flex flex-col items-center justify-center py-12 gap-6">
                   <p className="text-muted-foreground text-center max-w-md">
                     Aquí puedes agregar nuevas Tablets o Escáneres al inventario.
                   </p>
-                  <div className="flex gap-4">
+                  <div className="flex flex-wrap justify-center gap-4">
                     <Button onClick={() => { setActiveTab('tablet'); handleCreateNew(); }} variant="outline" className="border-border gap-2">
                       <Tablet className="h-5 w-5" /> Agregar Tablet
                     </Button>

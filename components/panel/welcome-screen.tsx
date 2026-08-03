@@ -215,7 +215,7 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/10 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-gradient-to-br from-background via-background to-primary/10 p-4">
       {/* Rotating JB Logo */}
       <style>{`
 @keyframes rotateJB {
@@ -228,16 +228,16 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
   transform-style: preserve-3d;
 }
 `}</style>
-      <div className="fixed left-4 top-4 z-[60] flex h-28 w-28 items-center justify-center overflow-visible rounded-xl border border-primary/20 bg-background/80 shadow-lg backdrop-blur-sm">
+      <div className="fixed left-4 top-4 z-[60] flex h-20 w-20 items-center justify-center overflow-visible rounded-xl border border-primary/20 bg-background/80 shadow-lg backdrop-blur-sm sm:h-28 sm:w-28">
         <img
           src="/v0-ailoginandpanel/logo.png"
           alt="JB"
-          className="logo-jb h-24 w-auto"
+          className="logo-jb h-16 w-auto sm:h-24"
         />
       </div>
       <div className="w-full max-w-lg">
         {/* Tarjeta principal */}
-        <div className="rounded-2xl border border-primary/20 bg-card/95 p-8 shadow-2xl backdrop-blur-sm">
+        <div className="rounded-2xl border border-primary/20 bg-card/95 p-4 shadow-2xl backdrop-blur-sm sm:p-8">
           {/* Employee Photo */}
           <div className="mb-6 flex justify-center">
             {empleado?.foto ? (

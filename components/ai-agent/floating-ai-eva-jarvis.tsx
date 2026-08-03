@@ -403,7 +403,7 @@ export function FloatingAIEVAJARVIS() {
           {isChatOpen && (
             <div
               className="fixed z-[60] w-[380px] max-w-[calc(100vw-2rem)] rounded-2xl shadow-2xl"
-              style={{ left: Math.min(posX + 50, vw - 400), top: Math.max(posY - 400, 10) }}
+              style={{ left: Math.max(Math.min(posX + 50, vw - 400), 16), top: Math.max(posY - 400, 10) }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-[#161b22] border border-[#30363d] rounded-2xl overflow-hidden">
@@ -512,7 +512,7 @@ export function FloatingAIEVAJARVIS() {
           {musicOpen && (
             <div
               className="fixed z-[61] w-[340px] max-w-[calc(100vw-3rem)] rounded-2xl shadow-2xl"
-              style={{ left: Math.min(posX + 50, vw - 360), top: Math.max(posY - 250, 10) }}
+              style={{ left: Math.max(Math.min(posX + 50, vw - 360), 16), top: Math.max(posY - 250, 10) }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-[#161b22] border border-[#30363d] rounded-2xl overflow-hidden">

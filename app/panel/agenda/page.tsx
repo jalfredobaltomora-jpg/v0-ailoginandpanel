@@ -108,14 +108,14 @@ export default function AgendaPage() {
     <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 p-4 md:p-8">
       <div className="mx-auto max-w-3xl">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <button onClick={() => router.push('/panel')} className="rounded-lg border border-border bg-card p-2 text-muted-foreground hover:bg-accent">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h1 className="text-xl font-bold text-foreground">Agenda Personal</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button onClick={() => setView('today')} className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${view === 'today' ? 'bg-primary text-primary-foreground' : 'border border-border bg-card text-muted-foreground hover:bg-accent'}`}>
               {new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
             </button>

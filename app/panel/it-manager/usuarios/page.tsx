@@ -112,9 +112,9 @@ export default function UsuariosPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 p-8">
+    <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 p-4 md:p-8">
       {/* Header */}
-      <div className="mb-8 flex items-center gap-4">
+      <div className="mb-8 flex flex-wrap items-center gap-4">
         <Button
           variant="outline"
           onClick={() => router.push('/panel/it-manager')}
@@ -123,22 +123,22 @@ export default function UsuariosPage() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Volver
         </Button>
-        <h1 className="text-2xl font-black tracking-wider text-primary">
+        <h1 className="text-xl font-black tracking-wider text-primary md:text-2xl">
           Gestión de Usuarios
         </h1>
       </div>
 
       <Card className="mx-auto max-w-5xl border-primary/20 bg-card/95">
-        <CardHeader className="flex-row items-center justify-between">
+        <CardHeader className="flex-row items-center justify-between flex-wrap gap-4">
           <CardTitle className="text-primary">Usuarios del Sistema</CardTitle>
-          <div className="flex items-center gap-3">
-            <div className="relative">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-full sm:w-auto">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar..."
-                className="w-64 border-border bg-input pl-9"
+                className="w-full sm:w-64 border-border bg-input pl-9"
               />
             </div>
             <Button onClick={handleOpenCreate} className="bg-primary text-primary-foreground">
