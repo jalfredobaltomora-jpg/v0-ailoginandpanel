@@ -138,10 +138,11 @@ export function FloatingAI() {
     return () => { if (exprTimeoutRef.current) clearTimeout(exprTimeoutRef.current); };
   }, []);
 
-  // Wake word detection — always on when voiceActivated is true
+  // Wake word detection — always on when voiceActivated is true (paused while JAB speaks
+  // so Android releases the microphone and TTS can actually play)
   const wakeSkipRef = useRef(false);
-  useWakeWord({
-    enabled: voiceActivated,
+  const { stopListening: stopWakeWord } = useWakeWord({
+    enabled: voiceActivated && !isSpeaking,
     onWake: (text) => {
       if (processingRef.current) { console.log('JAB wake: skip, processing'); return; }
       if (wakeSkipRef.current) return;
@@ -184,39 +185,36 @@ export function FloatingAI() {
       utterance.rate = 1.1;
       utterance.pitch = 0.9;
 
+      let finished = false;
+      const finish = (ok: boolean) => {
+        if (finished) return;
+        finished = true;
+        setIsSpeaking(false);
+        setExpression(ok ? 'happy' : 'concerned');
+        cb?.();
+      };
       utterance.onstart = () => {
         setIsSpeaking(true);
         setExpression('processing');
       };
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        setExpression('happy');
-        cb?.();
-      };
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-        setExpression('concerned');
-      };
+      utterance.onend = () => finish(true);
+      utterance.onerror = () => finish(false);
 
+      // Stop the wake-word microphone first so Android releases audio focus
+      // and the TTS output is actually audible, then speak after a short delay.
+      stopWakeWord();
       window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
+      setIsSpeaking(true);
+      setTimeout(() => {
+        if (finished) return;
+        window.speechSynthesis.speak(utterance);
+      }, 350);
     },
-    [lang, soundEnabled]
+    [lang, soundEnabled, stopWakeWord]
   );
 
   // Greeting & auto-show on app start
   const greetedRef = useRef(false);
-  const firstRunRef = useRef(false);
-  useEffect(() => {
-    // Check first run
-    try {
-      const val = localStorage.getItem('jab_first_run');
-      if (!val) {
-        firstRunRef.current = true;
-        localStorage.setItem('jab_first_run', 'done');
-      }
-    } catch {}
-  }, []);
 
   // No auto-open the chat on app load. The floating button stays visible;
   // the chat only opens when the user clicks JAB, says the wake word, or asks.
@@ -229,21 +227,21 @@ export function FloatingAI() {
     if (greetedRef.current) return;
     greetedRef.current = true;
     setGreetComplete(true);
-    const hours = new Date().getHours();
+    const now = new Date();
+    const hours = now.getHours();
     const timeGreeting = hours >= 6 && hours < 12 ? (lang === 'es' ? 'Buenos días' : 'Good morning')
       : hours >= 12 && hours < 18 ? (lang === 'es' ? 'Buenas tardes' : 'Good afternoon')
       : (lang === 'es' ? 'Buenas noches' : 'Good evening');
 
-    const intro = firstRunRef.current
-      ? (lang === 'es'
-          ? `${timeGreeting} ${userName}! 👋\n\nSoy JAB, tu Asistente Técnico y Analítico del Sistema de Control Administrativo, inspirado en JARVIS de Iron Man.\n\nPuedo ayudarte con:\n• Análisis de datos y reportes\n• Navegación por el sistema\n• Búsqueda en Google\n• Diagnóstico de equipos\n• Y mucho más...\n\nSolo di "jab" y lo que necesitas para activarme por voz, o escríbeme directamente.`
-          : `${timeGreeting} ${userName}! 👋\n\nI'm JAB, your Technical Assistance and Analytical System of the Administrative Control System, inspired by JARVIS from Iron Man.\n\nI can help you with:\n• Data analysis and reports\n• System navigation\n• Google search\n• Equipment diagnostics\n• And much more...\n\nJust say "jab" followed by what you need to activate me by voice, or type directly.`)
-      : (lang === 'es'
-          ? `${timeGreeting} ${userName}! 👋\n\nSoy JAB, tu asistente inteligente 🤖`
-          : `${timeGreeting} ${userName}! 👋\n\nI'm JAB, your intelligent assistant 🤖`);
+    const fecha = now.toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const hora = now.toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+    const intro = (lang === 'es'
+      ? `${timeGreeting} ${userName}!\n\nHoy es ${fecha} y son las ${hora} horas.\n\nMi nombre es JAB, tu asistente inteligente, estoy aquí para ayudarte en lo que necesites.\n\nSolo di "JAB necesito" + lo que deseas, o escríbeme directamente.`
+      : `${timeGreeting} ${userName}!\n\nToday is ${fecha} and it's ${hora}.\n\nMy name is JAB, your intelligent assistant, I'm here to help you with anything you need.\n\nJust say "JAB I need" + what you want, or type directly.`);
 
     setMessages((prev) => prev.length === 0 ? [{ role: 'assistant', content: intro, timestamp: Date.now() }] : prev);
-    setTimeout(() => speak(intro), firstRunRef.current ? 500 : 300);
+    setTimeout(() => speak(intro), 800);
   }, [isChatOpen, lang, userName, speak]);
 
   const addMessage = useCallback((role: 'user' | 'assistant', content: string) => {
