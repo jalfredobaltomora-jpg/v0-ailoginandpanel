@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { transcribeAudio } from './transcribe-client';
+import { isNativeApp } from './native-speech';
 
 interface UseWakeWordOptions {
   enabled: boolean;
@@ -15,6 +16,7 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const retryRef = useRef(0);
+  const nativeLoopRef = useRef<{ stop: () => Promise<void> } | null>(null);
 
   const stopListening = useCallback(() => {
     activeRef.current = false;
@@ -28,6 +30,11 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
     }
+    if (nativeLoopRef.current) {
+      const loop = nativeLoopRef.current;
+      nativeLoopRef.current = null;
+      loop.stop().catch(() => {});
+    }
     onListeningChange?.(false);
   }, [onListeningChange]);
 
@@ -36,6 +43,38 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
     activeRef.current = true;
     retryRef.current = 0;
     onListeningChange?.(true);
+
+    if (isNativeApp()) {
+      // Native Capacitor speech recognition loop (works in the APK webview)
+      import('./native-speech')
+        .then(({ startWakeLoop }) => startWakeLoop({
+          language: 'es-CO',
+          onWake: (text) => {
+            if (!activeRef.current) return;
+            onWake(text);
+          },
+          onError: () => {
+            if (activeRef.current) {
+              activeRef.current = false;
+              onListeningChange?.(false);
+            }
+          },
+        }))
+        .then((loop) => {
+          if (!activeRef.current) {
+            loop.stop().catch(() => {});
+            return;
+          }
+          nativeLoopRef.current = loop;
+        })
+        .catch(() => {
+          if (activeRef.current) {
+            activeRef.current = false;
+            onListeningChange?.(false);
+          }
+        });
+      return;
+    }
 
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const MAX_RETRIES = 3;
@@ -219,5 +258,5 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
     }
   }, [enabled, startListening, stopListening]);
 
-  return { stopListening };
+  return { stopListening, restart: startListening };
 }

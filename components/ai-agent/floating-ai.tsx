@@ -20,6 +20,8 @@ import { askAI } from '@/lib/ai-client';
 import { detectIntent } from './system-knowledge';
 import { transcribeAudio } from '@/lib/transcribe-client';
 import { useWakeWord } from '@/lib/use-wake-word';
+import { speakText } from '@/lib/tts';
+import { isNativeApp } from '@/lib/native-speech';
 import { getEmpleadoByCodigo, getUserSchedule, saveUserSchedule, type UserSchedule, type Empleado } from '@/lib/firebase';
 import { getWeekNumber, getDayEndTime, getDayEndAdjusted, setStoredLunchTime, setLunchPromptWeek, getLunchPromptWeek, scheduleTodayAlarms, getStoredLunchTime, setStoredSatExitTime, setStoredSatEatCompany, setStoredSatLunchTime, setSatPromptWeek, getSatPromptWeek, scheduleSaturdayAlarms, getStoredSatExitTime, getStoredSatEatCompany, esQATeam } from '@/lib/alarm-engine';
 
@@ -73,6 +75,9 @@ export function FloatingAI() {
   const buttonRef = useRef<HTMLDivElement>(null);
   const [posOverrides, setPosOverrides] = useState<{ right?: number; bottom?: number }>({});
   const posIndexRef = useRef(0);
+  const micHandleRef = useRef<{ stop: () => Promise<void> } | null>(null);
+  const inputTextRef = useRef('');
+  useEffect(() => { inputTextRef.current = inputText; }, [inputText]);
 
   // ─── Setup ───
   useEffect(() => {
@@ -141,7 +146,7 @@ export function FloatingAI() {
   // Wake word detection — always on when voiceActivated is true (paused while JAB speaks
   // so Android releases the microphone and TTS can actually play)
   const wakeSkipRef = useRef(false);
-  const { stopListening: stopWakeWord } = useWakeWord({
+  const { stopListening: stopWakeWord, restart: restartWakeWord } = useWakeWord({
     enabled: voiceActivated && !isSpeaking,
     onWake: (text) => {
       if (processingRef.current) { console.log('JAB wake: skip, processing'); return; }
@@ -174,41 +179,33 @@ export function FloatingAI() {
 
   const speak = useCallback(
     (text: string, cb?: () => void) => {
-      if (!soundEnabled || !window.speechSynthesis) {
+      if (!soundEnabled) {
         cb?.();
         return;
       }
 
-      const cleanText = text.replace(/\bJAB\b/gi, 'Jab').replace(/\p{Emoji}\s*/gu, '').trim();
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = lang === 'es' ? 'es-CO' : 'en-US';
-      utterance.rate = 1.1;
-      utterance.pitch = 0.9;
-
-      let finished = false;
-      const finish = (ok: boolean) => {
-        if (finished) return;
-        finished = true;
-        setIsSpeaking(false);
-        setExpression(ok ? 'happy' : 'concerned');
-        cb?.();
-      };
-      utterance.onstart = () => {
-        setIsSpeaking(true);
-        setExpression('processing');
-      };
-      utterance.onend = () => finish(true);
-      utterance.onerror = () => finish(false);
-
       // Stop the wake-word microphone first so Android releases audio focus
-      // and the TTS output is actually audible, then speak after a short delay.
+      // and the TTS output is actually audible.
       stopWakeWord();
-      window.speechSynthesis.cancel();
-      setIsSpeaking(true);
-      setTimeout(() => {
-        if (finished) return;
-        window.speechSynthesis.speak(utterance);
-      }, 350);
+      speakText({
+        text,
+        lang: lang === 'es' ? 'es-CO' : 'en-US',
+        rate: 1.1,
+        pitch: 0.9,
+        onStart: () => {
+          setIsSpeaking(true);
+          setExpression('processing');
+        },
+        onEnd: (ok) => {
+          setIsSpeaking(false);
+          setExpression(ok ? 'happy' : 'concerned');
+          cb?.();
+        },
+      }).catch(() => {
+        setIsSpeaking(false);
+        setExpression('concerned');
+        cb?.();
+      });
     },
     [lang, soundEnabled, stopWakeWord]
   );
@@ -612,11 +609,57 @@ export function FloatingAI() {
   const toggleListening = useCallback(() => {
     if (isMicActive) {
       setIsMicActive(false);
+      if (micHandleRef.current) {
+        const handle = micHandleRef.current;
+        micHandleRef.current = null;
+        handle.stop().catch(() => {});
+      }
+      restartWakeWord();
       return;
     }
 
     setIsMicActive(true);
     setExpression('scanning');
+
+    if (isNativeApp()) {
+      stopWakeWord();
+      const startPTT = async () => {
+        try {
+          const { recognizeOnce } = await import('@/lib/native-speech');
+          const handle = await recognizeOnce({
+            language: lang === 'es' ? 'es-CO' : 'en-US',
+            callbacks: {
+              onPartial: (t) => setInputText(t),
+              onEnd: () => {
+                micHandleRef.current = null;
+                setIsMicActive(false);
+                const t = inputTextRef.current.trim();
+                if (t) processMessage(t);
+                restartWakeWord();
+              },
+              onError: () => {
+                micHandleRef.current = null;
+                setIsMicActive(false);
+                setExpression('concerned');
+                restartWakeWord();
+              },
+            },
+          });
+          if (!isMicActive) {
+            handle.stop().catch(() => {});
+            return;
+          }
+          micHandleRef.current = handle;
+        } catch {
+          micHandleRef.current = null;
+          setIsMicActive(false);
+          setExpression('concerned');
+          restartWakeWord();
+        }
+      };
+      startPTT();
+      return;
+    }
 
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
@@ -675,7 +718,7 @@ export function FloatingAI() {
       setIsMicActive(false);
       setExpression('concerned');
     });
-  }, [isMicActive, lang, processMessage]);
+  }, [isMicActive, lang, processMessage, restartWakeWord]);
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const userScrolledUpRef = useRef(false);

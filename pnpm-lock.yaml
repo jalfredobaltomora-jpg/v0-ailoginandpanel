@@ -11,6 +11,9 @@ importers:
       '@ai-sdk/react':
         specifier: ^3.0.179
         version: 3.0.193(react@19.2.6)(zod@3.25.76)
+      '@capacitor-community/text-to-speech':
+        specifier: ^8.0.2
+        version: 8.0.2(@capacitor/core@8.3.4)
       '@capacitor/android':
         specifier: ^8.3.4
         version: 8.3.4(@capacitor/core@8.3.4)
@@ -41,6 +44,9 @@ importers:
       '@capacitor/preferences':
         specifier: ^8.0.1
         version: 8.0.1(@capacitor/core@8.3.4)
+      '@capgo/capacitor-speech-recognition':
+        specifier: ^8.1.10
+        version: 8.1.10(@capacitor/core@8.3.4)
       '@hookform/resolvers':
         specifier: ^3.9.1
         version: 3.10.0(react-hook-form@7.76.1(react@19.2.6))
@@ -279,6 +285,11 @@ packages:
     resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
     engines: {node: '>=6.9.0'}
 
+  '@capacitor-community/text-to-speech@8.0.2':
+    resolution: {integrity: sha512-SbpBMzcmzdTiN8jQDme/yUYHEJISZA+IiaRn5zT14k3UKpjaA7eYBnSm9h76rJHRV/y6DVZVhT1J0SaK5JTKtA==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
+
   '@capacitor/android@8.3.4':
     resolution: {integrity: sha512-7gJjrG3X32Am1QMLqgMztWTYMLMVNE+VZwhekNxhvYizH4mOV05vH+rC9B+f17bCkYZfyu/qXQX6hoY7kLeVZw==}
     peerDependencies:
@@ -329,6 +340,11 @@ packages:
 
   '@capacitor/synapse@1.0.4':
     resolution: {integrity: sha512-/C1FUo8/OkKuAT4nCIu/34ny9siNHr9qtFezu4kxm6GY1wNFxrCFWjfYx5C1tUhVGz3fxBABegupkpjXvjCHrw==}
+
+  '@capgo/capacitor-speech-recognition@8.1.10':
+    resolution: {integrity: sha512-nght4q8qxsfb51Au2KzwtDnMpDiN7P0bElISxeUxRKTTHWwVb3HLRRxf5l0TpdpvK2KUUYU1MuBhj+/odC9wGw==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
 
   '@date-fns/tz@1.5.0':
     resolution: {integrity: sha512-lwYN/vDPeNRULcepoE/LO2Pgx+7/RV+S9ARfbc9lr2DtGkOD7pAiruHvbR1RX3Qyf6ja47EWJDMsNK5vK08DJg==}
@@ -3012,6 +3028,10 @@ snapshots:
 
   '@babel/runtime@7.29.7': {}
 
+  '@capacitor-community/text-to-speech@8.0.2(@capacitor/core@8.3.4)':
+    dependencies:
+      '@capacitor/core': 8.3.4
+
   '@capacitor/android@8.3.4(@capacitor/core@8.3.4)':
     dependencies:
       '@capacitor/core': 8.3.4
@@ -3073,6 +3093,10 @@ snapshots:
       '@capacitor/core': 8.3.4
 
   '@capacitor/synapse@1.0.4': {}
+
+  '@capgo/capacitor-speech-recognition@8.1.10(@capacitor/core@8.3.4)':
+    dependencies:
+      '@capacitor/core': 8.3.4
 
   '@date-fns/tz@1.5.0': {}
 
