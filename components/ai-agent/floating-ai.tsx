@@ -234,7 +234,7 @@ export function FloatingAI() {
       : (lang === 'es' ? 'Buenas noches' : 'Good evening');
 
     const fecha = now.toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    const hora = now.toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const hora = now.toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
     const intro = (lang === 'es'
       ? `${timeGreeting} ${userName}!\n\nHoy es ${fecha} y son las ${hora} horas.\n\nMi nombre es JAB, tu asistente inteligente, estoy aquí para ayudarte en lo que necesites.\n\nSolo di "JAB necesito" + lo que deseas, o escríbeme directamente.`
@@ -976,7 +976,7 @@ export function FloatingAI() {
                   {/* Status Bar */}
                   <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-cyan-500/10">
                     <div className="flex items-center gap-2">
-                      <span>{new Date().toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>{new Date().toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
                       {voiceActivated && (
                         <span className={`flex items-center gap-1 ${isListening ? 'text-green-400' : 'text-cyan-400'}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${isListening ? 'bg-green-400 animate-pulse' : 'bg-cyan-400'}`} />

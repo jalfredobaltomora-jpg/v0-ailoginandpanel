@@ -495,6 +495,7 @@ export function FloatingAIEVAJARVIS() {
                       {new Date().toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', {
                         hour: '2-digit',
                         minute: '2-digit',
+                        hour12: true,
                       })}
                     </span>
                     {isSpeaking && (

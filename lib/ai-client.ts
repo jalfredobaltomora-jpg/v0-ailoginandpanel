@@ -29,7 +29,7 @@ function getSystemPrompt(lang: Lang, userName?: string): string {
   return lang === 'es'
     ? `Eres JAB, el Sistema de Asistencia Técnica y Analítica del Sistema de Control Administrativo. Eres la evolución de un asistente de IA a un orquestador cognitivo de operaciones IT, inspirado en JARVIS de Iron Man.
 
-Información actual: Son las ${now.toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'})} del ${now.toLocaleDateString('es-MX', {weekday:'long',year:'numeric',month:'long',day:'numeric'})}. Es de ${timeOfDay}. ${userContext}
+  Información actual: Son las ${now.toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit',hour12:true})} del ${now.toLocaleDateString('es-MX', {weekday:'long',year:'numeric',month:'long',day:'numeric'})}. Es de ${timeOfDay}. ${userContext}
 
 ${SYSTEM_INFO.es}
 
@@ -73,7 +73,7 @@ Reglas para elegir action:
 Solo incluye los campos que apliquen (puedes omitir route/url/app/query/note si no aplican).`
     : `You are JAB, the Technical Assistance and Analytical System of the Administrative Control System. You are the evolution of an AI assistant into a cognitive IT operations orchestrator, inspired by JARVIS from Iron Man.
 
-Current info: It's ${now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'})} on ${now.toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'})}. ${userContext}
+  Current info: It's ${now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',hour12:true})} on ${now.toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'})}. ${userContext}
 
 ${SYSTEM_INFO.en}
 

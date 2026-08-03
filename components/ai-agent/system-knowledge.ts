@@ -214,7 +214,7 @@ export function getIntentResponse(intent: Intent, lang: Lang, userName: string):
     }
     case 'time': {
       const now = new Date();
-      const timeStr = now.toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit' });
+      const timeStr = now.toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
       const dateStr = now.toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       return lang === 'es'
         ? `Son las ${timeStr} del ${dateStr}`
