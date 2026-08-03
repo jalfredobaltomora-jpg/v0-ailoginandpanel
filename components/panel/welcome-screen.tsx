@@ -44,8 +44,10 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
   const dismissedLunchRef = useRef(false);
   const dismissedSatRef = useRef(false);
 
+  // Pick the motivational phrase once per session so it doesn't change on re-renders
+  const [phrase] = useState(() => getMotivationalPhrase());
+
   const greeting = getGreeting();
-  const phrase = getMotivationalPhrase();
   const day = new Date().getDay();
   const isWeekend = day === 0 || day === 6;
   const isSaturday = day === 6;

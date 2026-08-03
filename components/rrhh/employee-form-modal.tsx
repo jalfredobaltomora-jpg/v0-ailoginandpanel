@@ -25,7 +25,7 @@ import {
   type HistorialContractual,
   type UsuarioIT,
 } from '@/lib/firebase';
-import { tienePermisoEnGrupo } from '@/lib/permisos';
+import { tienePermiso, tienePermisoEnGrupo } from '@/lib/permisos';
 
 interface EmployeeFormModalProps {
   empleado: Empleado | null;
@@ -82,6 +82,9 @@ export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: E
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Only IT Manager roles can change the employee code on a regular edit
+  const puedeEditarCodigo = !!currentUser && tienePermiso(currentUser, 'itManager');
 
   // Form state
   const [formData, setFormData] = useState<Empleado>({
@@ -309,6 +312,9 @@ export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: E
           saveData.firstEmployeeCode = empleado.firstEmployeeCode;
           saveData.renewalCount = empleado.renewalCount ?? 0;
           success = await updateEmpleado(code, saveData as Partial<Empleado>);
+          if (success && code !== empleado.code) {
+            await deleteEmpleado(empleado.code);
+          }
         }
       } else {
         const saveData = {
@@ -431,7 +437,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: E
                 onChange={(e) => handleChange('code', e.target.value)}
                 placeholder="100001"
                 className="border-border bg-input font-mono"
-                disabled={!isEditing || (!!empleado && !isRenewing)}
+                disabled={!isEditing || (!!empleado && !isRenewing && !puedeEditarCodigo)}
               />
             </div>
             <div>

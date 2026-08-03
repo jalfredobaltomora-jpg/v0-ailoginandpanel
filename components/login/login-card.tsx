@@ -127,9 +127,9 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
     } else if (result.match === 'similar') {
       setSimilarUser(result.matchedUser);
       setShowSupportBtn(true);
-      setAiMessage(result.suggestion);
+      setAiMessage(`${result.suggestion} Si no lo recuerdas, puedo ayudarte a recuperarlo en el chat de asistencia.`);
     } else {
-      setAiMessage('IA: Usuario no encontrado en el sistema.');
+      setAiMessage('IA: Usuario no encontrado en el sistema. Si olvidaste tu usuario, puedes recuperarlo a través del chat de asistencia.');
       setShowSupportBtn(true);
     }
   }, [allUsers]);
@@ -165,10 +165,11 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
         setPin('');
 
         if (newAttempts >= 3) {
-          setAiMessage('IA: Demasiados intentos fallidos. Puede solicitar asistencia de IT.');
+          setAiMessage('IA: Demasiados intentos fallidos. Puedo ayudarte a recuperar tu PIN en el chat de asistencia.');
           setShowSupportBtn(true);
         } else {
-          setAiMessage(`IA: PIN incorrecto. Intento ${newAttempts}/3`);
+          setAiMessage(`IA: PIN incorrecto. Intento ${newAttempts}/3. Si olvidaste tu PIN, puedo ayudarte a recuperarlo en el chat de asistencia.`);
+          setShowSupportBtn(true);
         }
       }
     }
@@ -265,7 +266,7 @@ export function LoginCard({ onLoginSuccess, onRequestSupport }: LoginCardProps) 
               className="w-full bg-blue-600 text-white hover:bg-blue-700"
             >
               <MessageCircle className="mr-2 h-4 w-4" />
-              Asistencia de IT
+              Recuperar credenciales por chat
             </Button>
           )}
         </div>
