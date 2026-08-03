@@ -11,6 +11,7 @@ import {
   getGreeting, getMotivationalPhrase, getDayEndTime, getDayEndAdjusted,
   getStoredLunchTime, setStoredLunchTime,
   shouldAskLunch, setLunchPromptWeek, getLunchPromptWeek, getWeekNumber, scheduleTodayAlarms,
+  esQATeam,
   shouldAskSaturday, setSatPromptWeek, getSatPromptWeek,
   getStoredSatExitTime, setStoredSatExitTime,
   getStoredSatEatCompany, setStoredSatEatCompany,
@@ -111,26 +112,31 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
         }
       } else {
         if (!dismissedLunchRef.current && !isWeekend) {
-          const fbHasLunch = !!fbSchedule?.lunchTime;
-          const fbLunchWeek = fbSchedule?.lunchWeek;
-          const currWeek = getWeekNumber();
-          if (fbHasLunch) {
-            if (fbLunchWeek != null) {
-              if (fbLunchWeek !== currWeek) setNeedsLunchPrompt(true);
-            } else {
-              // Legacy: lunchTime exists but no week saved yet
-              // Auto-save current week to Firebase so it never asks again until new week
-              saveUserSchedule(user.codigo, {
-                lunchTime: fbSchedule.lunchTime,
-                lunchWeek: currWeek,
-                satExitTime: fbSchedule.satExitTime || undefined,
-                satEatCompany: fbSchedule.satEatCompany,
-                satLunchTime: fbSchedule.satLunchTime || undefined,
-                satWeek: fbSchedule.satWeek,
-              });
+          // Solo QA Team (horarios rotativos) recibe la pregunta de almuerzo
+          if (!esQATeam(empleado)) {
+            setNeedsLunchPrompt(false);
+          } else {
+            const fbHasLunch = !!fbSchedule?.lunchTime;
+            const fbLunchWeek = fbSchedule?.lunchWeek;
+            const currWeek = getWeekNumber();
+            if (fbHasLunch) {
+              if (fbLunchWeek != null) {
+                if (fbLunchWeek !== currWeek) setNeedsLunchPrompt(true);
+              } else {
+                // Legacy: lunchTime exists but no week saved yet
+                // Auto-save current week to Firebase so it never asks again until new week
+                saveUserSchedule(user.codigo, {
+                  lunchTime: fbSchedule.lunchTime,
+                  lunchWeek: currWeek,
+                  satExitTime: fbSchedule.satExitTime || undefined,
+                  satEatCompany: fbSchedule.satEatCompany,
+                  satLunchTime: fbSchedule.satLunchTime || undefined,
+                  satWeek: fbSchedule.satWeek,
+                });
+              }
+            } else if (shouldAskLunch()) {
+              setNeedsLunchPrompt(true);
             }
-          } else if (shouldAskLunch()) {
-            setNeedsLunchPrompt(true);
           }
         }
       }
@@ -139,7 +145,7 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
     });
 
     return unsub;
-  }, [user, isWeekend, isSaturday]);
+  }, [user, isWeekend, isSaturday, empleado]);
 
   const handleLunchSave = async () => {
     if (!lunchTime) return;

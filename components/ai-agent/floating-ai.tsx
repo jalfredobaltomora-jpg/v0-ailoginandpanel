@@ -21,7 +21,7 @@ import { detectIntent } from './system-knowledge';
 import { transcribeAudio } from '@/lib/transcribe-client';
 import { useWakeWord } from '@/lib/use-wake-word';
 import { getEmpleadoByCodigo, getUserSchedule, saveUserSchedule, type UserSchedule, type Empleado } from '@/lib/firebase';
-import { getWeekNumber, getDayEndTime, getDayEndAdjusted, setStoredLunchTime, setLunchPromptWeek, getLunchPromptWeek, scheduleTodayAlarms, getStoredLunchTime, setStoredSatExitTime, setStoredSatEatCompany, setStoredSatLunchTime, setSatPromptWeek, getSatPromptWeek, scheduleSaturdayAlarms, getStoredSatExitTime, getStoredSatEatCompany } from '@/lib/alarm-engine';
+import { getWeekNumber, getDayEndTime, getDayEndAdjusted, setStoredLunchTime, setLunchPromptWeek, getLunchPromptWeek, scheduleTodayAlarms, getStoredLunchTime, setStoredSatExitTime, setStoredSatEatCompany, setStoredSatLunchTime, setSatPromptWeek, getSatPromptWeek, scheduleSaturdayAlarms, getStoredSatExitTime, getStoredSatEatCompany, esQATeam } from '@/lib/alarm-engine';
 
 declare global {
   interface Window {
@@ -281,10 +281,10 @@ export function FloatingAI() {
       }
       return;
     }
-    // Weekday (Monday-Friday): once per week
+    // Weekday (Monday-Friday): once per week, only for QA Team (rotating schedules)
     const storedWeek = schedule?.lunchWeek || getLunchPromptWeek();
     const storedLunch = schedule?.lunchTime || getStoredLunchTime();
-    if ((!storedLunch || storedWeek !== week) && userCode) {
+    if (esQATeam(empleado) && (!storedLunch || storedWeek !== week) && userCode) {
       sessionPromptShown.current = true;
       setAwaitingLunchResponse(true);
       const ask = lang === 'es'
@@ -295,7 +295,7 @@ export function FloatingAI() {
         speak(ask);
       }, 3000);
     }
-  }, [isChatOpen, greetComplete, schedule, lang, addMessage, speak, userCode]);
+  }, [isChatOpen, greetComplete, schedule, lang, addMessage, speak, userCode, empleado]);
 
   // ─── Background timer for lunch/exit reminders ───
   useEffect(() => {

@@ -90,6 +90,14 @@ export function shouldAskLunch(): boolean {
   return getLunchPromptWeek() !== getWeekNumber();
 }
 
+// QA Team (Control de Calidad) tiene horarios de almuerzo rotativos semanales,
+// por lo que JAB solo pregunta la hora de almuerzo a estos empleados.
+export function esQATeam(emp?: { area?: string; cargo?: string } | null): boolean {
+  if (!emp) return false;
+  const text = `${emp.area || ''} ${emp.cargo || ''}`.toUpperCase();
+  return /\bQA\b|\bQUALITY\b|\bCALIDAD\b/.test(text);
+}
+
 // --- Sábado ---
 export function getSatPromptWeek(): number {
   if (typeof window === 'undefined') return 0;
