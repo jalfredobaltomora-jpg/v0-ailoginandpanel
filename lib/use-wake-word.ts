@@ -106,8 +106,18 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
 
       tryStart();
     } else {
-      // Fallback: MediaRecorder + Groq Whisper
+      // Fallback: MediaRecorder + VAD + Groq Whisper (works on Android WebView / Capacitor)
       let micFailureCount = 0;
+      let loopTimer: ReturnType<typeof setTimeout> | null = null;
+      let vadCleanup: (() => void) | null = null;
+
+      const stopStreamTracks = () => {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(t => t.stop());
+          streamRef.current = null;
+        }
+      };
+
       const tryStart = async () => {
         if (!activeRef.current) return;
         if (micFailureCount >= MAX_RETRIES) {
@@ -121,34 +131,73 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
           streamRef.current = stream;
           micFailureCount = 0;
 
-          const loop = () => {
-            if (!activeRef.current) return;
-            const mr = new MediaRecorder(stream);
-            const chunks: BlobPart[] = [];
-            mr.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
-            mr.onstop = async () => {
-              if (!activeRef.current) return;
-              const blob = new Blob(chunks);
-              if (blob.size > 400) {
-                try {
-                  const text = await transcribeAudio(blob);
-                  if (text && /\bjabe?\b/i.test(text.trim())) {
-                    onWake(text);
-                  }
-                } catch {}
-              }
-              if (activeRef.current) {
-                timerRef.current = setTimeout(loop, 200);
-              }
-            };
-            mr.start();
-            setTimeout(() => { if (mr.state === 'recording') mr.stop(); }, 3000);
+          const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+            ? 'audio/webm;codecs=opus'
+            : 'audio/webm';
+          const mr = new MediaRecorder(stream, { mimeType });
+          const chunks: BlobPart[] = [];
+          let isStopped = false;
+          let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+          let hardStopTimer: ReturnType<typeof setTimeout> | null = null;
+
+          const stopRecording = () => {
+            if (isStopped) return;
+            isStopped = true;
+            if (silenceTimer) clearTimeout(silenceTimer);
+            if (hardStopTimer) clearTimeout(hardStopTimer);
+            if (mr.state === 'recording') mr.stop();
           };
-          loop();
+
+          // Silence detection via AudioContext (VAD)
+          const audioCtx = new AudioContext();
+          const source = audioCtx.createMediaStreamSource(stream);
+          const analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 2048;
+          source.connect(analyser);
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+          const detectSilence = () => {
+            if (isStopped) return;
+            analyser.getByteFrequencyData(dataArray);
+            const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+            if (avg < 5) {
+              if (!silenceTimer) silenceTimer = setTimeout(stopRecording, 1400);
+            } else {
+              if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+            }
+            if (!isStopped) requestAnimationFrame(detectSilence);
+          };
+
+          vadCleanup = () => {
+            if (audioCtx.state !== 'closed') audioCtx.close().catch(() => {});
+          };
+
+          mr.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
+          mr.onstop = async () => {
+            vadCleanup?.();
+            if (!activeRef.current) return;
+            const blob = new Blob(chunks, { type: mimeType });
+            if (blob.size > 400) {
+              try {
+                const text = await transcribeAudio(blob, 'es');
+                if (text && /\bjabe?\b/i.test(text.trim())) {
+                  onWake(text);
+                }
+              } catch {}
+            }
+            if (activeRef.current) {
+              timerRef.current = setTimeout(tryStart, 150);
+            }
+          };
+
+          mr.start(100);
+          detectSilence();
+          // Safety cap: max 15s per utterance
+          hardStopTimer = setTimeout(stopRecording, 15000);
         } catch {
           micFailureCount++;
           if (micFailureCount < MAX_RETRIES) {
-            timerRef.current = setTimeout(tryStart, 5000);
+            timerRef.current = setTimeout(tryStart, 4000);
           } else {
             activeRef.current = false;
             onListeningChange?.(false);
@@ -157,6 +206,7 @@ export function useWakeWord({ enabled, onWake, onListeningChange }: UseWakeWordO
       };
 
       tryStart();
+      loopTimer = null;
     }
   }, [enabled, onWake, onListeningChange]);
 

@@ -58,7 +58,7 @@ export function FloatingAI() {
   const [isVisible, setIsVisible] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [voiceActivated, setVoiceActivated] = useState(false);
+  const [voiceActivated, setVoiceActivated] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const processingRef = useRef(false);
@@ -218,16 +218,10 @@ export function FloatingAI() {
     } catch {}
   }, []);
 
+  // No auto-open the chat on app load. The floating button stays visible;
+  // the chat only opens when the user clicks JAB, says the wake word, or asks.
   useEffect(() => {
-    // Auto-show chat after app loads
-    const timer = setTimeout(() => {
-      setIsVisible(true);
-      unlockSpeech();
-    }, 1500);
-    const openTimer = setTimeout(() => {
-      setIsChatOpen(true);
-    }, 2500);
-    return () => { clearTimeout(timer); clearTimeout(openTimer); };
+    setIsVisible(true);
   }, []);
 
   useEffect(() => {
@@ -547,10 +541,50 @@ export function FloatingAI() {
         const aiPromise = askAI(trimmed, lang, userName, undefined, history);
         const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('AI timeout')), 20000));
         const aiResponse = await Promise.race([aiPromise, timeoutPromise]);
-        console.log('JAB: askAI response', aiResponse?.content?.slice(0, 80));
-        if (aiResponse?.content) {
-          // Strip emojis entirely (both standalone and parenthetical like "🤖 (Cara de Robot)")
-          const clean = aiResponse.content.replace(/\p{Emoji}\s*\([^)]*\)/gu, '').replace(/\p{Emoji}\s*/gu, '').trim();
+        console.log('JAB: askAI response', aiResponse?.content?.slice(0, 80), aiResponse?.action);
+
+        // Execute structured action from the AI (autonomy)
+        const action = aiResponse?.action || 'reply';
+        const confirmMsg = aiResponse?.content;
+
+        if (action === 'navigate' && aiResponse?.route) {
+          router.push(aiResponse.route);
+        } else if (action === 'openUrl' && aiResponse?.url) {
+          const { openURL } = await import('@/lib/device-api');
+          await openURL(aiResponse.url);
+        } else if (action === 'search' && (aiResponse?.query || aiResponse?.url)) {
+          const q = encodeURIComponent(aiResponse?.query || aiResponse?.url || '');
+          const { openURL } = await import('@/lib/device-api');
+          await openURL(`https://www.google.com/search?q=${q}`);
+        } else if (action === 'openApp' && aiResponse?.app) {
+          const { launchApp } = await import('@/lib/device-api');
+          await launchApp(aiResponse.app);
+        } else if (action === 'music' && aiResponse?.url) {
+          const { openURL } = await import('@/lib/device-api');
+          await openURL(aiResponse.url);
+        } else if (action === 'note' && aiResponse?.note) {
+          if (userCode) {
+            const { saveAgendaNote } = await import('@/lib/firebase');
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10);
+            const week = Math.ceil(((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / 86400000 + 1) / 7);
+            await saveAgendaNote(userCode, {
+              text: aiResponse.note,
+              date: dateStr,
+              year: now.getFullYear(),
+              month: now.getMonth() + 1,
+              week,
+              day: now.getDate(),
+              done: false,
+              priority: 2,
+              createdAt: Date.now(),
+            });
+          }
+          router.push('/panel/agenda');
+        }
+
+        if (confirmMsg) {
+          const clean = confirmMsg.replace(/\p{Emoji}\s*\([^)]*\)/gu, '').replace(/\p{Emoji}\s*/gu, '').trim();
           addMessage('assistant', clean);
           setExpression('happy');
           speak(clean);
