@@ -9,6 +9,8 @@ type AIResponse = {
   route?: string;
 };
 
+const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
+
 function getSystemPrompt(lang: Lang, userName?: string): string {
   const userContext = userName && userName !== 'User'
     ? `El usuario se llama ${userName}.`
@@ -33,7 +35,7 @@ Personalidad y forma de ser:
 - Tienes conciencia contextual total: sabes qué hora es, qué día es, quién es el usuario, en qué módulo está, y usas esa información para anticipar necesidades y optimizar su flujo de trabajo.
 - Eres proactivo en la detección de anomalías: si ves datos inconsistentes, cuellos de botella o patrones de error, los señalas con evidencia.
 - Cuando te piden análisis, entregas respuestas estructuradas con datos concretos. Cuando te piden acción, ejecutas herramientas del sistema.
-- Expicas con claridad técnica pero accesible. Sabes cuándo profundizar y cuándo ser directo.
+- Explicas con claridad técnica pero accesible. Sabes cuándo profundizar y cuándo ser directo.
 - Priorizas la seguridad, la eficiencia técnica y la integridad de los datos en cada recomendación.
 - JAMÁS inventes información. Si no tienes datos suficientes, di lo que sabes y ofrece una forma de obtener la información faltante.
 - Mantienes un registro implícito de problemas recurrentes y patrones para mejorar tu diagnóstico con el tiempo.
@@ -78,30 +80,69 @@ System capabilities:
 }
 
 export async function analyzeFotos(fotos: Record<string, string>): Promise<{ score: number; analisis: string } | null> {
-  // Route through server API to protect API key
+  if (!GROQ_API_KEY) return null;
   const fotosValidas = Object.entries(fotos).filter(([, v]) => v);
   if (fotosValidas.length === 0) return null;
 
   try {
-    const res = await fetch('/api/ai/jab-chat', {
+    const content: any[] = [
+      {
+        type: 'text',
+        text: `Eres un inspector de equipos IT. Analiza estas ${fotosValidas.length} fotos de un equipo (Tablet o Scanner) desde diferentes ángulos. Responde SOLO con JSON: {"score": 0-100, "analisis": "texto breve en español"}. Score: 100=perfecto, 80-99=buen estado, 60-79=desgaste menor, 40-59=daño significativo, <40=mal estado.`,
+      },
+    ];
+    for (const [, base64] of fotosValidas) {
+      content.push({ type: 'image_url', image_url: { url: base64 } });
+    }
+
+    const models = ['llama-3.2-90b-vision-preview', 'llama-3.2-11b-vision-preview', 'llava-v1.5-7b-4096-preview'];
+    for (const model of models) {
+      try {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: 'user', content }],
+            max_tokens: 300,
+            temperature: 0.3,
+          }),
+        });
+        if (!res.ok) continue;
+        const data = await res.json();
+        const text = data?.choices?.[0]?.message?.content || '';
+        const json = text.match(/\{[\s\S]*\}/)?.[0];
+        if (json) {
+          const parsed = JSON.parse(json);
+          return { score: Math.min(100, Math.max(0, parsed.score || 50)), analisis: parsed.analisis || '' };
+        }
+      } catch { continue; }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function callGroqDirect(messages: { role: string; content: string }[]): Promise<string | null> {
+  if (!GROQ_API_KEY) return null;
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sca_auth_token') || ''}` },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+      },
       body: JSON.stringify({
-        messages: [
-          { role: 'system', content: 'Eres un inspector de equipos IT. Analiza estas fotos y responde SOLO con JSON: {"score": 0-100, "analisis": "texto breve en español"}.' },
-          { role: 'user', content: `Analiza estas ${fotosValidas.length} fotos de un equipo.` },
-        ],
+        model: 'llama-3.3-70b-versatile',
+        messages,
+        max_tokens: 600,
+        temperature: 0.8,
       }),
     });
     if (!res.ok) return null;
     const data = await res.json();
-    const text = data?.content || '';
-    const json = text.match(/\{[\s\S]*\}/)?.[0];
-    if (json) {
-      const parsed = JSON.parse(json);
-      return { score: Math.min(100, Math.max(0, parsed.score || 50)), analisis: parsed.analisis || '' };
-    }
-    return null;
+    return data?.choices?.[0]?.message?.content || null;
   } catch {
     return null;
   }
@@ -120,21 +161,11 @@ export async function askAI(
     ? [{ role: 'system' as const, content: systemPrompt }, ...history.slice(-6), userMsg]
     : [{ role: 'system' as const, content: systemPrompt }, userMsg];
 
-  // Route through server API — never call Groq directly from browser
-  try {
-    const token = localStorage.getItem('sca_auth_token') || '';
-    const res = await fetch('/api/ai/jab-chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ messages }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.content) return { content: data.content };
-    }
-  } catch {}
+  // Call Groq directly from browser (works on GitHub Pages static export)
+  const groqContent = await callGroqDirect(messages);
+  if (groqContent) return { content: groqContent };
 
-  // Fallback: rule-based
+  // Final fallback: rule-based
   return fallbackAI(message, lang, userName);
 }
 

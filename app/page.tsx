@@ -3,7 +3,8 @@
 import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getStoredUser, setStoredUser, type SafeUser } from '@/lib/auth-store';
+import { getStoredUser, setStoredUser } from '@/lib/auth-store';
+import type { UsuarioIT } from '@/lib/firebase';
 
 const LoginCard = dynamic(() => import('@/components/login/login-card').then(m => m.LoginCard), { ssr: false });
 const SupportChat = dynamic(() => import('@/components/chat/support-chat').then(m => m.SupportChat), { ssr: false });
@@ -22,7 +23,7 @@ export default function LoginPage() {
     }
   }, [router]);
 
-  const handleLoginSuccess = (user: SafeUser & { token: string }) => {
+  const handleLoginSuccess = (user: UsuarioIT) => {
     setStoredUser(user);
     router.push('/panel/welcome');
   };
