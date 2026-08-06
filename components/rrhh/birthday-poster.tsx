@@ -456,7 +456,7 @@ export function BirthdayPoster({ empleados, selectedMonths = [] }: BirthdayPoste
   const generate = useCallback(async () => {
     setGenerating(true);
     try {
-      const MARGIN = 50;
+      const MARGIN = 35;
       const COLS = 6;
       const COL_GAP = 18;
       const CARD_W = 700;
@@ -465,9 +465,8 @@ export function BirthdayPoster({ empleados, selectedMonths = [] }: BirthdayPoste
       const MONTH_HEADER_H = 95;
       const SECTION_GAP = 24;
       const HEADER_H = 230;
-      const FOOTER_H = 90;
-      const FOOTER_GAP = 40;
-      const MIN_W = 1500;
+      const FOOTER_H = 70;
+      const FOOTER_GAP = 20;
 
       const allSelected = selectedMonths.length === 0;
       const validEmps = empleados.filter(e => e.fechaNac && e.activo !== false);
@@ -484,22 +483,17 @@ export function BirthdayPoster({ empleados, selectedMonths = [] }: BirthdayPoste
         .map((g, i) => (g.length > 0 ? i : -1))
         .filter(i => i >= 0);
 
-      // Layout ajustado al contenido (sin márgenes sobrados):
-      // - Ancho: llega hasta el final de la fila más ancha (el mes con más
-      //   cumpleañeros; p.ej. abril termina en Jovita Calderón).
-      // - Alto: llega hasta el último mes con contenido (p.ej. diciembre).
-      let maxCardsPerRow = 0;
+      // Ancho: carta mas ancha en cualquier fila + margenes justos
+      let maxCardsInAnyRow = 0;
       for (const mi of activeMonths) {
         const g = monthGroups[mi];
-        const rows = Math.ceil(g.length / COLS);
-        const lastRow = rows > 1 ? COLS : g.length;
-        maxCardsPerRow = Math.max(maxCardsPerRow, lastRow);
+        const inFirstRow = Math.min(g.length, COLS);
+        maxCardsInAnyRow = Math.max(maxCardsInAnyRow, inFirstRow);
       }
-      const posterW = Math.max(
-        MIN_W,
-        MARGIN + (maxCardsPerRow - 1) * (CARD_W + COL_GAP) + CARD_W + MARGIN
-      );
+      if (maxCardsInAnyRow === 0) maxCardsInAnyRow = 1;
+      const posterW = MARGIN + (maxCardsInAnyRow - 1) * (CARD_W + COL_GAP) + CARD_W + MARGIN;
 
+      // Alto: header + cada mes con su contenido + footer pegado al ultimo
       let contentBottom = HEADER_H;
       activeMonths.forEach((mi, idx) => {
         const rows = Math.ceil(monthGroups[mi].length / COLS);
@@ -507,7 +501,7 @@ export function BirthdayPoster({ empleados, selectedMonths = [] }: BirthdayPoste
         if (idx < activeMonths.length - 1) contentBottom += SECTION_GAP;
       });
       if (activeMonths.length === 0) contentBottom += 200;
-      const totalH = contentBottom + FOOTER_GAP + FOOTER_H + MARGIN;
+      const totalH = contentBottom + FOOTER_GAP + FOOTER_H;
 
       const canvas = document.createElement('canvas');
       canvas.width = posterW;
@@ -848,20 +842,21 @@ export function BirthdayPoster({ empleados, selectedMonths = [] }: BirthdayPoste
         ctx.textAlign = 'left';
       }
 
-      // ─── Footer (pegado al último contenido) ───
+      // ─── Footer (justo al final del contenido) ───
+      const footerY = totalH - FOOTER_H;
       ctx.strokeStyle = 'rgba(196,77,255,0.15)';
       ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(MARGIN, totalH - FOOTER_H); ctx.lineTo(posterW - MARGIN, totalH - FOOTER_H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(MARGIN, footerY); ctx.lineTo(posterW - MARGIN, footerY); ctx.stroke();
 
       ctx.textAlign = 'center';
       ctx.fillStyle = 'rgba(42,21,72,0.4)';
-      ctx.font = '24px "Segoe UI", Arial, sans-serif';
-      ctx.fillText('SCA — Sistema de Control Administrativo', posterW / 2, totalH - FOOTER_H + 42);
+      ctx.font = '22px "Segoe UI", Arial, sans-serif';
+      ctx.fillText('SCA — Sistema de Control Administrativo', posterW / 2, footerY + 32);
       ctx.fillStyle = 'rgba(42,21,72,0.3)';
-      ctx.font = '18px "Segoe UI", Arial, sans-serif';
+      ctx.font = '16px "Segoe UI", Arial, sans-serif';
       ctx.fillText(
         `Generado el ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}`,
-        posterW / 2, totalH - FOOTER_H + 72
+        posterW / 2, footerY + 56
       );
 
       // Download
