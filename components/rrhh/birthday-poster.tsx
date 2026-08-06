@@ -509,18 +509,10 @@ export function BirthdayPoster({ empleados, selectedMonths = [] }: BirthdayPoste
       if (activeMonths.length === 0) contentBottom += 200;
       const totalH = contentBottom + FOOTER_GAP + FOOTER_H + MARGIN;
 
-      // A3 portrait at 300 DPI (297mm × 420mm)
-      const A3_W = 3508;
-      const A3_H = 4961;
-
-      // Scale the content layout to fit exactly within A3
-      const scale = Math.min(A3_W / posterW, A3_H / totalH);
-
       const canvas = document.createElement('canvas');
-      canvas.width = A3_W;
-      canvas.height = A3_H;
+      canvas.width = posterW;
+      canvas.height = totalH;
       const ctx = canvas.getContext('2d')!;
-      ctx.scale(scale, scale);
 
       // ─── Background (light for print) ───
       const bgGrad = ctx.createLinearGradient(0, 0, 0, totalH);
