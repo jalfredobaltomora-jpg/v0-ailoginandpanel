@@ -22,10 +22,10 @@ interface AIAssistantProps {
 }
 
 const quickActions = [
-  { label: 'Optimizar codigo', prompt: 'Optimiza este codigo para mejor rendimiento' },
-  { label: 'Agregar validacion', prompt: 'Agrega validaciones de entrada al formulario' },
-  { label: 'Agregar comentarios', prompt: 'Agrega comentarios explicativos al codigo' },
-  { label: 'Corregir errores', prompt: 'Revisa y corrige posibles errores en el codigo' },
+  { label: 'Optimizar código', prompt: 'Optimiza este código para mejor rendimiento' },
+  { label: 'Agregar validación', prompt: 'Agrega validaciones de entrada al formulario' },
+  { label: 'Agregar comentarios', prompt: 'Agrega comentarios explicativos al código' },
+  { label: 'Corregir errores', prompt: 'Revisa y corrige posibles errores en el código' },
   { label: 'Mejorar UI', prompt: 'Sugiere mejoras para la interfaz de usuario' },
   { label: 'Agregar loading', prompt: 'Agrega estados de carga y feedback visual' },
 ];
@@ -35,7 +35,7 @@ export function AIAssistant({ currentCode, onApplyCode, selectedFile }: AIAssist
     {
       id: '1',
       role: 'assistant',
-      content: 'Hola! Soy tu asistente de IA para desarrollo. Puedo ayudarte a:\n\n- Generar codigo\n- Optimizar funciones\n- Corregir errores\n- Mejorar la UI\n- Explicar codigo\n\nSelecciona un archivo y preguntame lo que necesites!',
+      content: '¡Hola! Soy tu asistente de IA para desarrollo. Puedo ayudarte a:\n\n- Generar código\n- Optimizar funciones\n- Corregir errores\n- Mejorar la UI\n- Explicar código\n\nSelecciona un archivo y pregúntame lo que necesites!',
       timestamp: new Date(),
     },
   ]);
@@ -147,7 +147,7 @@ export function AIAssistant({ currentCode, onApplyCode, selectedFile }: AIAssist
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Code className="h-3 w-3" />
-                        Codigo sugerido
+                        Código sugerido
                       </span>
                       <div className="flex items-center gap-1">
                         <Button size="sm" variant="ghost"

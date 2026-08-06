@@ -340,17 +340,39 @@ export const launchApp = async (appName: string, args?: string[]): Promise<boole
     if (platform === 'electron' && (window as any).electronAPI?.launchApp) {
       return await (window as any).electronAPI.launchApp(appName, args);
     } else if (platform === 'capacitor') {
-      // For Android, you'd use @capacitor-community/app-launcher
-      // @ts-expect-error - optional Capacitor plugin
-      const { AppLauncher } = await import('@capacitor-community/app-launcher');
-      await AppLauncher.canOpenUrl({ url: appName });
-      return true;
+      const { AppLauncher } = await import('@capacitor/app-launcher');
+      const url = resolveAppUri(appName);
+      const canOpen = await AppLauncher.canOpenUrl({ url });
+      if (canOpen?.value) {
+        const result = await AppLauncher.openUrl({ url });
+        return result?.completed || false;
+      }
+      return false;
     }
   } catch (error) {
     console.error('Launch app error:', error);
   }
 
   return false;
+};
+
+const resolveAppUri = (app: string): string => {
+  const known: Record<string, string> = {
+    whatsapp: 'whatsapp://',
+    'whatsapp web': 'https://web.whatsapp.com',
+    youtube: 'https://www.youtube.com',
+    spotify: 'spotify://',
+    instagram: 'instagram://',
+    telegram: 'tg://',
+    gmail: 'mailto:',
+    maps: 'geo:0,0?q=',
+    chrome: 'https://',
+  };
+  const key = app.toLowerCase().trim();
+  if (known[key]) return known[key];
+  if (/^https?:\/\//.test(app)) return app;
+  // Assume it's an Android package name (e.g. com.whatsapp)
+  return app.includes('.') ? `https://${app}` : `${app.toLowerCase()}://`;
 };
 
 // ─── System Command Execution (Electron only - requires IPC) ───

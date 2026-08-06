@@ -74,9 +74,9 @@ export default function ITManagerPage() {
   if (!currentUser) return null;
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 p-8">
+    <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 p-4 md:p-8">
       {/* Header */}
-      <div className="mb-8 flex items-center gap-4">
+      <div className="mb-8 flex flex-wrap items-center gap-4">
         <Button
           variant="outline"
           onClick={() => view === 'tiles' ? router.push('/panel') : setView('tiles')}
@@ -91,7 +91,7 @@ export default function ITManagerPage() {
       </div>
 
       {view === 'tiles' && (
-        <div className="flex flex-wrap justify-center gap-10">
+        <div className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-10">
           <Tile
             title="Usuarios"
             subtitle="Gestión de usuarios"
@@ -119,7 +119,7 @@ export default function ITManagerPage() {
 
           <Tile
             title="IDE Visual"
-            subtitle="Editor de codigo"
+            subtitle="Editor de código"
             icon={<Code2 className="h-10 w-10" />}
             color="bg-gradient-to-br from-[oklch(0.55_0.2_280)] to-[oklch(0.4_0.15_280)]"
             onClick={() => router.push('/panel/it-manager/ide')}

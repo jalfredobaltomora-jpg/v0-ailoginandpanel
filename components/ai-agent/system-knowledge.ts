@@ -60,7 +60,7 @@ export const FEATURES: { keywords: string[]; label: Record<Lang, string>; info: 
     info: { es: 'Sistema de mensajería en tiempo real entre empleados usando Firebase. Soporta mensajes de texto, imágenes, archivos y notas de audio. Las conversaciones se limpian automáticamente después de 90 días. Muestra notificaciones y estado de conexión.', en: 'Real-time messaging system between employees using Firebase. Supports text, images, files and audio notes. Conversations auto-clean after 90 days. Shows notifications and online status.' }
   },
   {
-    keywords: ['login', 'acceso', 'iniciar', 'sesion', 'auth', 'autenticacion', 'authentication'],
+    keywords: ['login', 'acceso', 'iniciar', 'sesión', 'auth', 'autenticación', 'authentication'],
     label: { es: 'Inicio de Sesión', en: 'Login' },
     info: { es: 'El acceso al sistema es por username + PIN de 6 dígitos. El username se valida con inteligencia artificial (corrección fuzzy con Levenshtein). El PIN se verifica contra Firebase. Los usuarios tienen roles: admin, user e it-manager con permisos granulares.', en: 'System access is by username + 6-digit PIN. Username is validated with AI (fuzzy Levenshtein correction). PIN is verified against Firebase. Users have roles: admin, user, and it-manager with granular permissions.' }
   },
@@ -69,6 +69,53 @@ export const FEATURES: { keywords: string[]; label: Record<Lang, string>; info: 
 export interface Intent {
   action: 'navigate' | 'info' | 'music' | 'time' | 'greet' | 'help' | 'unknown' | 'search' | 'typewrite' | 'scroll' | 'refreshPage' | 'note' | 'openSite' | 'logout' | 'copy' | 'screenshot' | 'editRecord';
   params?: Record<string, string>;
+}
+
+// ─── Hora natural en palabras (sin omitir palabras) ───
+const HORA_WORDS_ES = ['', 'una', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez', 'once', 'doce'];
+const MINUTOS_WORDS_ES = ['cero', 'un', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve', 'veinte', 'veintiún', 'veintidós', 'veintitrés', 'veinticuatro', 'veinticinco', 'veintiséis', 'veintisiete', 'veintiocho', 'veintinueve', 'treinta', 'treinta y un', 'treinta y dos', 'treinta y tres', 'treinta y cuatro', 'treinta y cinco', 'treinta y seis', 'treinta y siete', 'treinta y ocho', 'treinta y nueve', 'cuarenta', 'cuarenta y un', 'cuarenta y dos', 'cuarenta y tres', 'cuarenta y cuatro', 'cuarenta y cinco', 'cuarenta y seis', 'cuarenta y siete', 'cuarenta y ocho', 'cuarenta y nueve', 'cincuenta', 'cincuenta y un', 'cincuenta y dos', 'cincuenta y tres', 'cincuenta y cuatro', 'cincuenta y cinco', 'cincuenta y seis', 'cincuenta y siete', 'cincuenta y ocho', 'cincuenta y nueve'];
+
+function parteDelDiaES(h: number): string {
+  if (h === 0) return 'de la medianoche';
+  if (h < 6) return 'de la madrugada';
+  if (h < 12) return 'de la mañana';
+  if (h === 12) return 'del medio día';
+  if (h < 18) return 'de la tarde';
+  return 'de la noche';
+}
+
+/** "Son las doce del medio día con treinta y ocho minutos" */
+export function formatClockSpanish(now: Date): string {
+  const h = now.getHours();
+  const m = now.getMinutes();
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  const horaWord = HORA_WORDS_ES[hour12];
+  const minuteWord = MINUTOS_WORDS_ES[m];
+  const be = hour12 === 1 ? 'Es la' : 'Son las';
+  const minutePhrase = m === 0 ? 'en punto' : (m === 1 ? 'con un minuto' : `con ${minuteWord} minutos`);
+  return `${be} ${horaWord} ${parteDelDiaES(h)} ${minutePhrase}`;
+}
+
+const HOUR_WORDS_EN = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+const EN_UNITS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+
+function minutesEnglish(n: number): string {
+  if (n < 20) return EN_UNITS[n];
+  const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty'];
+  const d = Math.floor(n / 10);
+  const u = n % 10;
+  return tens[d] + (u ? `-${EN_UNITS[u]}` : '');
+}
+
+/** "It's twelve thirty-eight in the afternoon" */
+export function formatClockEnglish(now: Date): string {
+  const h = now.getHours();
+  const m = now.getMinutes();
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  const hourWord = HOUR_WORDS_EN[hour12];
+  const minutePhrase = m === 0 ? "o'clock" : minutesEnglish(m);
+  const period = h === 0 ? 'at night' : h < 12 ? 'in the morning' : h < 18 ? 'in the afternoon' : 'in the evening';
+  return `It's ${hourWord} ${minutePhrase} ${period}`;
 }
 
 export function detectIntent(text: string, lang: Lang): Intent {
@@ -213,12 +260,9 @@ export function getIntentResponse(intent: Intent, lang: Lang, userName: string):
         : `${timeGreeting.en} ${userName}! My name is JAB 🤖 I'm here to help. You can ask me: navigate, search Google, play music, type text, take notes, open websites, or control the screen. How can I help you?`;
     }
     case 'time': {
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit' });
-      const dateStr = now.toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       return lang === 'es'
-        ? `Son las ${timeStr} del ${dateStr}`
-        : `It's ${timeStr} on ${dateStr}`;
+        ? formatClockSpanish(new Date())
+        : formatClockEnglish(new Date());
     }
     case 'music': {
       return lang === 'es'

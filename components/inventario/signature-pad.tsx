@@ -171,7 +171,7 @@ export function SignaturePad({ value, onChange, label, disabled }: SignaturePadP
         />
         {!value && !hasDrawnRef.current && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-            <span className="text-sm text-gray-400">Firme aqui</span>
+            <span className="text-sm text-gray-400">Firme aquí</span>
           </div>
         )}
       </div>

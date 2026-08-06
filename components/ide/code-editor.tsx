@@ -37,7 +37,7 @@ export function CodeEditor({ selectedNode, onCodeChange, onRequestAIAssist }: Co
   // Load code when node is selected
   useEffect(() => {
     if (!selectedNode?.path) {
-      setCode('// Selecciona un archivo del arbol de funciones para ver el codigo');
+      setCode('// Selecciona un archivo del árbol de funciones para ver el código');
       setOriginalCode('');
       setHasChanges(false);
       return;
@@ -77,7 +77,7 @@ export function CodeEditor({ selectedNode, onCodeChange, onRequestAIAssist }: Co
         }
       } catch {}
       // 4. Fallback placeholder
-      setCode(`// ${selectedNode!.path}\n// (contenido no disponible en modo estatico)\n//\n// Usa el Asistente IA o las Herramientas para generar codigo`);
+      setCode(`// ${selectedNode!.path}\n// (contenido no disponible en modo estático)\n//\n// Usa el Asistente IA o las Herramientas para generar código`);
       setOriginalCode('');
       setLoading(false);
     };

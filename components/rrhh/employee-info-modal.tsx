@@ -107,7 +107,7 @@ export function EmployeeInfoModal({ empleado, onClose }: EmployeeInfoModalProps)
             {edad !== null && (
               <div className="flex items-center justify-center gap-2 text-sm text-foreground">
                 <Clock className="h-4 w-4 text-primary" />
-                <span>Edad Actual: <strong>{edad} anos</strong></span>
+                <span>Edad Actual: <strong>{edad} años</strong></span>
               </div>
             )}
           </div>
@@ -116,9 +116,9 @@ export function EmployeeInfoModal({ empleado, onClose }: EmployeeInfoModalProps)
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
             <p className="mb-3 text-sm font-medium text-muted-foreground">
               {isBirthdayToday() ? (
-                <span className="text-amber-500 font-bold">HOY ES SU CUMPLEANOS! </span>
+                <span className="text-amber-500 font-bold">HOY ES SU CUMPLEAÑOS! </span>
               ) : (
-                'Tiempo restante para su proximo cumpleanos:'
+                'Tiempo restante para su próximo cumpleaños:'
               )}
             </p>
             <div className="flex justify-center gap-4">

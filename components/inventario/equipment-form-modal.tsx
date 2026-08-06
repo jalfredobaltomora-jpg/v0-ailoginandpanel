@@ -205,7 +205,7 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
     }
 
     setSaving(false);
-    setError('Error al guardar el equipo. Revisa la consola (F12) para mas detalles.');
+    setError('Error al guardar el equipo. Revisa la consola (F12) para más detalles.');
   };
 
   const fotoSlots: { key: keyof typeof defaultFotos; label: string }[] = [
@@ -269,10 +269,10 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
             </div>
           </div>
 
-          {/* Codigo de trabajador */}
+          {/* Código de trabajador */}
           <div>
             <label className="mb-2 block text-sm font-medium text-primary">
-              Codigo de Trabajador
+              Código de Trabajador
             </label>
             <Select
               value={formData.empleadoAsignado}

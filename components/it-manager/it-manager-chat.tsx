@@ -114,8 +114,8 @@ export function ITManagerChat({ request, onClose, onResolve }: ITManagerChatProp
         {empleadoData && (
           <div className="border-b border-border bg-muted/30 p-3 text-xs">
             <div className="grid grid-cols-2 gap-2 text-muted-foreground">
-              <div><span className="font-medium">Cedula:</span> {empleadoData.cedula}</div>
-              <div><span className="font-medium">Area:</span> {empleadoData.area}</div>
+              <div><span className="font-medium">Cédula:</span> {empleadoData.cedula}</div>
+              <div><span className="font-medium">Área:</span> {empleadoData.area}</div>
               <div><span className="font-medium">Cargo:</span> {empleadoData.cargo}</div>
               <div><span className="font-medium">Fecha Nac:</span> {empleadoData.fechaNac}</div>
             </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Database, Trash2, ChevronDown, ChevronRight, CalendarDays, Edit, Save, Scissors, Search, X, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { Database, Trash2, ChevronDown, ChevronRight, CalendarDays, Edit, Save, Scissors, Search, X, ChevronLeft, ChevronRight as ChevronRightIcon, Plus, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -138,6 +138,9 @@ export function WeeklyRegistry() {
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
   const [editStart, setEditStart] = useState('');
   const [editEnd, setEditEnd] = useState('');
+  const [editingDataId, setEditingDataId] = useState<string | null>(null);
+  const [editRows, setEditRows] = useState<FactoryRow[]>([]);
+  const [editTotals, setEditTotals] = useState<FactoryRow | null>(null);
 
   // Filter
   const [filterStart, setFilterStart] = useState('');
@@ -210,6 +213,88 @@ export function WeeklyRegistry() {
   };
 
   const cancelEditDates = () => setEditingDateId(null);
+
+  const startEditData = (record: WeeklyRecord) => {
+    setEditingDataId(record.id);
+    setEditRows((record.factories || []).map(f => ({ ...f })));
+    setEditTotals(record.totals ? { ...record.totals } : null);
+  };
+
+  const cancelEditData = () => {
+    setEditingDataId(null);
+    setEditRows([]);
+    setEditTotals(null);
+  };
+
+  const recomputeRow = (f: FactoryRow): FactoryRow => ({
+    ...f,
+    totalRate: calcularPorcentaje(f.totalFail, f.totalAudit),
+    measRate: calcularPorcentaje(f.measDef, f.measQty),
+    visRate: calcularPorcentaje(f.visDef, f.visQty),
+  });
+
+  const handleEditCell = (index: number, field: keyof FactoryRow, value: string) => {
+    setEditRows(prev => {
+      const next = prev.map((r, i) => {
+        if (i !== index) return r;
+        const updated = { ...r };
+        if (field === 'factoryBuyer' || field === 'buyer') updated[field] = value;
+        else (updated as any)[field] = parseNum(value);
+        return recomputeRow(updated);
+      });
+      const t = recomputeTotals(next);
+      t.totalRate = calcularPorcentaje(t.totalFail, t.totalAudit);
+      t.measRate = calcularPorcentaje(t.measDef, t.measQty);
+      t.visRate = calcularPorcentaje(t.visDef, t.visQty);
+      setEditTotals(t);
+      return next;
+    });
+  };
+
+  const recomputeTotals = (rows: FactoryRow[]): FactoryRow => ({
+    factoryBuyer: 'Total General', buyer: '',
+    totalAudit: rows.reduce((s, f) => s + f.totalAudit, 0),
+    totalFail: rows.reduce((s, f) => s + f.totalFail, 0),
+    totalRate: '',
+    measQty: rows.reduce((s, f) => s + f.measQty, 0),
+    measDef: rows.reduce((s, f) => s + f.measDef, 0),
+    measRate: '',
+    visQty: rows.reduce((s, f) => s + f.visQty, 0),
+    visDef: rows.reduce((s, f) => s + f.visDef, 0),
+    visRate: '',
+  });
+
+  const addEditRow = () => {
+    setEditRows(prev => {
+      const next = [...prev, { factoryBuyer: '', buyer: '', totalAudit: 0, totalFail: 0, totalRate: '', measQty: 0, measDef: 0, measRate: '', visQty: 0, visDef: 0, visRate: '' }];
+      setEditTotals(prevT => { const t = recomputeTotals(next); t.totalRate = calcularPorcentaje(t.totalFail, t.totalAudit); t.measRate = calcularPorcentaje(t.measDef, t.measQty); t.visRate = calcularPorcentaje(t.visDef, t.visQty); return t; });
+      return next;
+    });
+  };
+
+  const removeEditRow = (index: number) => {
+    setEditRows(prev => {
+      const next = prev.filter((_, i) => i !== index);
+      setEditTotals(prevT => { const t = recomputeTotals(next); t.totalRate = calcularPorcentaje(t.totalFail, t.totalAudit); t.measRate = calcularPorcentaje(t.measDef, t.measQty); t.visRate = calcularPorcentaje(t.visDef, t.visQty); return t; });
+      return next;
+    });
+  };
+
+  const saveEditData = async () => {
+    if (!editingDataId) return;
+    try {
+      const rowsWithRates = editRows.map(recomputeRow);
+      const totals = recomputeTotals(rowsWithRates);
+      totals.totalRate = calcularPorcentaje(totals.totalFail, totals.totalAudit);
+      totals.measRate = calcularPorcentaje(totals.measDef, totals.measQty);
+      totals.visRate = calcularPorcentaje(totals.visDef, totals.visQty);
+      await update(ref(db, `qa-reports/weekly-registry/${editingDataId}`), { factories: rowsWithRates, totals });
+      setEditingDataId(null);
+      setEditRows([]);
+      setEditTotals(null);
+      await loadRecords();
+    } catch { alert('Error al guardar los datos'); }
+  };
 
   const spansTwoMonths = (r: WeeklyRecord): boolean => {
     const s = r.startDate?.slice(5, 7);
@@ -316,8 +401,8 @@ export function WeeklyRegistry() {
   }
 
   return (
-    <Card className="mx-auto max-w-6xl border-primary/20 bg-card/95">
-      <CardHeader className="border-b border-border">
+    <Card className="mx-auto max-w-6xl border-primary/20 bg-card/95 h-[calc(100vh-8rem)] flex flex-col overflow-hidden">
+      <CardHeader className="border-b border-border shrink-0">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <CardTitle className="flex items-center gap-2 text-primary">
@@ -360,7 +445,7 @@ export function WeeklyRegistry() {
         )}
       </CardHeader>
 
-      <CardContent className="p-6">
+      <CardContent className="p-6 flex-1 overflow-y-auto min-h-0">
         {loading ? (
           <div className="flex items-center justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
         ) : filteredRecords.length === 0 ? (
@@ -397,7 +482,7 @@ export function WeeklyRegistry() {
                             <div className="flex items-center justify-between px-4 py-2 cursor-pointer hover:bg-muted/20 transition-colors"
                               onClick={() => toggleExpand(record.id)}
                             >
-                              <div className="flex items-center gap-3">
+                              <div className="flex flex-wrap items-center gap-3">
                                 {expanded[record.id] ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                                 <CalendarDays className="h-4 w-4 text-primary" />
                                 <span className="text-sm font-medium text-foreground">Semana {record.weekNumber}</span>
@@ -418,13 +503,16 @@ export function WeeklyRegistry() {
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-xs text-muted-foreground">{record.factories?.length || 0} fábricas</span>
-                                {spansTwoMonths(record) && editingDateId !== record.id && (
+                                {spansTwoMonths(record) && editingDateId !== record.id && editingDataId !== record.id && (
                                   <Button size="sm" variant="ghost" onClick={e => { e.stopPropagation(); openSplitModal(record); }} className="text-amber-500 hover:text-amber-400 h-7 px-2 text-xs">
                                     <Scissors className="h-3 w-3 mr-1" /> Dividir
                                   </Button>
                                 )}
-                                {editingDateId !== record.id && (
-                                  <Button size="sm" variant="ghost" onClick={e => { e.stopPropagation(); startEditDates(record); }} className="text-primary hover:text-primary h-7 w-7 p-0"><Edit className="h-4 w-4" /></Button>
+                                {editingDateId !== record.id && editingDataId !== record.id && (
+                                  <Button size="sm" variant="ghost" onClick={e => { e.stopPropagation(); startEditData(record); }} className="text-cyan-500 hover:text-cyan-400 h-7 w-7 p-0" title="Editar datos"><Pencil className="h-4 w-4" /></Button>
+                                )}
+                                {editingDataId !== record.id && (
+                                  <Button size="sm" variant="ghost" onClick={e => { e.stopPropagation(); startEditDates(record); }} className="text-primary hover:text-primary h-7 w-7 p-0" title="Editar fechas"><Edit className="h-4 w-4" /></Button>
                                 )}
                                 <Button size="sm" variant="ghost" onClick={e => { e.stopPropagation(); handleDelete(record.id); }} className="text-destructive hover:text-destructive h-7 w-7 p-0"><Trash2 className="h-4 w-4" /></Button>
                               </div>
@@ -436,50 +524,103 @@ export function WeeklyRegistry() {
                                   <table className="w-full text-xs">
                                     <thead>
                                       <tr className="bg-slate-800">
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-left text-white sticky top-0 bg-slate-800 z-10">Factory Buyer</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-cyan-300 sticky top-0 bg-slate-800 z-10">No. Audit</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-cyan-300 sticky top-0 bg-slate-800 z-10">No. Failure</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-muted-foreground sticky top-0 bg-slate-800 z-10">Fail Rate %</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-amber-300 sticky top-0 bg-slate-800 z-10">Meas Qty</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-amber-300 sticky top-0 bg-slate-800 z-10">Meas Def</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-amber-300 sticky top-0 bg-slate-800 z-10">Meas Rate %</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-violet-300 sticky top-0 bg-slate-800 z-10">Vis Qty</th>
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-violet-300 sticky top-0 bg-slate-800 z-10">Vis Def</th>
-                                        <th className="border-b border-border px-2 py-1.5 text-center text-violet-300 sticky top-0 bg-slate-800 z-10">Vis Rate %</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-left text-white sticky top-0 bg-slate-800 z-10">Fábrica / Comprador</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-cyan-300 sticky top-0 bg-slate-800 z-10">No. Auditoría</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-cyan-300 sticky top-0 bg-slate-800 z-10">No. Fallos</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-muted-foreground sticky top-0 bg-slate-800 z-10">Tasa de Fallo %</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-amber-300 sticky top-0 bg-slate-800 z-10">Cant. Med.</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-amber-300 sticky top-0 bg-slate-800 z-10">Def. Med.</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-amber-300 sticky top-0 bg-slate-800 z-10">Tasa Med. %</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-violet-300 sticky top-0 bg-slate-800 z-10">Cant. Vis.</th>
+                                        <th className="border-b border-r border-border px-2 py-1.5 text-center text-violet-300 sticky top-0 bg-slate-800 z-10">Def. Vis.</th>
+                                        <th className="border-b border-border px-2 py-1.5 text-center text-violet-300 sticky top-0 bg-slate-800 z-10">Tasa Vis. %</th>
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {record.factories?.map((f, i) => (
-                                        <tr key={i} className="border-b border-border/50 hover:bg-muted/10">
-                                          <td className="border-r border-border/50 px-2 py-1.5 font-medium text-left">{f.factoryBuyer}</td>
-                                          <td className="border-r border-border/50 px-2 py-1.5 bg-cyan-950/30">{f.totalAudit}</td>
-                                          <td className="border-r border-border/50 px-2 py-1.5 bg-cyan-950/30">{f.totalFail}</td>
-                                          <td className="border-r border-border/50 px-2 py-1.5">{f.totalRate}</td>
-                                          <td className="border-r border-border/50 px-2 py-1.5 bg-amber-950/30">{f.measQty}</td>
-                                          <td className="border-r border-border/50 px-2 py-1.5 bg-amber-950/30">{f.measDef}</td>
-                                          <td className="border-r border-border/50 px-2 py-1.5">{f.measRate}</td>
-                                          <td className="border-r border-border/50 px-2 py-1.5 bg-violet-950/30">{f.visQty}</td>
-                                          <td className="border-r border-border/50 px-2 py-1.5 bg-violet-950/30">{f.visDef}</td>
-                                          <td className="px-2 py-1.5">{f.visRate}</td>
-                                        </tr>
-                                      ))}
-                                      {record.totals && (
-                                        <tr className="border-t-2 border-primary/50 bg-primary/5 font-bold">
-                                          <td className="border-r border-border/50 px-2 py-2 text-left text-primary">{record.totals.factoryBuyer}</td>
-                                          <td className="border-r border-border/50 px-2 py-2 bg-cyan-950/40">{record.totals.totalAudit}</td>
-                                          <td className="border-r border-border/50 px-2 py-2 bg-cyan-950/40">{record.totals.totalFail}</td>
-                                          <td className="border-r border-border/50 px-2 py-2">{record.totals.totalRate}</td>
-                                          <td className="border-r border-border/50 px-2 py-2 bg-amber-950/40">{record.totals.measQty}</td>
-                                          <td className="border-r border-border/50 px-2 py-2 bg-amber-950/40">{record.totals.measDef}</td>
-                                          <td className="border-r border-border/50 px-2 py-2">{record.totals.measRate}</td>
-                                          <td className="border-r border-border/50 px-2 py-2 bg-violet-950/40">{record.totals.visQty}</td>
-                                          <td className="border-r border-border/50 px-2 py-2 bg-violet-950/40">{record.totals.visDef}</td>
-                                          <td className="px-2 py-2">{record.totals.visRate}</td>
-                                        </tr>
+                                      {editingDataId === record.id ? (
+                                        <>
+                                          {editRows.map((f, i) => (
+                                            <tr key={i} className="border-b border-border/50 hover:bg-muted/10">
+                                              <td className="border-r border-border/50 px-2 py-1.5">
+                                                <div className="flex items-center gap-1">
+                                                  <Input value={f.factoryBuyer} onChange={e => handleEditCell(i, 'factoryBuyer', e.target.value)} placeholder="Fábrica / Comprador" className="h-7 w-36 text-xs" />
+                                                  <Button size="sm" variant="ghost" onClick={() => removeEditRow(i)} className="h-6 w-6 p-0 text-destructive hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
+                                                </div>
+                                              </td>
+                                              <td className="border-r border-border/50 px-1 py-1.5 bg-cyan-950/30"><Input type="number" value={f.totalAudit} onChange={e => handleEditCell(i, 'totalAudit', e.target.value)} className="h-7 w-16 text-xs text-center" /></td>
+                                              <td className="border-r border-border/50 px-1 py-1.5 bg-cyan-950/30"><Input type="number" value={f.totalFail} onChange={e => handleEditCell(i, 'totalFail', e.target.value)} className="h-7 w-16 text-xs text-center" /></td>
+                                              <td className="border-r border-border/50 px-2 py-1.5 text-center">{f.totalRate}</td>
+                                              <td className="border-r border-border/50 px-1 py-1.5 bg-amber-950/30"><Input type="number" value={f.measQty} onChange={e => handleEditCell(i, 'measQty', e.target.value)} className="h-7 w-16 text-xs text-center" /></td>
+                                              <td className="border-r border-border/50 px-1 py-1.5 bg-amber-950/30"><Input type="number" value={f.measDef} onChange={e => handleEditCell(i, 'measDef', e.target.value)} className="h-7 w-16 text-xs text-center" /></td>
+                                              <td className="border-r border-border/50 px-2 py-1.5 text-center">{f.measRate}</td>
+                                              <td className="border-r border-border/50 px-1 py-1.5 bg-violet-950/30"><Input type="number" value={f.visQty} onChange={e => handleEditCell(i, 'visQty', e.target.value)} className="h-7 w-16 text-xs text-center" /></td>
+                                              <td className="border-r border-border/50 px-1 py-1.5 bg-violet-950/30"><Input type="number" value={f.visDef} onChange={e => handleEditCell(i, 'visDef', e.target.value)} className="h-7 w-16 text-xs text-center" /></td>
+                                              <td className="px-2 py-1.5 text-center">{f.visRate}</td>
+                                            </tr>
+                                          ))}
+                                          {editTotals && (
+                                            <tr className="border-t-2 border-primary/50 bg-primary/5 font-bold">
+                                              <td className="border-r border-border/50 px-2 py-2 text-left text-primary">{editTotals.factoryBuyer}</td>
+                                              <td className="border-r border-border/50 px-2 py-2 bg-cyan-950/40">{editTotals.totalAudit}</td>
+                                              <td className="border-r border-border/50 px-2 py-2 bg-cyan-950/40">{editTotals.totalFail}</td>
+                                              <td className="border-r border-border/50 px-2 py-2 text-center">{editTotals.totalRate}</td>
+                                              <td className="border-r border-border/50 px-2 py-2 bg-amber-950/40">{editTotals.measQty}</td>
+                                              <td className="border-r border-border/50 px-2 py-2 bg-amber-950/40">{editTotals.measDef}</td>
+                                              <td className="border-r border-border/50 px-2 py-2 text-center">{editTotals.measRate}</td>
+                                              <td className="border-r border-border/50 px-2 py-2 bg-violet-950/40">{editTotals.visQty}</td>
+                                              <td className="border-r border-border/50 px-2 py-2 bg-violet-950/40">{editTotals.visDef}</td>
+                                              <td className="px-2 py-2 text-center">{editTotals.visRate}</td>
+                                            </tr>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <>
+                                          {record.factories?.map((f, i) => (
+                                            <tr key={i} className="border-b border-border/50 hover:bg-muted/10">
+                                              <td className="border-r border-border/50 px-2 py-1.5 font-medium text-left">{f.factoryBuyer}</td>
+                                              <td className="border-r border-border/50 px-2 py-1.5 bg-cyan-950/30">{f.totalAudit}</td>
+                                              <td className="border-r border-border/50 px-2 py-1.5 bg-cyan-950/30">{f.totalFail}</td>
+                                              <td className="border-r border-border/50 px-2 py-1.5">{f.totalRate}</td>
+                                              <td className="border-r border-border/50 px-2 py-1.5 bg-amber-950/30">{f.measQty}</td>
+                                              <td className="border-r border-border/50 px-2 py-1.5 bg-amber-950/30">{f.measDef}</td>
+                                              <td className="border-r border-border/50 px-2 py-1.5">{f.measRate}</td>
+                                              <td className="border-r border-border/50 px-2 py-1.5 bg-violet-950/30">{f.visQty}</td>
+                                              <td className="border-r border-border/50 px-2 py-1.5 bg-violet-950/30">{f.visDef}</td>
+                                              <td className="px-2 py-1.5">{f.visRate}</td>
+                                            </tr>
+                                          ))}
+                                          {record.totals && (
+                                            <tr className="border-t-2 border-primary/50 bg-primary/5 font-bold">
+                                              <td className="border-r border-border/50 px-2 py-2 text-left text-primary">{record.totals.factoryBuyer}</td>
+                                              <td className="border-r border-border/50 px-2 py-2 bg-cyan-950/40">{record.totals.totalAudit}</td>
+                                              <td className="border-r border-border/50 px-2 py-2 bg-cyan-950/40">{record.totals.totalFail}</td>
+                                              <td className="border-r border-border/50 px-2 py-2">{record.totals.totalRate}</td>
+                                              <td className="border-r border-border/50 px-2 py-2 bg-amber-950/40">{record.totals.measQty}</td>
+                                              <td className="border-r border-border/50 px-2 py-2 bg-amber-950/40">{record.totals.measDef}</td>
+                                              <td className="border-r border-border/50 px-2 py-2">{record.totals.measRate}</td>
+                                              <td className="border-r border-border/50 px-2 py-2 bg-violet-950/40">{record.totals.visQty}</td>
+                                              <td className="border-r border-border/50 px-2 py-2 bg-violet-950/40">{record.totals.visDef}</td>
+                                              <td className="px-2 py-2">{record.totals.visRate}</td>
+                                            </tr>
+                                          )}
+                                        </>
                                       )}
                                     </tbody>
                                   </table>
                                 </div>
+                                {editingDataId === record.id && (
+                                  <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
+                                    <Button size="sm" variant="outline" onClick={addEditRow} className="border-border text-primary">
+                                      <Plus className="h-3.5 w-3.5 mr-1" /> Agregar fábrica
+                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                      <Button size="sm" variant="ghost" onClick={cancelEditData} className="text-muted-foreground">Cancelar</Button>
+                                      <Button size="sm" onClick={saveEditData} className="bg-green-600 text-white hover:bg-green-700">
+                                        <Save className="mr-1.5 h-3.5 w-3.5" /> Guardar cambios
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -536,13 +677,13 @@ export function WeeklyRegistry() {
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="bg-slate-800">
-                              <th className="border border-border px-2 py-1.5 text-left text-white">Factory Buyer</th>
-                              <th className="border border-border px-2 py-1.5 text-cyan-300">No. Audit</th>
-                              <th className="border border-border px-2 py-1.5 text-cyan-300">No. Failure</th>
-                              <th className="border border-border px-2 py-1.5 text-amber-300">Meas Qty</th>
-                              <th className="border border-border px-2 py-1.5 text-amber-300">Meas Def</th>
-                              <th className="border border-border px-2 py-1.5 text-violet-300">Vis Qty</th>
-                              <th className="border border-border px-2 py-1.5 text-violet-300">Vis Def</th>
+                              <th className="border border-border px-2 py-1.5 text-left text-white">Fábrica / Comprador</th>
+                              <th className="border border-border px-2 py-1.5 text-cyan-300">No. Auditoría</th>
+                              <th className="border border-border px-2 py-1.5 text-cyan-300">No. Fallos</th>
+                              <th className="border border-border px-2 py-1.5 text-amber-300">Cant. Med.</th>
+                              <th className="border border-border px-2 py-1.5 text-amber-300">Def. Med.</th>
+                              <th className="border border-border px-2 py-1.5 text-violet-300">Cant. Vis.</th>
+                              <th className="border border-border px-2 py-1.5 text-violet-300">Def. Vis.</th>
                             </tr>
                           </thead>
                           <tbody>

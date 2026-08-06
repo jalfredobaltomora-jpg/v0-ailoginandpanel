@@ -184,7 +184,7 @@ export function PermisosManager() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por nombre o codigo..."
+                placeholder="Buscar por nombre o código..."
                 className="w-full border-border bg-input pl-9"
               />
             </div>

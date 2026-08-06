@@ -25,9 +25,9 @@ const METRIC_CFG: Record<string, {type:'sum'|'rate',field?:string,num?:string,de
 };
 
 const Y_LABELS: Record<string,string> = {
-  audits:'Auditorías', failures:'Fallos', failureRate:'Total Failure Rate %',
+  audits:'Auditorías', failures:'Fallos', failureRate:'Tasa de Fallo Total %',
   measDef:'Def. Medición', visDef:'Def. Visuales',
-  measDefRate:'Measurement Defect Rate %', visDefRate:'Visual Defect Rate %'
+  measDefRate:'Tasa de Defecto de Medición %', visDefRate:'Tasa de Defecto Visual %'
 };
 
 interface RawRow {
@@ -430,7 +430,7 @@ export function KpiReports() {
           if (goalVal === undefined) return;
           const yPx = (meta.data[0] as any).y;
           const goalColor = ds.borderColor as string || '#FF0040';
-          const text = 'GOAL ' + goalVal.toFixed(2) + '%';
+          const text = 'META ' + goalVal.toFixed(2) + '%';
           const lastLabel = String(chart.data.labels?.[chart.data.labels.length - 1] || '');
           const firstLabel = String(chart.data.labels?.[0] || '');
           let useRight = true;
@@ -725,7 +725,7 @@ export function KpiReports() {
 
       // Find the main card content area to capture
       const contentEl = document.querySelector('.max-w-7xl');
-      if (!contentEl) { alert('No se encontro el contenido'); return; }
+      if (!contentEl) { alert('No se encontró el contenido'); return; }
 
       const canvas = await html2canvasFn(contentEl as HTMLElement, {
         backgroundColor: '#0b111b',
@@ -783,8 +783,8 @@ export function KpiReports() {
           <div className="flex items-center gap-3">
             <div className="bg-gradient-to-r from-cyan-500 to-blue-600 text-gray-950 p-2 rounded-lg font-extrabold tracking-wider text-xs shadow-md">SYSTEM JB</div>
             <div>
-              <CardTitle className="flex items-center gap-2 text-primary text-base tracking-wide">Control Administrative</CardTitle>
-              <p className="text-[11px] text-cyan-400 font-mono">Data Engine con Panel Analítico Flotante Estilo PowerBI</p>
+              <CardTitle className="flex items-center gap-2 text-primary text-base tracking-wide">Control Administrativo</CardTitle>
+              <p className="text-[11px] text-cyan-400 font-mono">Motor de Datos con Panel Analítico Flotante Estilo PowerBI</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -866,9 +866,9 @@ export function KpiReports() {
                       <tr className="sticky top-0 z-10 bg-[#1c2128] text-gray-400 font-bold border-b border-gray-700 text-[10px] text-center">
                         <th colSpan={9} className="p-1.5 border-r border-gray-800 text-left text-cyan-400">GENERAL</th>
                         <th colSpan={3} className="p-1.5 border-r border-gray-800 bg-blue-950/20 text-blue-300">TOTAL FINAL</th>
-                        <th colSpan={3} className="p-1.5 border-r border-gray-800 bg-emerald-950/20 text-emerald-300">MEASUREMENT</th>
+                        <th colSpan={3} className="p-1.5 border-r border-gray-800 bg-emerald-950/20 text-emerald-300">MEDICIÓN</th>
                         <th colSpan={3} className="p-1.5 border-r border-gray-800 bg-amber-950/20 text-amber-300">VISUAL</th>
-                        <th className="p-1.5">RESULT</th>
+                        <th className="p-1.5">RESULTADO</th>
                       </tr>
                       <tr className="sticky top-[26px] z-10 bg-[#21262d] text-gray-300 font-semibold border-b border-gray-700 text-[11px]">
                         <th className="p-2 text-left">Fecha</th>
@@ -876,20 +876,20 @@ export function KpiReports() {
                         <th className="p-2 text-left">Cliente</th>
                         <th className="p-2 text-left">Estilo</th>
                         <th className="p-2 text-left">PO</th>
-                        <th className="p-2 text-left">Type</th>
-                        <th className="p-2 text-left">Name</th>
-                        <th className="p-2 text-left">Stage</th>
-                        <th className="p-2 text-left border-r border-gray-800">Point</th>
-                        <th className="p-2 text-right">Audits</th>
-                        <th className="p-2 text-right">Failures</th>
-                        <th className="p-2 text-right border-r border-gray-800 text-blue-400">Failure Rate %</th>
-                        <th className="p-2 text-right">Insp Qty</th>
-                        <th className="p-2 text-right">Def Qty</th>
-                        <th className="p-2 text-right border-r border-gray-800 text-emerald-400">Def Rate %</th>
-                        <th className="p-2 text-right">Insp Qty</th>
-                        <th className="p-2 text-right">Def Qty</th>
-                        <th className="p-2 text-right border-r border-gray-800 text-amber-400">Def Rate %</th>
-                        <th className="p-2 text-center">Result</th>
+                        <th className="p-2 text-left">Tipo</th>
+                        <th className="p-2 text-left">Nombre</th>
+                        <th className="p-2 text-left">Etapa</th>
+                        <th className="p-2 text-left border-r border-gray-800">Punto</th>
+                        <th className="p-2 text-right">Auditorías</th>
+                        <th className="p-2 text-right">Fallos</th>
+                        <th className="p-2 text-right border-r border-gray-800 text-blue-400">Tasa de Fallo %</th>
+<th className="p-2 text-right">Cant. Insp.</th>
+                        <th className="p-2 text-right">Cant. Def.</th>
+                        <th className="p-2 text-right border-r border-gray-800 text-emerald-400">Tasa de Def. %</th>
+                        <th className="p-2 text-right">Cant. Insp.</th>
+                        <th className="p-2 text-right">Cant. Def.</th>
+                        <th className="p-2 text-right border-r border-gray-800 text-amber-400">Tasa de Def. %</th>
+                        <th className="p-2 text-center">Resultado</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800/40">
@@ -914,7 +914,7 @@ export function KpiReports() {
                           <td className="p-2 text-right font-mono text-amber-400">{e.visDef}</td>
                           <td className="p-2 text-right font-mono text-amber-400 border-r border-gray-800">{fmtPct(e.visDef, e.visIns)}</td>
                           <td className="p-2 text-center">
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${e.result === 'PASS' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>{e.result}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${e.result === 'PASS' || e.result === 'PASA' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>{e.result === 'PASS' ? 'PASA' : e.result === 'FAIL' ? 'FALLA' : e.result}</span>
                           </td>
                         </tr>
                       ))}
@@ -943,7 +943,7 @@ export function KpiReports() {
                       <div className="bg-gradient-to-r from-gray-900 to-[#1c2128] border-b border-gray-700 px-4 py-2.5 flex justify-between items-center shrink-0">
                         <div className="flex items-center gap-2">
                           <BarChart3 className="h-4 w-4 text-amber-400 animate-pulse" />
-                          <span className="text-xs font-bold tracking-wider text-white uppercase">Engine Monitor: Inteligencia Analítica</span>
+                          <span className="text-xs font-bold tracking-wider text-white uppercase">Monitor del Motor: Inteligencia Analítica</span>
                         </div>
                         <div className="flex items-center gap-2 relative">
                           <Button onClick={() => setExportOpen(!exportOpen)} size="sm" className="bg-gradient-to-r from-blue-700 to-cyan-600 hover:from-blue-600 hover:to-cyan-500 text-white border-none h-7 text-[10px] px-2">
@@ -959,11 +959,11 @@ export function KpiReports() {
                                 </button>
                                 <button onClick={() => handleExportEngine('pptx')} className="flex items-center gap-3 w-full text-xs p-2.5 hover:bg-[#1c2128] rounded text-gray-200 transition-colors">
                                   <Presentation className="h-4 w-4 text-orange-400" />
-                                  <span className="text-left"><span className="block font-semibold">PPT - Presentacion</span><span className="text-[10px] text-gray-500">4 slides con KPIs, graficos, tabla</span></span>
+                                  <span className="text-left"><span className="block font-semibold">PPT - Presentación</span><span className="text-[10px] text-gray-500">4 slides con KPIs, graficos, tabla</span></span>
                                 </button>
                                 <button onClick={() => handleExportEngine('xlsx')} className="flex items-center gap-3 w-full text-xs p-2.5 hover:bg-[#1c2128] rounded text-gray-200 transition-colors">
                                   <FileXlsx className="h-4 w-4 text-green-400" />
-                                  <span className="text-left"><span className="block font-semibold">XLSX - Analitico</span><span className="text-[10px] text-gray-500">Dark theme, grafico insertado, filtros</span></span>
+                                  <span className="text-left"><span className="block font-semibold">XLSX - Analítico</span><span className="text-[10px] text-gray-500">Dark theme, gráfico insertado, filtros</span></span>
                                 </button>
                               </div>
                             </>
@@ -1047,8 +1047,8 @@ export function KpiReports() {
                             <div className="flex flex-wrap gap-3 items-end mb-3 p-2 bg-[#0d1117] border border-amber-600/40 rounded-lg">
                               <span className="text-[10px] text-amber-400 font-bold uppercase">Metas:</span>
                               <div><label className="text-[9px] text-gray-400 block">Failure Rate %</label><input type="number" step="0.1" value={goalFR} onChange={(e) => setGoalFR(e.target.value)} className="bg-[#21262d] text-xs p-1 w-20 border border-gray-600 rounded text-white" /></div>
-                              <div><label className="text-[9px] text-gray-400 block">Meas Def Rate %</label><input type="number" step="0.1" value={goalMR} onChange={(e) => setGoalMR(e.target.value)} className="bg-[#21262d] text-xs p-1 w-20 border border-gray-600 rounded text-white" /></div>
-                              <div><label className="text-[9px] text-gray-400 block">Vis Def Rate %</label><input type="number" step="0.1" value={goalVR} onChange={(e) => setGoalVR(e.target.value)} className="bg-[#21262d] text-xs p-1 w-20 border border-gray-600 rounded text-white" /></div>
+                              <div><label className="text-[9px] text-gray-400 block">Meas Tasa de Def. %</label><input type="number" step="0.1" value={goalMR} onChange={(e) => setGoalMR(e.target.value)} className="bg-[#21262d] text-xs p-1 w-20 border border-gray-600 rounded text-white" /></div>
+                              <div><label className="text-[9px] text-gray-400 block">Vis Tasa de Def. %</label><input type="number" step="0.1" value={goalVR} onChange={(e) => setGoalVR(e.target.value)} className="bg-[#21262d] text-xs p-1 w-20 border border-gray-600 rounded text-white" /></div>
                             </div>
                           )}
 
@@ -1069,18 +1069,18 @@ export function KpiReports() {
                                 <tr className="bg-[#161b22] border-b border-gray-700 text-center text-[10px] tracking-wider text-gray-400 font-bold">
                                   <th colSpan={3} className="p-2 border-r border-gray-800 text-left text-cyan-400">IDENTIFICACIÓN</th>
                                   <th colSpan={3} className="p-2 border-r border-gray-800 bg-blue-950/20 text-blue-300">TOTAL FINAL (COMPILADO)</th>
-                                  <th className="p-2 border-r border-gray-800 bg-emerald-950/20 text-emerald-300">MEASUREMENT</th>
-                                  <th className="p-2 bg-amber-950/20 text-amber-300">VISUAL CONTROL</th>
+                                  <th className="p-2 border-r border-gray-800 bg-emerald-950/20 text-emerald-300">MEDICIÓN</th>
+                                  <th className="p-2 bg-amber-950/20 text-amber-300">CONTROL VISUAL</th>
                                 </tr>
                                 <tr className="bg-[#1c2128] text-[11px] border-b border-gray-700">
-                                  <th className="p-2.5 font-medium text-left">Month</th>
-                                  <th className="p-2.5 font-medium text-left">Factory</th>
-                                  <th className="p-2.5 font-medium text-left border-r border-gray-800">Buyer</th>
-                                  <th className="p-2.5 text-right font-mono">No. of Audit</th>
-                                  <th className="p-2.5 text-right font-mono">No. of Failure</th>
-                                  <th className="p-2.5 text-right font-mono border-r border-gray-800 text-blue-400">Failure Rate(%)</th>
-                                  <th className="p-2.5 text-right font-mono text-emerald-400 border-r border-gray-800">Defect Rate(%)</th>
-                                  <th className="p-2.5 text-right font-mono text-amber-400">Defect Rate(%)</th>
+                                  <th className="p-2.5 font-medium text-left">Mes</th>
+                                  <th className="p-2.5 font-medium text-left">Fábrica</th>
+                                  <th className="p-2.5 font-medium text-left border-r border-gray-800">Comprador</th>
+                                  <th className="p-2.5 text-right font-mono">No. de Auditoría</th>
+                                  <th className="p-2.5 text-right font-mono">No. de Fallos</th>
+                                  <th className="p-2.5 text-right font-mono border-r border-gray-800 text-blue-400">Tasa de Fallo(%)</th>
+                                  <th className="p-2.5 text-right font-mono text-emerald-400 border-r border-gray-800">Tasa de Defecto(%)</th>
+                                  <th className="p-2.5 text-right font-mono text-amber-400">Tasa de Defecto(%)</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-800/60 bg-[#161b22]/50">

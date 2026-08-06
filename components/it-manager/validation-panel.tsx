@@ -41,7 +41,7 @@ export function ValidationPanel() {
     try {
       const emp = await getEmpleadoByCodigo(codigo.trim());
       if (!emp) {
-        setError('Codigo de trabajador no encontrado');
+        setError('Código de trabajador no encontrado');
         setLoading(false);
         return;
       }
@@ -51,7 +51,7 @@ export function ValidationPanel() {
       const user = usuarios.find(u => u.codigo === codigo.trim());
       setUsuario(user || null);
     } catch {
-      setError('Error al buscar el codigo');
+      setError('Error al buscar el código');
     } finally {
       setLoading(false);
     }
@@ -77,7 +77,7 @@ export function ValidationPanel() {
             value={codigo}
             onChange={(e) => setCodigo(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="Codigo de trabajador"
+            placeholder="Código de trabajador"
             className="flex-1 border-border bg-input text-sm"
           />
           <Button
@@ -205,7 +205,7 @@ export function ValidationPanel() {
                 </div>
                 {revealOption === 'both' && (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Nota: La IA solo debe revelar un dato a la vez segun lo solicitado por el usuario
+                    Nota: La IA sólo debe revelar un dato a la vez según lo solicitado por el usuario
                   </p>
                 )}
               </div>

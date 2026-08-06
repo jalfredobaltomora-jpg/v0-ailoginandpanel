@@ -177,9 +177,9 @@ export function AsistenciaView() {
               <table>
                 <thead>
                   <tr>
-                    <th>Codigo</th>
+                    <th>Código</th>
                     <th>Nombre Completo</th>
-                    <th>Cedula</th>
+                    <th>Cédula</th>
                     <th>Entrada</th>
                     <th>Salida</th>
                     <th>Estado</th>
@@ -216,7 +216,7 @@ export function AsistenciaView() {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <CardTitle className="flex items-center gap-2 text-primary">
                 <Clock className="h-5 w-5" />
-                Asistencia por Area
+                Asistencia por Área
               </CardTitle>
               <div className="flex items-center gap-3">
                 <Input
@@ -294,7 +294,7 @@ export function AsistenciaView() {
             ) : filteredEmpleados.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground">
                 <Users className="mx-auto mb-3 h-10 w-10 opacity-30" />
-                <p>No hay empleados en esta area</p>
+                <p>No hay empleados en esta área</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -302,11 +302,11 @@ export function AsistenciaView() {
                   <thead>
                     <tr className="border-b border-border bg-muted/30">
                       <th className="p-3 text-left font-medium text-muted-foreground">Empleado</th>
-                      <th className="p-3 text-left font-medium text-muted-foreground">Area</th>
+                      <th className="p-3 text-left font-medium text-muted-foreground">Área</th>
                       <th className="p-3 text-left font-medium text-muted-foreground">Entrada</th>
                       <th className="p-3 text-left font-medium text-muted-foreground">Salida</th>
                       <th className="p-3 text-left font-medium text-muted-foreground">Estado</th>
-                      <th className="p-3 text-right font-medium text-muted-foreground">Accion</th>
+                      <th className="p-3 text-right font-medium text-muted-foreground">Acción</th>
                     </tr>
                   </thead>
                   <tbody>

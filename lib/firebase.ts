@@ -115,6 +115,12 @@ export async function getDownloadURL(ref: any) {
   await _init(); return _storageMod.getDownloadURL(ref);
 }
 
+function sanitizeFirebasePath(segment: string): string {
+  const clean = segment.replace(/[.#$\[\]]/g, '_').trim();
+  if (!clean || clean.length > 200) throw new Error('Invalid path segment');
+  return clean;
+}
+
 // ─── FCM — Firebase Cloud Messaging ──────────────────────────────
 
 let _messaging: any = null;
@@ -187,6 +193,14 @@ export async function removeAlarmSchedule(userCode: string, date: string, type: 
 
 // ─── TIPOS ───────────────────────────────────────────────────────
 
+export interface HistorialContractual {
+  oldCode: string;
+  newCode: string;
+  oldFechaIng: string;
+  newFechaIng: string;
+  timestamp: number;
+}
+
 export interface Empleado {
   code: string;
   nombres: string;
@@ -209,6 +223,7 @@ export interface Empleado {
   firstHireDate?: string;
   firstEmployeeCode?: string;
   renewalCount?: number;
+  historialContractual?: HistorialContractual[];
 }
 
 export interface UsuarioIT {
@@ -341,7 +356,7 @@ export async function getUsuarioByUsername(username: string): Promise<UsuarioIT 
 export async function saveUsuarioIT(codigo: string, usuario: UsuarioIT): Promise<boolean> {
   try {
     await _init();
-    await set(ref(db, `usuarios-it/${codigo}`), usuario);
+    await set(ref(db, `usuarios-it/${sanitizeFirebasePath(codigo)}`), usuario);
     return true;
   } catch (e) {
     console.error('Firebase saveUsuarioIT error:', e, 'codigo:', codigo);
@@ -672,7 +687,7 @@ export async function buscarAgendaNotes(userCode: string, query: string): Promis
 export async function updateUsuarioIT(codigo: string, updates: Partial<UsuarioIT>): Promise<boolean> {
   try {
     await _init();
-    const r = ref(db, `usuarios-it/${codigo}`);
+    const r = ref(db, `usuarios-it/${sanitizeFirebasePath(codigo)}`);
     const snap = await get(r);
     if (!snap.exists()) return false;
     const existing = snap.val() as UsuarioIT;

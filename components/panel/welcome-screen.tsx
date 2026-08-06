@@ -11,6 +11,7 @@ import {
   getGreeting, getMotivationalPhrase, getDayEndTime, getDayEndAdjusted,
   getStoredLunchTime, setStoredLunchTime,
   shouldAskLunch, setLunchPromptWeek, getLunchPromptWeek, getWeekNumber, scheduleTodayAlarms,
+  esQATeam,
   shouldAskSaturday, setSatPromptWeek, getSatPromptWeek,
   getStoredSatExitTime, setStoredSatExitTime,
   getStoredSatEatCompany, setStoredSatEatCompany,
@@ -43,8 +44,10 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
   const dismissedLunchRef = useRef(false);
   const dismissedSatRef = useRef(false);
 
+  // Pick the motivational phrase once per session so it doesn't change on re-renders
+  const [phrase] = useState(() => getMotivationalPhrase());
+
   const greeting = getGreeting();
-  const phrase = getMotivationalPhrase();
   const day = new Date().getDay();
   const isWeekend = day === 0 || day === 6;
   const isSaturday = day === 6;
@@ -111,26 +114,31 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
         }
       } else {
         if (!dismissedLunchRef.current && !isWeekend) {
-          const fbHasLunch = !!fbSchedule?.lunchTime;
-          const fbLunchWeek = fbSchedule?.lunchWeek;
-          const currWeek = getWeekNumber();
-          if (fbHasLunch) {
-            if (fbLunchWeek != null) {
-              if (fbLunchWeek !== currWeek) setNeedsLunchPrompt(true);
-            } else {
-              // Legacy: lunchTime exists but no week saved yet
-              // Auto-save current week to Firebase so it never asks again until new week
-              saveUserSchedule(user.codigo, {
-                lunchTime: fbSchedule.lunchTime,
-                lunchWeek: currWeek,
-                satExitTime: fbSchedule.satExitTime || undefined,
-                satEatCompany: fbSchedule.satEatCompany,
-                satLunchTime: fbSchedule.satLunchTime || undefined,
-                satWeek: fbSchedule.satWeek,
-              });
+          // Solo QA Team (horarios rotativos) recibe la pregunta de almuerzo
+          if (!esQATeam(empleado)) {
+            setNeedsLunchPrompt(false);
+          } else {
+            const fbHasLunch = !!fbSchedule?.lunchTime;
+            const fbLunchWeek = fbSchedule?.lunchWeek;
+            const currWeek = getWeekNumber();
+            if (fbHasLunch) {
+              if (fbLunchWeek != null) {
+                if (fbLunchWeek !== currWeek) setNeedsLunchPrompt(true);
+              } else {
+                // Legacy: lunchTime exists but no week saved yet
+                // Auto-save current week to Firebase so it never asks again until new week
+                saveUserSchedule(user.codigo, {
+                  lunchTime: fbSchedule.lunchTime,
+                  lunchWeek: currWeek,
+                  satExitTime: fbSchedule.satExitTime || undefined,
+                  satEatCompany: fbSchedule.satEatCompany,
+                  satLunchTime: fbSchedule.satLunchTime || undefined,
+                  satWeek: fbSchedule.satWeek,
+                });
+              }
+            } else if (shouldAskLunch()) {
+              setNeedsLunchPrompt(true);
             }
-          } else if (shouldAskLunch()) {
-            setNeedsLunchPrompt(true);
           }
         }
       }
@@ -139,7 +147,7 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
     });
 
     return unsub;
-  }, [user, isWeekend, isSaturday]);
+  }, [user, isWeekend, isSaturday, empleado]);
 
   const handleLunchSave = async () => {
     if (!lunchTime) return;
@@ -215,7 +223,7 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/10 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-gradient-to-br from-background via-background to-primary/10 p-4">
       {/* Rotating JB Logo */}
       <style>{`
 @keyframes rotateJB {
@@ -228,16 +236,16 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
   transform-style: preserve-3d;
 }
 `}</style>
-      <div className="fixed left-4 top-4 z-[60] flex h-28 w-28 items-center justify-center overflow-visible rounded-xl border border-primary/20 bg-background/80 shadow-lg backdrop-blur-sm">
+      <div className="fixed left-4 top-4 z-[60] flex h-20 w-20 items-center justify-center overflow-visible rounded-xl border border-primary/20 bg-background/80 shadow-lg backdrop-blur-sm sm:h-28 sm:w-28">
         <img
           src="/v0-ailoginandpanel/logo.png"
           alt="JB"
-          className="logo-jb h-24 w-auto"
+          className="logo-jb h-16 w-auto sm:h-24"
         />
       </div>
       <div className="w-full max-w-lg">
         {/* Tarjeta principal */}
-        <div className="rounded-2xl border border-primary/20 bg-card/95 p-8 shadow-2xl backdrop-blur-sm">
+        <div className="rounded-2xl border border-primary/20 bg-card/95 p-4 shadow-2xl backdrop-blur-sm sm:p-8">
           {/* Employee Photo */}
           <div className="mb-6 flex justify-center">
             {empleado?.foto ? (

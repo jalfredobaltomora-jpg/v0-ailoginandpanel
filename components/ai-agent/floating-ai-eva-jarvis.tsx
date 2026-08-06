@@ -15,7 +15,7 @@ import { detectIntent, getIntentResponse, LANG_LABELS, SYSTEM_INFO } from './sys
 import { askAI } from '@/lib/ai-client';
 import { buscarEmpleados, buscarUsuariosIT, buscarAgendaNotes, updateEmpleado, updateUsuarioIT, updateAgendaNote } from '@/lib/firebase';
 import { useLang } from '@/lib/lang-context';
-import { EVARobotComponent, drawEVARobot, type EVAExpression } from './eva-design';
+import { EVARobotComponent, type EVAExpression } from './eva-design';
 import { executeJARVISCommand } from '@/lib/jarvis-commands';
 import { getDeviceInfo, isCapabilityAvailable } from '@/lib/device-api';
 
@@ -403,7 +403,7 @@ export function FloatingAIEVAJARVIS() {
           {isChatOpen && (
             <div
               className="fixed z-[60] w-[380px] max-w-[calc(100vw-2rem)] rounded-2xl shadow-2xl"
-              style={{ left: Math.min(posX + 50, vw - 400), top: Math.max(posY - 400, 10) }}
+              style={{ left: Math.max(Math.min(posX + 50, vw - 400), 16), top: Math.max(posY - 400, 10) }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-[#161b22] border border-[#30363d] rounded-2xl overflow-hidden">
@@ -495,6 +495,7 @@ export function FloatingAIEVAJARVIS() {
                       {new Date().toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', {
                         hour: '2-digit',
                         minute: '2-digit',
+                        hour12: true,
                       })}
                     </span>
                     {isSpeaking && (
@@ -512,7 +513,7 @@ export function FloatingAIEVAJARVIS() {
           {musicOpen && (
             <div
               className="fixed z-[61] w-[340px] max-w-[calc(100vw-3rem)] rounded-2xl shadow-2xl"
-              style={{ left: Math.min(posX + 50, vw - 360), top: Math.max(posY - 250, 10) }}
+              style={{ left: Math.max(Math.min(posX + 50, vw - 360), 16), top: Math.max(posY - 250, 10) }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-[#161b22] border border-[#30363d] rounded-2xl overflow-hidden">

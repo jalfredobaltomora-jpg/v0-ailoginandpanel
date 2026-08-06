@@ -295,7 +295,7 @@ function writeMatrixSheet(wb: ExcelJS.Workbook, records: EngineEntry[]) {
 function writeChartDataSheet(wb: ExcelJS.Workbook, chartData?: ChartExportData) {
   const ws = wb.addWorksheet('Datos Grafico');
   if (!chartData || !chartData.labels.length) {
-    ws.getCell(1, 1).value = 'No hay datos de grafico disponibles';
+    ws.getCell(1, 1).value = 'No hay datos de gráfico disponibles';
     return;
   }
 

@@ -73,7 +73,7 @@ export async function POST(req: Request) {
       match: 'none',
       matchedUser: null,
       similarity: 0,
-      suggestion: 'IA: Error de validacion. Intente de nuevo.',
+      suggestion: 'IA: Error de validación. Intente de nuevo.',
     });
   }
 }

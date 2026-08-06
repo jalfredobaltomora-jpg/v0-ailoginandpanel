@@ -167,7 +167,7 @@ export default function InventarioPage() {
   const handleSaved = () => {};
 
   const handleDelete = async (equipo: EquipoInventario) => {
-    if (confirm(`Esta seguro de eliminar el equipo ${equipo.serialNumber}?`)) {
+    if (confirm(`Está seguro de eliminar el equipo ${equipo.serialNumber}?`)) {
       const { deleteEquipoInventario } = await import('@/lib/firebase');
       await deleteEquipoInventario(equipo.id);
     }
@@ -179,14 +179,14 @@ export default function InventarioPage() {
   };
 
   const handleDeleteAudit = async (audit: typeof allAudits[0]) => {
-    if (!confirm(`Eliminar esta auditoria de ${audit.serialNumber} (${audit.historial.mes})?`)) return;
+    if (!confirm(`Eliminar esta auditoría de ${audit.serialNumber} (${audit.historial.mes})?`)) return;
     try {
       const { updateEquipoInventario } = await import('@/lib/firebase');
       const eq = equipos.find(e => e.id === audit.equipoId);
-      if (!eq) { alert('No se encontro el equipo en la lista local. Intenta recargar la pagina.'); return; }
+      if (!eq) { alert('No se encontró el equipo en la lista local. Intenta recargar la página.'); return; }
       const historial = (eq.historial || []).filter(h => h.timestamp !== audit.historial.timestamp);
       const ok = await updateEquipoInventario(audit.equipoId, { historial });
-      if (!ok) alert('Error al eliminar la auditoria en Firebase. Intenta de nuevo.');
+      if (!ok) alert('Error al eliminar la auditoría en Firebase. Intenta de nuevo.');
     } catch (err) {
       alert('Error inesperado: ' + (err instanceof Error ? err.message : 'Error desconocido'));
     }
@@ -303,7 +303,7 @@ export default function InventarioPage() {
         }
       }
     }
-    XLSX.utils.book_append_sheet(wb, ws, 'Auditorias');
+    XLSX.utils.book_append_sheet(wb, ws, 'Auditorías');
     const colWidths = headerKeys.map(k => ({
       wch: Math.max(k.length, ...data.map(r => String((r as any)[k] || '').length)) + 3,
     }));
@@ -395,7 +395,7 @@ export default function InventarioPage() {
       }
     }
     html += `
-        <div class="footer">Reporte generado automaticamente el ${new Date().toLocaleString('es-MX')}</div>
+        <div class="footer">Reporte generado automáticamente el ${new Date().toLocaleString('es-MX')}</div>
       </div></div>
     </body></html>`;
     win.document.write(html);
@@ -419,25 +419,25 @@ export default function InventarioPage() {
         </div>
       </div>
 
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <Card className="mx-auto max-w-6xl border-primary/20 bg-card/95">
           <CardHeader className="flex-row items-center justify-between flex-wrap gap-4">
             <CardTitle className="flex items-center gap-2 text-primary">
               {activeTab === 'agregar' ? 'Agregar Equipo' :
                activeTab === 'tablet' ? 'Inventario Tablet' :
-               activeTab === 'scanner' ? 'Inventario de Escaner' :
-               'Inspeccion Mensual'}
+               activeTab === 'scanner' ? 'Inventario de Escáner' :
+                'Inspección Mensual'}
             </CardTitle>
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex flex-wrap items-center gap-4">
               {activeTab !== 'agregar' && activeTab !== 'inspection' && (
-                <div className="relative">
+                <div className="relative w-full sm:w-auto">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className="w-64 border-border bg-input pl-9" />
+                  <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className="w-full sm:w-64 border-border bg-input pl-9" />
                 </div>
               )}
               {activeTab === 'inspection' && (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <span className="text-xs text-muted-foreground whitespace-nowrap">Filtrar por mes:</span>
                     <Select value={filterMes} onValueChange={setFilterMes}>
                       <SelectTrigger className="h-8 w-36 border-border bg-input text-xs">
@@ -458,7 +458,7 @@ export default function InventarioPage() {
                       </Button>
                     )}
                   </div>
-                  <div className="flex gap-2 ml-auto">
+                  <div className="flex flex-wrap gap-2 ml-auto">
                     <Button variant="outline" size="sm" className="border-border" onClick={handlePrintReport}>
                       <Printer className="mr-2 h-4 w-4" /> Imprimir
                     </Button>
@@ -466,7 +466,7 @@ export default function InventarioPage() {
                       <FileSpreadsheet className="mr-2 h-4 w-4" /> Generar Reporte
                     </Button>
                     <Button onClick={() => setAuditModalOpen(true)} className="bg-primary text-primary-foreground">
-                      <Plus className="mr-2 h-4 w-4" /> Agregar Auditoria de inventario
+                      <Plus className="mr-2 h-4 w-4" /> Agregar Auditoría de inventario
                     </Button>
                   </div>
                 </div>
@@ -474,13 +474,13 @@ export default function InventarioPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="px-6 pt-0">
-              <div className="flex border-b border-border">
+            <div className="px-4 pt-0 sm:px-6">
+              <div className="flex border-b border-border overflow-x-auto">
                 {([
                   { key: 'agregar', label: 'Agregar equipo', icon: Plus },
                   { key: 'tablet', label: 'Inventario Tablet', icon: Tablet },
-                  { key: 'scanner', label: 'Inventario de Escaner', icon: Scan },
-                  { key: 'inspection', label: 'Inspeccion Mensual', icon: ClipboardList },
+                  { key: 'scanner', label: 'Inventario de Escáner', icon: Scan },
+                  { key: 'inspection', label: 'Inspección Mensual', icon: ClipboardList },
                 ] as const).map(({ key, label, icon: Icon }) => (
                   <button key={key} onClick={() => setActiveTab(key)}
                     className={`relative flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-colors ${
@@ -505,18 +505,18 @@ export default function InventarioPage() {
               </div>
             </div>
 
-            <div className="border-t border-border p-6">
+            <div className="border-t border-border p-4 sm:p-6">
               {activeTab === 'agregar' && (
                 <div className="flex flex-col items-center justify-center py-12 gap-6">
                   <p className="text-muted-foreground text-center max-w-md">
-                    Aqui puedes agregar nuevas Tablets o Escaners al inventario.
+                    Aquí puedes agregar nuevas Tablets o Escáneres al inventario.
                   </p>
-                  <div className="flex gap-4">
+                  <div className="flex flex-wrap justify-center gap-4">
                     <Button onClick={() => { setActiveTab('tablet'); handleCreateNew(); }} variant="outline" className="border-border gap-2">
                       <Tablet className="h-5 w-5" /> Agregar Tablet
                     </Button>
                     <Button onClick={() => { setActiveTab('scanner'); handleCreateNew(); }} variant="outline" className="border-border gap-2">
-                      <Scan className="h-5 w-5" /> Agregar Escaner
+                      <Scan className="h-5 w-5" /> Agregar Escáner
                     </Button>
                   </div>
                 </div>
@@ -566,7 +566,7 @@ export default function InventarioPage() {
                 <div className="space-y-8">
                   {allAudits.length === 0 ? (
                     <div className="py-12 text-center text-muted-foreground">
-                      No hay auditorias registradas. Presiona "Agregar Auditoria de inventario" para comenzar.
+                      No hay auditorías registradas. Presiona "Agregar Auditoría de inventario" para comenzar.
                     </div>
                   ) : (
                     auditsGrouped.map(grupo => (
@@ -633,12 +633,12 @@ export default function InventarioPage() {
                                           <div className="flex items-center justify-center gap-1">
                                             <button onClick={() => handleEditAudit(a)}
                                               className="rounded bg-amber-500/10 px-1.5 py-1 text-[10px] text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
-                                              title="Editar auditoria">
+                                              title="Editar auditoría">
                                               <Edit className="h-3 w-3" />
                                             </button>
                                             <button onClick={() => handleDeleteAudit(a)}
                                               className="rounded bg-red-500/10 px-1.5 py-1 text-[10px] text-red-400 hover:bg-red-500/20 border border-red-500/20"
-                                              title="Eliminar auditoria">
+                                              title="Eliminar auditoría">
                                               <Trash2 className="h-3 w-3" />
                                             </button>
                                           </div>
@@ -703,7 +703,7 @@ export default function InventarioPage() {
     );
 
     if (filtered.length === 0) {
-      return <div className="py-4 text-center text-muted-foreground text-sm">No hay equipos en esta categoria</div>;
+      return <div className="py-4 text-center text-muted-foreground text-sm">No hay equipos en esta categoría</div>;
     }
 
     return (

@@ -32,92 +32,82 @@ interface BirthdayCardModalProps {
 
 const cardTemplates = [
   {
-    id: 'festive-bright',
-    name: 'Fiesta Colorida',
-    bgGradient: 'from-yellow-200 via-pink-100 to-purple-200',
-    borderColor: 'border-yellow-300',
-    textColor: 'text-slate-800',
-    accentColor: 'text-pink-600',
+    id: 'elegant',
+    name: 'Elegante',
+    bgGradient: 'from-amber-100 via-orange-50 to-rose-100',
+    borderColor: 'border-amber-300',
+    textColor: 'text-amber-900',
+    accentColor: 'text-amber-600',
     titleFont: 'font-serif',
-    pattern: 'radial-gradient(circle at 20% 80%, rgba(253,224,71,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(244,114,182,0.2) 0%, transparent 50%)',
+    pattern: 'radial-gradient(circle at 20% 80%, rgba(251,191,36,0.12) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(244,114,182,0.12) 0%, transparent 50%)',
   },
   {
-    id: 'rainbow-joy',
-    name: 'Arcoíris Alegre',
-    bgGradient: 'from-cyan-100 via-blue-100 to-purple-100',
-    borderColor: 'border-cyan-300',
-    textColor: 'text-slate-900',
-    accentColor: 'text-purple-600',
-    titleFont: 'font-sans font-bold',
-    pattern: 'radial-gradient(circle at 30% 30%, rgba(34,211,238,0.2) 0%, transparent 40%), radial-gradient(circle at 70% 70%, rgba(147,112,219,0.2) 0%, transparent 40%)',
-  },
-  {
-    id: 'pastel-dream',
-    name: 'Pastel Sueño',
-    bgGradient: 'from-rose-100 via-pink-50 to-orange-100',
-    borderColor: 'border-rose-300',
-    textColor: 'text-orange-900',
-    accentColor: 'text-rose-500',
+    id: 'royal',
+    name: 'Real',
+    bgGradient: 'from-indigo-100 via-purple-50 to-fuchsia-100',
+    borderColor: 'border-indigo-400',
+    textColor: 'text-indigo-900',
+    accentColor: 'text-fuchsia-600',
     titleFont: 'font-serif',
-    pattern: 'radial-gradient(circle at 10% 50%, rgba(251,113,133,0.2) 0%, transparent 50%), radial-gradient(circle at 90% 50%, rgba(251,146,60,0.15) 0%, transparent 50%)',
+    pattern: 'radial-gradient(circle at 30% 30%, rgba(139,92,246,0.1) 0%, transparent 40%), radial-gradient(circle at 70% 70%, rgba(217,70,239,0.1) 0%, transparent 40%)',
   },
   {
-    id: 'bright-mint',
-    name: 'Menta Brillante',
-    bgGradient: 'from-green-100 via-emerald-50 to-teal-100',
-    borderColor: 'border-emerald-300',
+    id: 'festive',
+    name: 'Festivo',
+    bgGradient: 'from-pink-100 via-rose-50 to-purple-100',
+    borderColor: 'border-pink-300',
+    textColor: 'text-pink-900',
+    accentColor: 'text-rose-600',
+    titleFont: 'font-sans',
+    pattern: 'radial-gradient(circle at 10% 10%, rgba(236,72,153,0.15) 0%, transparent 40%), radial-gradient(circle at 90% 90%, rgba(147,51,234,0.1) 0%, transparent 40%)',
+  },
+  {
+    id: 'vibrant',
+    name: 'Vibrante',
+    bgGradient: 'from-emerald-100 via-teal-50 to-cyan-100',
+    borderColor: 'border-emerald-400',
     textColor: 'text-emerald-900',
     accentColor: 'text-teal-600',
-    titleFont: 'font-sans font-bold',
-    pattern: 'radial-gradient(circle at 80% 20%, rgba(52,211,153,0.2) 0%, transparent 40%), radial-gradient(circle at 20% 80%, rgba(20,184,166,0.15) 0%, transparent 40%)',
+    titleFont: 'font-sans',
+    pattern: 'radial-gradient(circle at 80% 20%, rgba(52,211,153,0.15) 0%, transparent 40%), radial-gradient(circle at 20% 80%, rgba(34,211,238,0.12) 0%, transparent 40%)',
   },
   {
-    id: 'golden-celebration',
-    name: 'Celebración Dorada',
-    bgGradient: 'from-yellow-100 via-amber-50 to-orange-100',
-    borderColor: 'border-yellow-300',
-    textColor: 'text-amber-900',
-    accentColor: 'text-yellow-600',
+    id: 'golden',
+    name: 'Dorado',
+    bgGradient: 'from-yellow-50 via-amber-50 to-orange-100',
+    borderColor: 'border-yellow-400',
+    textColor: 'text-yellow-900',
+    accentColor: 'text-amber-500',
     titleFont: 'font-serif',
-    pattern: 'radial-gradient(circle at 50% 50%, rgba(251,191,36,0.2) 0%, transparent 50%), repeating-linear-gradient(45deg, transparent 0px, transparent 10px, rgba(251,191,36,0.08) 10px, rgba(251,191,36,0.08) 20px)',
+    pattern: 'radial-gradient(circle at 50% 50%, rgba(251,191,36,0.15) 0%, transparent 50%), repeating-linear-gradient(45deg, transparent 0px, transparent 10px, rgba(251,191,36,0.03) 10px, rgba(251,191,36,0.03) 12px)',
   },
   {
-    id: 'lavender-party',
-    name: 'Fiesta Lavanda',
-    bgGradient: 'from-purple-100 via-fuchsia-50 to-pink-100',
-    borderColor: 'border-purple-300',
-    textColor: 'text-purple-900',
-    accentColor: 'text-fuchsia-600',
-    titleFont: 'font-sans font-bold',
-    pattern: 'radial-gradient(circle at 30% 70%, rgba(168,85,247,0.2) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(217,70,239,0.15) 0%, transparent 50%)',
-  },
-  {
-    id: 'sunny-day',
-    name: 'Día Soleado',
-    bgGradient: 'from-yellow-50 via-orange-100 to-red-50',
-    borderColor: 'border-orange-300',
-    textColor: 'text-red-900',
-    accentColor: 'text-orange-600',
-    titleFont: 'font-serif',
-    pattern: 'radial-gradient(circle at 30% 30%, rgba(249,115,22,0.2) 0%, transparent 50%), radial-gradient(circle at 70% 70%, rgba(239,68,68,0.15) 0%, transparent 50%)',
-  },
-  {
-    id: 'tropical-vibes',
-    name: 'Vibes Tropicales',
-    bgGradient: 'from-blue-100 via-cyan-50 to-green-100',
-    borderColor: 'border-cyan-400',
-    textColor: 'text-blue-900',
+    id: 'classic',
+    name: 'Clasico',
+    bgGradient: 'from-blue-50 via-sky-50 to-cyan-50',
+    borderColor: 'border-sky-300',
+    textColor: 'text-sky-900',
     accentColor: 'text-cyan-600',
-    titleFont: 'font-sans font-bold',
-    pattern: 'radial-gradient(circle at 50% 0%, rgba(34,211,238,0.2) 0%, transparent 50%), radial-gradient(circle at 50% 100%, rgba(34,197,94,0.15) 0%, transparent 50%)',
+    titleFont: 'font-sans',
+    pattern: 'radial-gradient(circle at 50% 0%, rgba(34,211,238,0.1) 0%, transparent 50%)',
+  },
+  {
+    id: 'warm',
+    name: 'Calido',
+    bgGradient: 'from-red-50 via-orange-50 to-yellow-50',
+    borderColor: 'border-orange-300',
+    textColor: 'text-orange-900',
+    accentColor: 'text-red-500',
+    titleFont: 'font-sans',
+    pattern: 'radial-gradient(circle at 30% 70%, rgba(249,115,22,0.1) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(234,179,8,0.1) 0%, transparent 50%)',
   },
 ];
 
 const getMessagesForEmployee = (name: string, area?: string) => [
-  `Querido(a) ${name}, en este día tan especial celebramos tu vida y todo lo que aportas a nuestro equipo${area ? ` en ${area}` : ''}. Que este nuevo año esté lleno de éxitos, salud y momentos inolvidables.`,
+  `Querido(a) ${name}, en este día tan especial celebramos tu vida y todo lo que aportas a nuestro equipo${area ? ` en ${area}` : ''}. Que este nuevo año esté lleno de éxitos, salud y momentos inolvidables. ¡Felicidades!`,
   `¡Feliz cumpleaños, ${name}! Hoy es un día para celebrar a una persona increíble. Gracias por tu dedicación y alegría${area ? ` en el área de ${area}` : ''}. Que todos tus sueños se hagan realidad.`,
   `${name}, tu presencia ilumina nuestros días${area ? ` en ${area}` : ''}. En este nuevo aniversario de vida, te deseamos lo mejor: salud, prosperidad y mucha felicidad. ¡Disfruta tu día!`,
-  `Hoy celebramos a ${name}! Eres una parte fundamental de nuestro equipo${area ? ` en ${area}` : ''}. Que este nuevo ciclo esté lleno de bendiciones y que cada meta que te propongas la puedas alcanzar.`,
+  `Hoy celebramos a ${name}! Eres una parte fundamental de nuestro equipo${area ? ` en ${area}` : ''}. Que este nuevo ciclo esté lleno de bendiciones y que cada meta que te propongas la puedas alcanzar. ¡Felicidades!`,
   `Para ${name}: en tu cumpleaños queremos agradecerte por ser parte de nuestra familia laboral. Tu esfuerzo y dedicación hacen la diferencia. ¡Que tengas un día maravilloso lleno de amor y alegría!`,
   `¡${name}, hoy es tu día! Que la felicidad te acompañe siempre y que este nuevo año de vida esté lleno de sorpresas agradables. Disfruta cada momento. ¡Felicidades de parte de todo el equipo!`,
 ];
@@ -128,7 +118,7 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [messages] = useState(() => getMessagesForEmployee(empleado.nombres?.split(' ')[0] || 'amigo', empleado.area));
   const [message, setMessage] = useState(messages[Math.floor(Math.random() * messages.length)]);
-  const [title, setTitle] = useState('¡FELIZ CUMPLEAÑOS!');
+  const [title, setTitle] = useState('¡Feliz Cumpleaños!');
   const [isEditing, setIsEditing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -171,29 +161,6 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
     setGenerating(false);
   };
 
-  // Función para dibujar globos
-  const drawBalloon = (ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, color: string, stringY: number) => {
-    // Globo
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Brillo en el globo
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.beginPath();
-    ctx.arc(x - radius * 0.3, y - radius * 0.3, radius * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Cuerda
-    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x, y + radius);
-    ctx.lineTo(x, stringY);
-    ctx.stroke();
-  };
-
   const handleDownload = async () => {
     if (!cardRef.current) return;
     setDownloading(true);
@@ -206,6 +173,16 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
         img.onerror = () => reject(new Error('Image load failed'));
         img.src = url;
       });
+
+    const measureText = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number, fontSize: number): string => {
+      let w = maxWidth;
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      while (ctx.measureText(text).width > w && text.length > 0) {
+        text = text.slice(0, -1);
+        w -= ctx.measureText('…').width;
+      }
+      return text.length < maxWidth ? text + '…' : text;
+    };
 
     const wrapText = (ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
       const words = text.split(' ');
@@ -225,27 +202,26 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
     };
 
     const canvas = document.createElement('canvas');
-    const W = 1200, H = 840; // A3 landscape mejorado
+    const W = 800, H = 560;
     canvas.width = W;
     canvas.height = H;
     const ctx = canvas.getContext('2d')!;
 
     const template = selectedTemplate;
 
-    // Colores de fondo
+    // Helper: parse tailwind gradient classes to canvas gradient
     const gradColors: Record<string, [string, string, string]> = {
-      'from-yellow-200 via-pink-100 to-purple-200': ['#fef08a', '#ffe4e6', '#e9d5ff'],
-      'from-cyan-100 via-blue-100 to-purple-100': ['#cffafe', '#dbeafe', '#e9d5ff'],
-      'from-rose-100 via-pink-50 to-orange-100': ['#ffe4e6', '#fdf2f8', '#ffedd5'],
-      'from-green-100 via-emerald-50 to-teal-100': ['#dcfce7', '#f0fdf4', '#ccfbf1'],
-      'from-yellow-100 via-amber-50 to-orange-100': ['#fef3c7', '#fffbeb', '#ffedd5'],
-      'from-purple-100 via-fuchsia-50 to-pink-100': ['#f3e8ff', '#fdf2f8', '#fce7f3'],
-      'from-yellow-50 via-orange-100 to-red-50': ['#fefce8', '#fed7aa', '#fef2f2'],
-      'from-blue-100 via-cyan-50 to-green-100': ['#dbeafe', '#ecfdf5', '#dcfce7'],
+      'from-amber-100 via-orange-50 to-rose-100': ['#fef3c7', '#fff7ed', '#ffe4e6'],
+      'from-indigo-100 via-purple-50 to-fuchsia-100': ['#e0e7ff', '#faf5ff', '#fae8ff'],
+      'from-pink-100 via-rose-50 to-purple-100': ['#fce7f3', '#fff1f2', '#f3e8ff'],
+      'from-emerald-100 via-teal-50 to-cyan-100': ['#d1fae5', '#f0fdfa', '#cffafe'],
+      'from-yellow-50 via-amber-50 to-orange-100': ['#fefce8', '#fffbeb', '#ffedd5'],
+      'from-blue-50 via-sky-50 to-cyan-50': ['#eff6ff', '#f0f9ff', '#ecfeff'],
+      'from-red-50 via-orange-50 to-yellow-50': ['#fef2f2', '#fff7ed', '#fefce8'],
     };
     const colors = gradColors[template.bgGradient] || ['#fff', '#fff', '#fff'];
 
-    // Fondo degradado
+    // Background
     const bgGrad = ctx.createLinearGradient(0, 0, W, H);
     bgGrad.addColorStop(0, colors[0]);
     bgGrad.addColorStop(0.5, colors[1]);
@@ -253,160 +229,129 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, W, H);
 
-    // Globos decorativos en las esquinas con colores pasteles
-    const balloonColors = [
-      '#FFB3BA', // Rosa pastel
-      '#FFFFBA', // Amarillo pastel
-      '#BAE1FF', // Azul pastel
-      '#BAFFC9', // Verde pastel
-      '#FFD4BA', // Naranja pastel
-      '#E0BBE4', // Púrpura pastel
-      '#FFDAB9', // Durazno pastel
-      '#C7CEEA', // Lavanda pastel
-    ];
+    // Border accent
+    ctx.strokeStyle = '#fcd34d';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(12, 12, W - 24, H - 24);
 
-    // Globos esquina superior izquierda
-    drawBalloon(ctx, 80, 70, 35, balloonColors[0], 200);
-    drawBalloon(ctx, 140, 90, 40, balloonColors[1], 220);
-    drawBalloon(ctx, 200, 75, 38, balloonColors[2], 210);
-    drawBalloon(ctx, 260, 95, 36, balloonColors[3], 230);
-
-    // Globos esquina superior derecha
-    drawBalloon(ctx, W - 80, 70, 35, balloonColors[4], 200);
-    drawBalloon(ctx, W - 140, 90, 40, balloonColors[5], 220);
-    drawBalloon(ctx, W - 200, 75, 38, balloonColors[6], 210);
-    drawBalloon(ctx, W - 260, 95, 36, balloonColors[7], 230);
-
-    // Globos esquina inferior izquierda
-    drawBalloon(ctx, 80, H - 70, 35, balloonColors[1], H - 200);
-    drawBalloon(ctx, 140, H - 90, 40, balloonColors[2], H - 220);
-    drawBalloon(ctx, 200, H - 75, 38, balloonColors[3], H - 210);
-    drawBalloon(ctx, 260, H - 95, 36, balloonColors[4], H - 230);
-
-    // Globos esquina inferior derecha
-    drawBalloon(ctx, W - 80, H - 70, 35, balloonColors[5], H - 200);
-    drawBalloon(ctx, W - 140, H - 90, 40, balloonColors[6], H - 220);
-    drawBalloon(ctx, W - 200, H - 75, 38, balloonColors[7], H - 210);
-    drawBalloon(ctx, W - 260, H - 95, 36, balloonColors[0], H - 230);
-
-    // Borde decorativo colorido
-    const borderColors = ['#FF6B6B', '#FFA500', '#FFD700', '#90EE90', '#87CEEB', '#9370DB'];
-    for (let i = 0; i < W; i += 15) {
-      ctx.fillStyle = borderColors[Math.floor((i / 15) % borderColors.length)];
-      ctx.fillRect(i, 10, 12, 12);
-      ctx.fillRect(i, H - 22, 12, 12);
-    }
-    for (let i = 0; i < H; i += 15) {
-      ctx.fillStyle = borderColors[Math.floor((i / 15) % borderColors.length)];
-      ctx.fillRect(10, i, 12, 12);
-      ctx.fillRect(W - 22, i, 12, 12);
-    }
-
-    // Título MUY GRANDE Y COLORIDO
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#E91E63'; // Rosa fuerte
-    ctx.font = 'bold 90px Arial, sans-serif';
-    ctx.strokeStyle = '#FFD700'; // Oro
+    // Corner decorations
+    ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 4;
-    ctx.strokeText(title, W / 2, 160);
-    ctx.fillText(title, W / 2, 160);
+    const cl = 40;
+    ctx.beginPath(); ctx.moveTo(20, 20 + cl); ctx.lineTo(20, 20); ctx.lineTo(20 + cl, 20); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W - 20 - cl, 20); ctx.lineTo(W - 20, 20); ctx.lineTo(W - 20, 20 + cl); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(20, H - 20 - cl); ctx.lineTo(20, H - 20); ctx.lineTo(20 + cl, H - 20); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W - 20 - cl, H - 20); ctx.lineTo(W - 20, H - 20); ctx.lineTo(W - 20, H - 20 - cl); ctx.stroke();
 
-    // Símbolo de celebración
-    ctx.font = 'bold 80px Arial';
-    ctx.fillText('🎉', W / 2 - 150, 160);
-    ctx.fillText('🎂', W / 2 + 150, 160);
+    // Confetti
+    const confetti = [
+      { x: 80, y: 40, color: '#f472b6', w: 10, h: 14, rot: 12 },
+      { x: 200, y: 60, color: '#fbbf24', w: 12, h: 10, rot: -8 },
+      { x: 320, y: 30, color: '#a78bfa', w: 10, h: 16, rot: 20 },
+      { x: 440, y: 50, color: '#22d3ee', w: 14, h: 10, rot: -15 },
+      { x: 560, y: 35, color: '#fb7185', w: 10, h: 14, rot: 5 },
+      { x: 680, y: 55, color: '#34d399', w: 12, h: 12, rot: -10 },
+      { x: 120, y: 500, color: '#38bdf8', w: 10, h: 10, rot: 25 },
+      { x: 500, y: 520, color: '#fb923c', w: 14, h: 12, rot: -20 },
+    ];
+    confetti.forEach(c => {
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate(c.rot * Math.PI / 180);
+      ctx.fillStyle = c.color;
+      ctx.globalAlpha = 0.7;
+      ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
+      ctx.restore();
+    });
 
-    // Foto de alta calidad
-    const photoX = W / 2, photoY = 380, photoR = 130;
+    // Title
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#d97706';
+    ctx.font = 'bold 40px Georgia, serif';
+    ctx.fillText(title, W / 2, 100);
+    ctx.font = '24px sans-serif';
+    ctx.fillText('🎉', W / 2 + ctx.measureText(title).width / 2 + 10, 100);
+
+    // Photo
+    const photoX = W / 2, photoY = 200, photoR = 75;
     try {
       const img = await loadImage(photoToUse || '');
       ctx.save();
-
-      // Sombra alrededor de la foto
-      ctx.shadowColor = 'rgba(0,0,0,0.3)';
-      ctx.shadowBlur = 20;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 5;
-
       ctx.beginPath();
-      ctx.arc(photoX, photoY, photoR + 8, 0, Math.PI * 2);
-      ctx.fillStyle = '#FFD700'; // Oro para el marco
+      ctx.arc(photoX, photoY, photoR + 4, 0, Math.PI * 2);
+      const glow = ctx.createRadialGradient(photoX, photoY, photoR - 10, photoX, photoY, photoR + 8);
+      glow.addColorStop(0, '#f472b6');
+      glow.addColorStop(0.5, '#a78bfa');
+      glow.addColorStop(1, '#f59e0b');
+      ctx.fillStyle = glow;
       ctx.fill();
 
       ctx.beginPath();
       ctx.arc(photoX, photoY, photoR, 0, Math.PI * 2);
       ctx.clip();
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, photoX - photoR, photoY - photoR, photoR * 2, photoR * 2);
       ctx.restore();
 
-      // Borde blanco fuerte
       ctx.beginPath();
       ctx.arc(photoX, photoY, photoR, 0, Math.PI * 2);
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 8;
-      ctx.stroke();
-
-      // Borde decorativo
-      ctx.beginPath();
-      ctx.arc(photoX, photoY, photoR, 0, Math.PI * 2);
-      ctx.strokeStyle = '#E91E63';
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = 4;
       ctx.stroke();
     } catch {
-      // Fallback
+      // Fallback: draw circle with initials
       ctx.save();
       ctx.beginPath();
-      ctx.arc(photoX, photoY, photoR + 8, 0, Math.PI * 2);
-      ctx.fillStyle = '#FFD700';
+      ctx.arc(photoX, photoY, photoR + 4, 0, Math.PI * 2);
+      const glow = ctx.createRadialGradient(photoX, photoY, 0, photoX, photoY, photoR + 8);
+      glow.addColorStop(0, '#f472b6');
+      glow.addColorStop(1, '#f59e0b');
+      ctx.fillStyle = glow;
       ctx.fill();
 
       ctx.beginPath();
       ctx.arc(photoX, photoY, photoR, 0, Math.PI * 2);
       const fallbackGrad = ctx.createRadialGradient(photoX, photoY, 0, photoX, photoY, photoR);
-      fallbackGrad.addColorStop(0, '#FFDAB9');
-      fallbackGrad.addColorStop(1, '#FFB3BA');
+      fallbackGrad.addColorStop(0, '#fde68a');
+      fallbackGrad.addColorStop(1, '#fbcfe8');
       ctx.fillStyle = fallbackGrad;
       ctx.fill();
 
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = `bold 80px sans-serif`;
+      ctx.fillStyle = '#92400e';
+      ctx.font = `bold 48px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(getInitials(), photoX, photoY);
       ctx.restore();
     }
 
-    // Nombre con estilo llamativo
-    ctx.fillStyle = '#FF6B9D'; // Rosa vibrante
-    ctx.font = 'bold 50px Arial, sans-serif';
+    // Name
+    ctx.fillStyle = '#78350f';
+    ctx.font = 'bold 28px sans-serif';
     ctx.textAlign = 'center';
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 3;
-    ctx.strokeText(`${empleado.nombres} ${empleado.apellidos}`, W / 2, 550);
-    ctx.fillText(`${empleado.nombres} ${empleado.apellidos}`, W / 2, 550);
+    ctx.fillText(`${empleado.nombres} ${empleado.apellidos}`, W / 2, 310);
 
-    // Fecha del cumpleaños
-    ctx.fillStyle = '#FFD700'; // Oro
-    ctx.font = 'bold 36px Arial, sans-serif';
-    ctx.fillText(formatBirthday(), W / 2, 610);
+    // Birthday date
+    ctx.fillStyle = '#d97706';
+    ctx.font = '20px sans-serif';
+    ctx.fillText(formatBirthday(), W / 2, 342);
 
-    // Mensaje con fuente legible
-    ctx.fillStyle = '#333333';
-    ctx.font = '24px Arial, sans-serif';
+    // Message
+    ctx.fillStyle = '#78350f';
+    ctx.font = '16px sans-serif';
     ctx.textAlign = 'center';
-    const msgMaxW = W - 200;
-    wrapText(ctx, `"${message}"`, W / 2, 680, msgMaxW, 32);
+    const msgMaxW = W - 120;
+    const msgY = wrapText(ctx, `"${message}"`, W / 2, 390, msgMaxW, 24);
 
-    // Decoración final
-    ctx.font = 'bold 40px Arial';
-    const finalIcons = ['🎈', '🎊', '🎁', '🎊', '🎈'];
-    finalIcons.forEach((icon, i) => {
-      ctx.fillText(icon, W / 2 - 200 + i * 100, 780);
+    // Footer decorations
+    const footerY = Math.min(msgY + 50, H - 40);
+    const icons = ['★', '♥', '◆', '♥', '★'];
+    ctx.font = '24px sans-serif';
+    icons.forEach((icon, i) => {
+      ctx.fillStyle = i % 2 === 0 ? '#fbbf24' : '#f472b6';
+      ctx.fillText(icon, W / 2 - 100 + i * 50, footerY);
     });
 
-    // Convertir a blob y descargar
+    // Convert to blob and download
     canvas.toBlob((blob) => {
       if (!blob) {
         alert('Error al generar la imagen. Usa la opción Imprimir.');
@@ -415,12 +360,12 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
       }
       const link = document.createElement('a');
       const namePart = `${empleado.nombres}_${empleado.apellidos}`.replace(/\s+/g, '_');
-      link.download = `cumpleanos_${namePart}_A3.png`;
+      link.download = `cumpleanos_${namePart}.png`;
       link.href = URL.createObjectURL(blob);
       link.click();
       URL.revokeObjectURL(link.href);
       setDownloading(false);
-    }, 'image/png', 0.95);
+    }, 'image/png');
   };
 
   const handlePrint = () => {
@@ -438,10 +383,10 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
     printWindow.document.write(`
       <html>
         <head>
-          <title>Cumpleanos - ${empleado.nombres} ${empleado.apellidos}</title>
+          <title>Cumpleaños - ${empleado.nombres} ${empleado.apellidos}</title>
           <style>${styles}
             body { display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #fff; }
-            @page { margin: 0; size: A3 landscape; }
+            @page { margin: 0; size: landscape; }
             @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
           </style>
         </head>
@@ -519,6 +464,15 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
                   />
                 ))}
 
+                {/* Decorative corners */}
+                {(() => { const c = TAILWIND_COLORS[selectedTemplate.accentColor.replace('text-', '')] || '#d97706'; return (<><div className="absolute top-3 left-3 w-12 h-12 border-t-4 border-l-4 rounded-tl-xl" style={{ borderColor: c, opacity: 0.2 }} />
+                <div className="absolute top-3 right-3 w-12 h-12 border-t-4 border-r-4 rounded-tr-xl" style={{ borderColor: c, opacity: 0.2 }} />
+                <div className="absolute bottom-3 left-3 w-12 h-12 border-b-4 border-l-4 rounded-bl-xl" style={{ borderColor: c, opacity: 0.2 }} />
+                <div className="absolute bottom-3 right-3 w-12 h-12 border-b-4 border-r-4 rounded-br-xl" style={{ borderColor: c, opacity: 0.2 }} /></>); })()}
+
+                {/* Ribbon top */}
+                {(() => { const c = TAILWIND_COLORS[selectedTemplate.accentColor.replace('text-', '')] || '#d97706'; return <div className="absolute top-6 left-1/2 -translate-x-1/2 w-32 h-7 rounded-full blur-sm" style={{ background: `linear-gradient(90deg, transparent, ${c}33, transparent)` }} />; })()}
+
                 {/* Card content */}
                 <div className="relative z-10 text-center space-y-4 w-full max-w-md">
                   {/* Title */}
@@ -527,7 +481,7 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className={`text-3xl md:text-4xl font-bold ${selectedTemplate.accentColor} ${selectedTemplate.titleFont} bg-transparent border-b-2 border-dashed border-current text-center w-full`}
+                      className={`text-3xl md:text-4xl font-bold ${selectedTemplate.accentColor} ${selectedTemplate.titleFont} bg-transparent border-b-2 border-dashed border-current text-center w-full outline-none`}
                     />
                   ) : (
                     <h2 className={`text-3xl md:text-4xl font-bold ${selectedTemplate.accentColor} ${selectedTemplate.titleFont}`}>
@@ -539,10 +493,10 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
                   {/* Photo */}
                   <div className="flex justify-center">
                     <div className="relative group">
-                      <div className="rounded-full p-1.5 bg-gradient-to-br from-amber-300 via-pink-300 to-purple-300 shadow-lg shadow-pink-200/50">
+                      <div className="rounded-full p-1.5 bg-gradient-to-br from-amber-400 via-pink-400 to-purple-400 shadow-lg shadow-pink-200/50">
                         <Avatar className="h-32 w-32 md:h-36 md:w-36 border-4 border-white/90 shadow-inner">
                           <AvatarImage src={photoToUse} alt={empleado.nombres} className="object-cover" />
-                          <AvatarFallback className={`bg-gradient-to-br from-yellow-200 to-pink-200 text-amber-800 text-3xl ${selectedTemplate.titleFont}`}>
+                          <AvatarFallback className={`bg-gradient-to-br from-amber-200 to-pink-200 text-amber-800 text-3xl ${selectedTemplate.titleFont}`}>
                             {getInitials()}
                           </AvatarFallback>
                         </Avatar>
@@ -684,14 +638,14 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
                 <Button
                   onClick={handleDownload}
                   disabled={downloading}
-                  className="w-full bg-gradient-to-r from-pink-500 to-yellow-500 hover:from-pink-600 hover:to-yellow-600 text-white h-10 font-semibold"
+                  className="w-full bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white h-10"
                 >
                   {downloading ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <Download className="mr-2 h-4 w-4" />
                   )}
-                  {downloading ? 'Generando...' : 'Descargar A3'}
+                  {downloading ? 'Generando...' : 'Descargar PNG'}
                 </Button>
                 <Button
                   onClick={handlePrint}
@@ -699,7 +653,7 @@ export function BirthdayCardModal({ empleado, onClose }: BirthdayCardModalProps)
                   className="w-full h-10"
                 >
                   <Printer className="mr-2 h-4 w-4" />
-                  Imprimir A3
+                  Imprimir
                 </Button>
               </div>
             </div>
