@@ -148,7 +148,6 @@ export function FloatingAI() {
   const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const downPosRef = useRef<{ x: number; y: number } | null>(null);
   const tapMovedRef = useRef(false);
-  const pointerHandledRef = useRef(false);
   const clearTimers = () => {
     if (pttHoldTimerRef.current) { clearTimeout(pttHoldTimerRef.current); pttHoldTimerRef.current = null; }
     if (tapTimerRef.current) { clearTimeout(tapTimerRef.current); tapTimerRef.current = null; }
@@ -921,23 +920,19 @@ export function FloatingAI() {
 
   if (pathname === '/') return null;
 
-  // Gestures on the floating JAB button.
+  // Gestures on the floating JAB button — pointer events only, no click.
   // Single tap = nothing. Double tap = toggle chat. Hold ≥350ms = PTT.
   const handleButtonPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     unlockSpeech();
-    pointerHandledRef.current = false;
     pttHeldRef.current = false;
     tapMovedRef.current = false;
     downPosRef.current = { x: e.clientX, y: e.clientY };
-    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
 
-    // Start hold-to-talk timer
     pttHoldTimerRef.current = setTimeout(() => {
       pttHoldTimerRef.current = null;
       pttHeldRef.current = true;
-      pointerHandledRef.current = true;
       tapCountRef.current = 0;
-      if (tapTimerRef.current) { clearTimeout(tapTimerRef.current); tapTimerRef.current = null; }
+      clearTimers();
       startPTT();
     }, 350);
   }, [startPTT, unlockSpeech]);
@@ -950,58 +945,38 @@ export function FloatingAI() {
   }, []);
 
   const handleButtonPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
     clearTimers();
 
     if (pttHeldRef.current) {
-      // Was holding → stop PTT
       pttHeldRef.current = false;
       downPosRef.current = null;
-      pointerHandledRef.current = true;
       stopPTT();
       return;
     }
 
     downPosRef.current = null;
+    if (tapMovedRef.current) { tapCountRef.current = 0; return; }
 
-    // Movement means this was a drag, not a tap
-    if (tapMovedRef.current) {
-      tapCountRef.current = 0;
-      return;
-    }
-
-    // Clean tap detected
-    pointerHandledRef.current = true;
     tapCountRef.current++;
-
     if (tapCountRef.current >= 2) {
-      // Double tap → toggle conversation
       tapCountRef.current = 0;
       setIsChatOpen((open) => !open);
     } else {
-      // First tap — start window for second tap
-      tapTimerRef.current = setTimeout(() => {
-        tapCountRef.current = 0;
-        tapTimerRef.current = null;
-      }, 350);
+      tapTimerRef.current = setTimeout(() => { tapCountRef.current = 0; }, 350);
     }
   }, [stopPTT]);
 
-  const handleButtonPointerCancel = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+  const handleButtonPointerCancel = useCallback(() => {
     clearTimers();
     pttHeldRef.current = false;
     tapCountRef.current = 0;
     downPosRef.current = null;
   }, []);
 
-  // Catch any stray click events and suppress them
+  // Absorb any stray click — all interaction goes through pointer events only.
   const handleButtonClick = useCallback((e: React.MouseEvent) => {
-    if (pointerHandledRef.current) {
-      e.preventDefault();
-      e.stopPropagation();
-      pointerHandledRef.current = false;
-    }
+    e.preventDefault();
+    e.stopPropagation();
   }, []);
 
   return (
