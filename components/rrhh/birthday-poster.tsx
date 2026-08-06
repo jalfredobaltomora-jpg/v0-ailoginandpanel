@@ -11,10 +11,10 @@ const MONTHS = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
-const PW = 5011;
-
 interface BirthdayPosterProps {
   empleados: Empleado[];
+  /** Índices de mes (0-11) a incluir. Vacío/indefinido = todos (año completo). */
+  selectedMonths?: number[];
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -450,48 +450,77 @@ function drawOfficeItems(
   });
 }
 
-export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
+export function BirthdayPoster({ empleados, selectedMonths = [] }: BirthdayPosterProps) {
   const [generating, setGenerating] = useState(false);
 
   const generate = useCallback(async () => {
     setGenerating(true);
     try {
-      const MARGIN = 55;
+      const MARGIN = 50;
       const COLS = 6;
-      const COL_GAP = 16;
-      const CONTENT_W = PW - MARGIN * 2;
-      const CARD_W = (CONTENT_W - COL_GAP * (COLS - 1)) / COLS;
+      const COL_GAP = 18;
+      const CARD_W = 700;
       const CARD_H = 165;
-      const CARD_GAP_Y = 10;
+      const CARD_GAP_Y = 12;
       const MONTH_HEADER_H = 95;
-      const SECTION_GAP = 18;
-      const HEADER_H = 220;
-      const FOOTER_H = 100;
+      const SECTION_GAP = 24;
+      const HEADER_H = 230;
+      const FOOTER_H = 90;
+      const FOOTER_GAP = 40;
+      const MIN_W = 1500;
 
+      const allSelected = selectedMonths.length === 0;
       const validEmps = empleados.filter(e => e.fechaNac && e.activo !== false);
 
       const monthGroups: Empleado[][] = Array.from({ length: 12 }, () => []);
       validEmps.forEach(emp => {
-        monthGroups[parseDateLocal(emp.fechaNac).getMonth()].push(emp);
+        const m = parseDateLocal(emp.fechaNac).getMonth();
+        if (allSelected || selectedMonths.includes(m)) monthGroups[m].push(emp);
       });
       monthGroups.forEach(group => {
         group.sort((a, b) => parseDateLocal(a.fechaNac).getDate() - parseDateLocal(b.fechaNac).getDate());
       });
+      const activeMonths = monthGroups
+        .map((g, i) => (g.length > 0 ? i : -1))
+        .filter(i => i >= 0);
 
-      let contentH = HEADER_H;
-      monthGroups.forEach(group => {
-        if (group.length > 0) {
-          const rows = Math.ceil(group.length / COLS);
-          contentH += MONTH_HEADER_H + rows * (CARD_H + CARD_GAP_Y) + SECTION_GAP;
-        }
+      // Layout ajustado al contenido (sin márgenes sobrados):
+      // - Ancho: llega hasta el final de la fila más ancha (el mes con más
+      //   cumpleañeros; p.ej. abril termina en Jovita Calderón).
+      // - Alto: llega hasta el último mes con contenido (p.ej. diciembre).
+      let maxCardsPerRow = 0;
+      for (const mi of activeMonths) {
+        const g = monthGroups[mi];
+        const rows = Math.ceil(g.length / COLS);
+        const lastRow = rows > 1 ? COLS : g.length;
+        maxCardsPerRow = Math.max(maxCardsPerRow, lastRow);
+      }
+      const posterW = Math.max(
+        MIN_W,
+        MARGIN + (maxCardsPerRow - 1) * (CARD_W + COL_GAP) + CARD_W + MARGIN
+      );
+
+      let contentBottom = HEADER_H;
+      activeMonths.forEach((mi, idx) => {
+        const rows = Math.ceil(monthGroups[mi].length / COLS);
+        contentBottom += MONTH_HEADER_H + rows * (CARD_H + CARD_GAP_Y);
+        if (idx < activeMonths.length - 1) contentBottom += SECTION_GAP;
       });
-      contentH += FOOTER_H;
-      const totalH = Math.max(contentH, PW);
+      if (activeMonths.length === 0) contentBottom += 200;
+      const totalH = contentBottom + FOOTER_GAP + FOOTER_H + MARGIN;
+
+      // A3 portrait at 300 DPI (297mm × 420mm)
+      const A3_W = 3508;
+      const A3_H = 4961;
+
+      // Scale the content layout to fit exactly within A3
+      const scale = Math.min(A3_W / posterW, A3_H / totalH);
 
       const canvas = document.createElement('canvas');
-      canvas.width = PW;
-      canvas.height = totalH;
+      canvas.width = A3_W;
+      canvas.height = A3_H;
       const ctx = canvas.getContext('2d')!;
+      ctx.scale(scale, scale);
 
       // ─── Background (light for print) ───
       const bgGrad = ctx.createLinearGradient(0, 0, 0, totalH);
@@ -501,39 +530,39 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       bgGrad.addColorStop(0.7, '#f0edf5');
       bgGrad.addColorStop(1, '#f5f2f9');
       ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, PW, totalH);
+      ctx.fillRect(0, 0, posterW, totalH);
 
       // Subtle warm radial glows
-      const g1 = ctx.createRadialGradient(PW * 0.15, totalH * 0.08, 0, PW * 0.15, totalH * 0.08, PW * 0.5);
+      const g1 = ctx.createRadialGradient(posterW * 0.15, totalH * 0.08, 0, posterW * 0.15, totalH * 0.08, posterW * 0.5);
       g1.addColorStop(0, 'rgba(255,107,157,0.06)');
       g1.addColorStop(1, 'transparent');
       ctx.fillStyle = g1;
-      ctx.fillRect(0, 0, PW, totalH);
+      ctx.fillRect(0, 0, posterW, totalH);
 
-      const g2 = ctx.createRadialGradient(PW * 0.85, totalH * 0.05, 0, PW * 0.85, totalH * 0.05, PW * 0.45);
+      const g2 = ctx.createRadialGradient(posterW * 0.85, totalH * 0.05, 0, posterW * 0.85, totalH * 0.05, posterW * 0.45);
       g2.addColorStop(0, 'rgba(255,171,64,0.05)');
       g2.addColorStop(1, 'transparent');
       ctx.fillStyle = g2;
-      ctx.fillRect(0, 0, PW, totalH);
+      ctx.fillRect(0, 0, posterW, totalH);
 
-      const g3 = ctx.createRadialGradient(PW * 0.9, totalH * 0.95, 0, PW * 0.9, totalH * 0.95, PW * 0.5);
+      const g3 = ctx.createRadialGradient(posterW * 0.9, totalH * 0.95, 0, posterW * 0.9, totalH * 0.95, posterW * 0.5);
       g3.addColorStop(0, 'rgba(0,229,255,0.04)');
       g3.addColorStop(1, 'transparent');
       ctx.fillStyle = g3;
-      ctx.fillRect(0, 0, PW, totalH);
+      ctx.fillRect(0, 0, posterW, totalH);
 
-      const g4 = ctx.createRadialGradient(PW * 0.5, totalH * 0.5, 0, PW * 0.5, totalH * 0.5, PW * 0.6);
+      const g4 = ctx.createRadialGradient(posterW * 0.5, totalH * 0.5, 0, posterW * 0.5, totalH * 0.5, posterW * 0.6);
       g4.addColorStop(0, 'rgba(196,77,255,0.03)');
       g4.addColorStop(1, 'transparent');
       ctx.fillStyle = g4;
-      ctx.fillRect(0, 0, PW, totalH);
+      ctx.fillRect(0, 0, posterW, totalH);
 
       // Confetti
-      drawConfetti(ctx, PW, totalH, 200);
+      drawConfetti(ctx, posterW, totalH, 200);
 
       // Bokeh circles (visible on light background)
       for (let i = 0; i < 25; i++) {
-        const bx = ((i * 2654435761) >>> 0) % PW;
+        const bx = ((i * 2654435761) >>> 0) % posterW;
         const by = ((i * 2654435761 * 7) >>> 0) % totalH;
         const br = 30 + ((i * 2654435761 * 13) >>> 0) % 60;
         const bAlpha = 0.06 + ((i * 2654435761 * 17) >>> 0) % 20 / 1000;
@@ -549,7 +578,7 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
 
       // Sparkles (subtle for print)
       for (let i = 0; i < 60; i++) {
-        const sx = ((i * 2654435761 * 3) >>> 0) % PW;
+        const sx = ((i * 2654435761 * 3) >>> 0) % posterW;
         const sy = ((i * 2654435761 * 11) >>> 0) % totalH;
         const ss = 4 + ((i * 2654435761 * 19) >>> 0) % 10;
         const so = 0.12 + ((i * 2654435761 * 23) >>> 0) % 15 / 100;
@@ -557,7 +586,7 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       }
 
       // Office items distributed across full height
-      drawOfficeItems(ctx, PW, totalH);
+      drawOfficeItems(ctx, posterW, totalH);
 
       // ─── Header ───
       // Background header band
@@ -565,15 +594,15 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       hdrGrad.addColorStop(0, 'rgba(196,77,255,0.12)');
       hdrGrad.addColorStop(1, 'rgba(196,77,255,0)');
       ctx.fillStyle = hdrGrad;
-      ctx.fillRect(MARGIN, 0, PW - MARGIN * 2, HEADER_H);
+      ctx.fillRect(MARGIN, 0, posterW - MARGIN * 2, HEADER_H);
 
       ctx.strokeStyle = 'rgba(196,77,255,0.4)';
       ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(MARGIN, 22); ctx.lineTo(PW - MARGIN, 22); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(MARGIN, 22); ctx.lineTo(posterW - MARGIN, 22); ctx.stroke();
 
       ctx.strokeStyle = 'rgba(255,107,157,0.2)';
       ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(MARGIN, 34); ctx.lineTo(PW - MARGIN, 34); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(MARGIN, 34); ctx.lineTo(posterW - MARGIN, 34); ctx.stroke();
 
       // Title with multi-layer glow — BIG
       ctx.textAlign = 'center';
@@ -581,21 +610,21 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       const year = new Date().getFullYear();
 
       // Cake icon left of title
-      drawCakeIcon(ctx, PW / 2 - 480, titleY - 45, 1.3, 0.8);
+      drawCakeIcon(ctx, posterW / 2 - 480, titleY - 45, 1.3, 0.8);
 
       // Balloon icon left
-      drawBalloon(ctx, PW / 2 - 380, titleY - 55, 22, '#ea80fc', 0.7);
+      drawBalloon(ctx, posterW / 2 - 380, titleY - 55, 22, '#ea80fc', 0.7);
 
       // Shadow glow layers
       ctx.shadowColor = 'rgba(196,77,255,0.5)';
       ctx.shadowBlur = 60;
       ctx.fillStyle = '#2a1548';
       ctx.font = 'bold 120px "Segoe UI", Arial, sans-serif';
-      ctx.fillText('CUMPLEAÑEROS', PW / 2, titleY);
+      ctx.fillText('CUMPLEAÑEROS', posterW / 2, titleY);
       ctx.shadowBlur = 0;
 
       // Gradient color overlay on text
-      const tg = ctx.createLinearGradient(PW / 2 - 500, titleY - 90, PW / 2 + 500, titleY);
+      const tg = ctx.createLinearGradient(posterW / 2 - 500, titleY - 90, posterW / 2 + 500, titleY);
       tg.addColorStop(0, '#c44dff');
       tg.addColorStop(0.2, '#ff6b9d');
       tg.addColorStop(0.4, '#ffd740');
@@ -603,14 +632,19 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       tg.addColorStop(0.8, '#c44dff');
       tg.addColorStop(1, '#ff6b9d');
       ctx.fillStyle = tg;
-      ctx.fillText('CUMPLEAÑEROS', PW / 2, titleY);
+      ctx.fillText('CUMPLEAÑEROS', posterW / 2, titleY);
 
-      // Year below title — big
+      // Subtitle below title (año, mes o selección)
+      const subtitle = allSelected
+        ? String(year)
+        : activeMonths.length === 1
+          ? `${MONTHS[activeMonths[0]].toUpperCase()} ${year}`
+          : `${activeMonths.map(mi => MONTHS[mi].slice(0, 3).toUpperCase()).join(' · ')} ${year}`;
       ctx.font = 'bold 56px "Segoe UI", Arial, sans-serif';
       ctx.fillStyle = '#c44dff';
       ctx.shadowColor = 'rgba(196,77,255,0.4)';
       ctx.shadowBlur = 20;
-      ctx.fillText(String(year), PW / 2, titleY + 65);
+      ctx.fillText(subtitle, posterW / 2, titleY + 65);
       ctx.shadowBlur = 0;
 
       // Decorative lines flanking the title
@@ -618,32 +652,32 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       ctx.strokeStyle = 'rgba(196,77,255,0.35)';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(PW / 2 - titleW - 120, titleY - 20);
-      ctx.lineTo(PW / 2 - titleW + 40, titleY - 20);
+      ctx.moveTo(posterW / 2 - titleW - 120, titleY - 20);
+      ctx.lineTo(posterW / 2 - titleW + 40, titleY - 20);
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(PW / 2 + titleW - 40, titleY - 20);
-      ctx.lineTo(PW / 2 + titleW + 120, titleY - 20);
+      ctx.moveTo(posterW / 2 + titleW - 40, titleY - 20);
+      ctx.lineTo(posterW / 2 + titleW + 120, titleY - 20);
       ctx.stroke();
 
       // Stars
-      drawStarShape(ctx, PW / 2 - titleW - 140, titleY - 20, 14, '#ffd740', 0.8);
-      drawStarShape(ctx, PW / 2 + titleW + 140, titleY - 20, 14, '#ffd740', 0.8);
-      drawStarShape(ctx, PW / 2 - titleW - 170, titleY - 20, 8, '#ff6b9d', 0.6);
-      drawStarShape(ctx, PW / 2 + titleW + 170, titleY - 20, 8, '#ff6b9d', 0.6);
-      drawStarShape(ctx, PW / 2 - 480, titleY + 20, 10, '#ea80fc', 0.5);
+      drawStarShape(ctx, posterW / 2 - titleW - 140, titleY - 20, 14, '#ffd740', 0.8);
+      drawStarShape(ctx, posterW / 2 + titleW + 140, titleY - 20, 14, '#ffd740', 0.8);
+      drawStarShape(ctx, posterW / 2 - titleW - 170, titleY - 20, 8, '#ff6b9d', 0.6);
+      drawStarShape(ctx, posterW / 2 + titleW + 170, titleY - 20, 8, '#ff6b9d', 0.6);
+      drawStarShape(ctx, posterW / 2 - 480, titleY + 20, 10, '#ea80fc', 0.5);
 
       // Balloon icon right
-      drawBalloon(ctx, PW / 2 + 380, titleY - 55, 22, '#69f0ae', 0.7);
-      drawCakeIcon(ctx, PW / 2 + 430, titleY - 45, 1.3, 0.8);
+      drawBalloon(ctx, posterW / 2 + 380, titleY - 55, 22, '#69f0ae', 0.7);
+      drawCakeIcon(ctx, posterW / 2 + 430, titleY - 45, 1.3, 0.8);
 
       // Bottom header lines
       ctx.strokeStyle = 'rgba(196,77,255,0.2)';
       ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(MARGIN, HEADER_H - 10); ctx.lineTo(PW - MARGIN, HEADER_H - 10); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(MARGIN, HEADER_H - 10); ctx.lineTo(posterW - MARGIN, HEADER_H - 10); ctx.stroke();
       ctx.strokeStyle = 'rgba(196,77,255,0.4)';
       ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(MARGIN, HEADER_H - 1); ctx.lineTo(PW - MARGIN, HEADER_H - 1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(MARGIN, HEADER_H - 1); ctx.lineTo(posterW - MARGIN, HEADER_H - 1); ctx.stroke();
 
       ctx.textAlign = 'left';
 
@@ -673,12 +707,12 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
         const mc = monthColors[mi];
 
         // Month header bar
-        const mGrad = ctx.createLinearGradient(MARGIN, yPos, PW - MARGIN, yPos);
+        const mGrad = ctx.createLinearGradient(MARGIN, yPos, posterW - MARGIN, yPos);
         mGrad.addColorStop(0, `${mc}15`);
         mGrad.addColorStop(0.3, `${mc}0a`);
         mGrad.addColorStop(1, `${mc}03`);
         ctx.fillStyle = mGrad;
-        roundRect(ctx, MARGIN, yPos, CONTENT_W, MONTH_HEADER_H - 10, 12);
+        roundRect(ctx, MARGIN, yPos, posterW - MARGIN * 2, MONTH_HEADER_H - 10, 12);
         ctx.fill();
 
         // Left accent bar
@@ -704,7 +738,7 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
         ctx.fillStyle = `${mc}30`;
         for (let d = 0; d < 4; d++) {
           ctx.beginPath();
-          ctx.arc(PW - MARGIN - 30 - d * 28, yPos + 48, 5, 0, Math.PI * 2);
+          ctx.arc(posterW - MARGIN - 30 - d * 28, yPos + 48, 5, 0, Math.PI * 2);
           ctx.fill();
         }
 
@@ -813,31 +847,45 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
         yPos += rows * (CARD_H + CARD_GAP_Y) + SECTION_GAP;
       }
 
-      // ─── Footer ───
+      // Sin cumpleañeros para la selección: aviso centrado.
+      if (activeMonths.length === 0) {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(42,21,72,0.55)';
+        ctx.font = 'bold 44px "Segoe UI", Arial, sans-serif';
+        ctx.fillText('No hay cumpleañeros para la selección', posterW / 2, HEADER_H + 120);
+        ctx.textAlign = 'left';
+      }
+
+      // ─── Footer (pegado al último contenido) ───
       ctx.strokeStyle = 'rgba(196,77,255,0.15)';
       ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(MARGIN, totalH - FOOTER_H + 15); ctx.lineTo(PW - MARGIN, totalH - FOOTER_H + 15); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(MARGIN, totalH - FOOTER_H); ctx.lineTo(posterW - MARGIN, totalH - FOOTER_H); ctx.stroke();
 
       ctx.textAlign = 'center';
       ctx.fillStyle = 'rgba(42,21,72,0.4)';
       ctx.font = '24px "Segoe UI", Arial, sans-serif';
-      ctx.fillText('SCA — Sistema de Control Administrativo', PW / 2, totalH - 48);
+      ctx.fillText('SCA — Sistema de Control Administrativo', posterW / 2, totalH - FOOTER_H + 42);
       ctx.fillStyle = 'rgba(42,21,72,0.3)';
       ctx.font = '18px "Segoe UI", Arial, sans-serif';
       ctx.fillText(
         `Generado el ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}`,
-        PW / 2, totalH - 18
+        posterW / 2, totalH - FOOTER_H + 72
       );
 
       // Download
       const link = document.createElement('a');
-      link.download = `cumpleanos-${year}-A3.png`;
+      const filePart = allSelected
+        ? `${year}`
+        : activeMonths.length === 1
+          ? `${MONTHS[activeMonths[0]].toLowerCase()}`
+          : `seleccion-${activeMonths.map(mi => MONTHS[mi].slice(0, 3).toLowerCase()).join('-')}`;
+      link.download = `cumpleanos-${filePart}-A3.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     } finally {
       setGenerating(false);
     }
-  }, [empleados]);
+  }, [empleados, selectedMonths]);
 
   return (
     <Button
@@ -851,7 +899,7 @@ export function BirthdayPoster({ empleados }: BirthdayPosterProps) {
       ) : (
         <Download className="mr-1 h-4 w-4" />
       )}
-      Descargar Poster A3
+      Descargar Poster A3{selectedMonths.length === 1 ? ' del Mes' : selectedMonths.length > 1 ? ' (selección)' : ''}
     </Button>
   );
 }
