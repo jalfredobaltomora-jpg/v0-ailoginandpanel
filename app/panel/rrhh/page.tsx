@@ -64,6 +64,8 @@ export default function RRHHPage() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [marcasHoy, setMarcasHoy] = useState<Record<string, any>>({});
   const [birthdaySearch, setBirthdaySearch] = useState('');
+  const [selectedPosterMonths, setSelectedPosterMonths] = useState<number[]>([new Date().getMonth()]);
+  const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
   useEffect(() => {
     const user = getStoredUser();
@@ -585,7 +587,36 @@ export default function RRHHPage() {
                     Todos los Cumpleañeros del Año
                   </CardTitle>
                   <div className="flex flex-wrap items-center gap-3">
-                    <BirthdayPoster empleados={empleados} />
+                    <div className="flex flex-wrap gap-1">
+                      {MONTH_NAMES.map((name, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setSelectedPosterMonths(prev =>
+                            prev.includes(i) ? prev.filter(m => m !== i) : [...prev, i]
+                          )}
+                          className={`px-2 py-0.5 rounded text-xs font-medium transition ${
+                            selectedPosterMonths.includes(i)
+                              ? 'bg-pink-500 text-white'
+                              : 'bg-muted text-muted-foreground hover:bg-pink-500/20'
+                          }`}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setSelectedPosterMonths(prev =>
+                          prev.length === 12 ? [] : Array.from({length:12},(_,i)=>i)
+                        )}
+                        className={`px-2 py-0.5 rounded text-xs font-medium transition ${
+                          selectedPosterMonths.length === 12
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground hover:bg-primary/20'
+                        }`}
+                      >
+                        {selectedPosterMonths.length === 12 ? 'Ninguno' : 'Todos'}
+                      </button>
+                    </div>
+                    <BirthdayPoster empleados={empleados} selectedMonths={selectedPosterMonths} />
                     <div className="relative w-full sm:w-64">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <input

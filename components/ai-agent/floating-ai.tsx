@@ -140,21 +140,18 @@ export function FloatingAI() {
   const inputTextRef = useRef('');
   useEffect(() => { inputTextRef.current = inputText; }, [inputText]);
 
-  // Gestures on the floating JAB button:
-  //  - Press-and-hold (>=350ms) = push-to-talk (opens the mic, release to send).
-  //  - Double click / double tap = open/close the conversation.
-  //  - Single tap = nothing (so it never collides with hold-to-talk).
+  // ─── Gesture state for the floating JAB button ───
+  // Single tap = nothing. Double tap = toggle chat. Hold ≥350ms = PTT.
   const pttHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pttHeldRef = useRef(false);
+  const tapCountRef = useRef(0);
+  const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const downPosRef = useRef<{ x: number; y: number } | null>(null);
   const tapMovedRef = useRef(false);
-  const lastTapRef = useRef(0);
-  const tapResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const clearHoldTimer = () => {
+  const pointerHandledRef = useRef(false);
+  const clearTimers = () => {
     if (pttHoldTimerRef.current) { clearTimeout(pttHoldTimerRef.current); pttHoldTimerRef.current = null; }
-  };
-  const clearTapReset = () => {
-    if (tapResetTimerRef.current) { clearTimeout(tapResetTimerRef.current); tapResetTimerRef.current = null; }
+    if (tapTimerRef.current) { clearTimeout(tapTimerRef.current); tapTimerRef.current = null; }
   };
 
   // ─── Setup ───
@@ -732,8 +729,6 @@ export function FloatingAI() {
                 setStatus('idle');
                 const t = (finalText || inputTextRef.current).trim();
                 if (t) {
-                  // Show the conversation so the user sees the response.
-                  setIsChatOpen(true);
                   processMessage(t);
                 }
               },
@@ -812,7 +807,6 @@ export function FloatingAI() {
         if (blob.size < 400) return;
         const text = await transcribeAudio(blob);
         if (text) {
-          setIsChatOpen(true);
           setInputText(text);
           processMessage(text);
         }
@@ -927,19 +921,23 @@ export function FloatingAI() {
 
   if (pathname === '/') return null;
 
-  // Gestures on the floating JAB button. Pointer events only (no native click):
-  // press-and-hold opens PTT; releasing ends it. A clean short press counts as
-  // a tap and only opens/closes the conversation on a DOUBLE tap/click.
+  // Gestures on the floating JAB button.
+  // Single tap = nothing. Double tap = toggle chat. Hold ≥350ms = PTT.
   const handleButtonPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     unlockSpeech();
-    clearHoldTimer();
+    pointerHandledRef.current = false;
     pttHeldRef.current = false;
     tapMovedRef.current = false;
     downPosRef.current = { x: e.clientX, y: e.clientY };
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+
+    // Start hold-to-talk timer
     pttHoldTimerRef.current = setTimeout(() => {
       pttHoldTimerRef.current = null;
       pttHeldRef.current = true;
+      pointerHandledRef.current = true;
+      tapCountRef.current = 0;
+      if (tapTimerRef.current) { clearTimeout(tapTimerRef.current); tapTimerRef.current = null; }
       startPTT();
     }, 350);
   }, [startPTT, unlockSpeech]);
@@ -951,40 +949,60 @@ export function FloatingAI() {
     if (Math.abs(dx) > 8 || Math.abs(dy) > 8) tapMovedRef.current = true;
   }, []);
 
-  const finishButtonGesture = useCallback((e: React.PointerEvent<HTMLDivElement>, isTap: boolean) => {
+  const handleButtonPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
-    clearHoldTimer();
+    clearTimers();
+
     if (pttHeldRef.current) {
+      // Was holding → stop PTT
       pttHeldRef.current = false;
       downPosRef.current = null;
+      pointerHandledRef.current = true;
       stopPTT();
       return;
     }
+
     downPosRef.current = null;
-    if (!isTap || tapMovedRef.current) return;
-    // Clean short press → detect a double tap/click to toggle the conversation.
-    const now = Date.now();
-    if (now - lastTapRef.current < 350) {
-      clearTapReset();
-      lastTapRef.current = 0;
+
+    // Movement means this was a drag, not a tap
+    if (tapMovedRef.current) {
+      tapCountRef.current = 0;
+      return;
+    }
+
+    // Clean tap detected
+    pointerHandledRef.current = true;
+    tapCountRef.current++;
+
+    if (tapCountRef.current >= 2) {
+      // Double tap → toggle conversation
+      tapCountRef.current = 0;
       setIsChatOpen((open) => !open);
     } else {
-      lastTapRef.current = now;
-      clearTapReset();
-      tapResetTimerRef.current = setTimeout(() => {
-        lastTapRef.current = 0;
-        tapResetTimerRef.current = null;
+      // First tap — start window for second tap
+      tapTimerRef.current = setTimeout(() => {
+        tapCountRef.current = 0;
+        tapTimerRef.current = null;
       }, 350);
     }
   }, [stopPTT]);
 
-  const handleButtonPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    finishButtonGesture(e, true);
-  }, [finishButtonGesture]);
-
   const handleButtonPointerCancel = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    finishButtonGesture(e, false);
-  }, [finishButtonGesture]);
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+    clearTimers();
+    pttHeldRef.current = false;
+    tapCountRef.current = 0;
+    downPosRef.current = null;
+  }, []);
+
+  // Catch any stray click events and suppress them
+  const handleButtonClick = useCallback((e: React.MouseEvent) => {
+    if (pointerHandledRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      pointerHandledRef.current = false;
+    }
+  }, []);
 
   return (
     <>
@@ -1015,6 +1033,7 @@ export function FloatingAI() {
             onPointerMove={handleButtonPointerMove}
             onPointerUp={handleButtonPointerUp}
             onPointerCancel={handleButtonPointerCancel}
+            onClick={handleButtonClick}
             title={lang === 'es' ? 'Doble clic para abrir el chat · Mantén presionado para hablar' : 'Double-click to open chat · Hold to talk'}
           >
             <div className="relative">
