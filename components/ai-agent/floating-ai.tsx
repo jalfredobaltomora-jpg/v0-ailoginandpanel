@@ -54,7 +54,6 @@ const esMonthIndex = (w: string): number | null => {
 function parseClearRange(text: string, now = new Date()): { from?: number; to?: number } {
   const lower = text.toLowerCase();
   const normalized = lower.replace(/[.,;]/g, ' ');
-  const singleDate = normalized.match(/(\d{1,2})\s*[/-]\s*(\d{1,2})(?:\s*[/-]\s*(\d{2,4}))?/);
   const fullDate = (s: string): number | null => {
     const m = s.match(/(\d{1,2})\s*[/-]\s*(\d{1,2})\s*[/-]\s*(\d{4})/);
     if (m) {
@@ -83,11 +82,6 @@ function parseClearRange(text: string, now = new Date()): { from?: number; to?: 
     return null;
   };
 
-  // "toda" or no specific dates → clear everything
-  if (/toda|todo|historial completo|conversaci[oó]n completa|dej[eé]lo vac[ií]o/.test(normalized)) {
-    return {};
-  }
-
   // Date range: "del 5 de enero al 12 de marzo" / "de enero a marzo" / "desde X hasta Y"
   const fromTo = normalized.match(/(?:del|de|desde|entre)\s+([a-z0-9áéíóúñ\s/.-]+?)\s+(?:al|a|hasta|y)\s+([a-z0-9áéíóúñ\s/.-]+?)(?:\s|$)/i);
   if (fromTo) {
@@ -115,6 +109,11 @@ function parseClearRange(text: string, now = new Date()): { from?: number; to?: 
     const d = new Date(now);
     d.setDate(d.getDate() - 1);
     return { from: new Date(d.setHours(0, 0, 0, 0)).getTime() };
+  }
+
+  // "toda" / "todo" without specific dates — clear everything
+  if (/toda|todo|historial completo|conversaci[oó]n completa|dej[eé]lo vac[ií]o/.test(normalized)) {
+    return {};
   }
 
   return {};
