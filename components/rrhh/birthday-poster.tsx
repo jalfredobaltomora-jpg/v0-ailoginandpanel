@@ -648,17 +648,16 @@ export function BirthdayPoster({ empleados, selectedMonths = [] }: BirthdayPoste
       ctx.fillStyle = tg;
       ctx.fillText('CUMPLEAÑEROS', posterW / 2, titleY);
 
-      // Subtitle below title (año, mes o selección)
-      const subtitle = allSelected
-        ? String(year)
-        : activeMonths.length === 1
-          ? `${MONTHS[activeMonths[0]].toUpperCase()} ${year}`
-          : `${activeMonths.map(mi => MONTHS[mi].slice(0, 3).toUpperCase()).join(' · ')} ${year}`;
-      ctx.font = 'bold 56px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#c44dff';
+      // Subtitle below title: mensaje de felicitación (en vez de meses + año)
       ctx.shadowColor = 'rgba(196,77,255,0.4)';
       ctx.shadowBlur = 20;
-      ctx.fillText(subtitle, posterW / 2, titleY + 65);
+      drawFitText(
+        ctx,
+        '¡Feliz cumpleaños a todos! les deseamos en su día',
+        posterW / 2, titleY + 65,
+        posterW - MARGIN * 2 - 60, 56, 24,
+        '#c44dff', 'bold'
+      );
       ctx.shadowBlur = 0;
 
       // Decorative lines flanking the title
