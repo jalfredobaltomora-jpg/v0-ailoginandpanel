@@ -38,6 +38,87 @@ declare global {
 interface Message { role: 'user' | 'assistant'; content: string; timestamp: number; report?: { format: string; filename: string; markdown: string }; }
 
 const LS_MESSAGES = 'jab-messages';
+
+/** Parse a Spanish date range from the command text (e.g. "del 1 de enero al 5 de febrero"). */
+const ES_MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const esMonthIndex = (w: string): number | null => {
+  const i = ES_MONTHS.findIndex((m) => w.toLowerCase().includes(m.slice(0, 4)));
+  return i >= 0 ? i : null;
+};
+
+/**
+ * Extracts { from, to } timestamps (ms) from a Spanish phrase.
+ * Supports: "toda la conversación", "del 5 de enero al 12 de marzo",
+ * "de enero a marzo", "desde ... hasta ...", full dates dd/mm/yyyy.
+ */
+function parseClearRange(text: string, now = new Date()): { from?: number; to?: number } {
+  const lower = text.toLowerCase();
+  const normalized = lower.replace(/[.,;]/g, ' ');
+  const singleDate = normalized.match(/(\d{1,2})\s*[/-]\s*(\d{1,2})(?:\s*[/-]\s*(\d{2,4}))?/);
+  const fullDate = (s: string): number | null => {
+    const m = s.match(/(\d{1,2})\s*[/-]\s*(\d{1,2})\s*[/-]\s*(\d{4})/);
+    if (m) {
+      const d = new Date(+m[3], +m[2] - 1, +m[1]);
+      if (!isNaN(d.getTime())) return d.getTime();
+    }
+    return null;
+  };
+  const parseTextDate = (s: string): number | null => {
+    const m = s.match(/(?:el\s+)?(\d{1,2})\s+de\s+([a-záéíóúñ]+)/i);
+    if (m) {
+      const mi = esMonthIndex(m[2]);
+      if (mi !== null) {
+        const d = new Date(now.getFullYear(), mi, +m[1]);
+        if (!isNaN(d.getTime())) return d.getTime();
+      }
+    }
+    const monthOnly = s.match(/(?:de\s+)?([a-záéíóúñ]+)/i);
+    if (monthOnly) {
+      const mi = esMonthIndex(monthOnly[1]);
+      if (mi !== null) {
+        const d = new Date(now.getFullYear(), mi, 1);
+        if (!isNaN(d.getTime())) return d.getTime();
+      }
+    }
+    return null;
+  };
+
+  // "toda" or no specific dates → clear everything
+  if (/toda|todo|historial completo|conversaci[oó]n completa|dej[eé]lo vac[ií]o/.test(normalized)) {
+    return {};
+  }
+
+  // Date range: "del 5 de enero al 12 de marzo" / "de enero a marzo" / "desde X hasta Y"
+  const fromTo = normalized.match(/(?:del|de|desde|entre)\s+([a-z0-9áéíóúñ\s/.-]+?)\s+(?:al|a|hasta|y)\s+([a-z0-9áéíóúñ\s/.-]+?)(?:\s|$)/i);
+  if (fromTo) {
+    const a = fullDate(fromTo[1].trim()) ?? parseTextDate(fromTo[1].trim());
+    const b = fullDate(fromTo[2].trim()) ?? parseTextDate(fromTo[2].trim());
+    if (a && b) {
+      const from = Math.min(a, b);
+      const to = Math.max(a, b);
+      return { from: new Date(new Date(from).setHours(0, 0, 0, 0)).getTime(), to: new Date(new Date(to).setHours(23, 59, 59, 999)).getTime() };
+    }
+  }
+
+  // Single date: "del 5 de enero" / "el 5 de enero" / "de enero"
+  const single = normalized.match(/(?:del|el|de|desde)\s+([a-z0-9áéíóúñ\s/.-]+?)(?:\s|$)/i);
+  if (single) {
+    const ts = fullDate(single[1].trim()) ?? parseTextDate(single[1].trim());
+    if (ts) {
+      return { from: new Date(new Date(ts).setHours(0, 0, 0, 0)).getTime() };
+    }
+  }
+
+  // Fallback: "hoy" / "ayer"
+  if (/\bhoy\b/.test(normalized)) return { from: new Date(now.setHours(0, 0, 0, 0)).getTime() };
+  if (/\bayer\b/.test(normalized)) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 1);
+    return { from: new Date(d.setHours(0, 0, 0, 0)).getTime() };
+  }
+
+  return {};
+}
 const LS_SETTINGS = 'jab-settings';
 
 // Auto-responses
@@ -438,6 +519,38 @@ export function FloatingAI() {
       setIsLoading(true);
       setStatus('processing');
       setExpression('scanning');
+
+      // Clear conversation command: "borra la conversación", "borra todo",
+      // "borra la conversación del 5 de enero al 12 de marzo", etc.
+      if (/(borra|limpia|elimina|vac[ií]a|clear|delete|erase).*(conversaci[oó]n|historial|mensajes|chat|todo|todito|mensajer[ií]a)/i.test(trimmed) ||
+          /(borra|limpia|elimina|vac[ií]a|clear|delete|erase)\s+(toda\s+la\s+conversaci[oó]n|todo|todo\s+el\s+historial|todos\s+los\s+mensajes)/i.test(trimmed)) {
+        const range = parseClearRange(trimmed);
+        if (range.from === undefined && range.to === undefined) {
+          setMessages([]);
+          const confirm = lang === 'es'
+            ? '✅ Listo. Borré toda la conversación. ¿En qué más te ayudo?'
+            : '✅ Done. I cleared the whole conversation. How can I help next?';
+          addMessage('assistant', confirm);
+          setExpression('happy');
+          speak(confirm);
+        } else {
+          const before = messages.length;
+          const fromTs = range.from ?? 0;
+          const toTs = range.to ?? Number.MAX_SAFE_INTEGER;
+          const kept = messages.filter((m) => m.timestamp < fromTs || m.timestamp > toTs);
+          const removed = before - kept.length;
+          setMessages(kept);
+          const confirm = lang === 'es'
+            ? `✅ Listo. Borré ${removed} mensaje${removed === 1 ? '' : 's'} en ese rango de fechas.`
+            : `✅ Done. I removed ${removed} message${removed === 1 ? '' : 's'} in that date range.`;
+          addMessage('assistant', confirm);
+          setExpression('happy');
+          speak(confirm);
+        }
+        setIsLoading(false);
+        processingRef.current = false;
+        return;
+      }
 
       // Voice activation toggle commands
       const cmd = trimmed.toLowerCase().replace(/\bjabe?\b/gi, '').trim();
