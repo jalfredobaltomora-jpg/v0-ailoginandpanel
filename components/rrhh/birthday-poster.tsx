@@ -31,8 +31,31 @@ function getInitials(emp: Empleado): string {
   return `${(emp.nombres?.[0] || '')}${(emp.apellidos?.[0] || '')}`.toUpperCase();
 }
 
-function truncate(text: string, max: number): string {
-  return text.length > max ? text.slice(0, max - 1) + '…' : text;
+/** Dibuja texto reduciendo el tamaño de fuente hasta que quepa en maxWidth. */
+function drawFitText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number, y: number,
+  maxWidth: number,
+  startSize: number,
+  minSize: number,
+  color: string,
+  weight: 'bold' | 'normal',
+) {
+  let size = startSize;
+  ctx.font = `${weight} ${size}px "Segoe UI", Arial, sans-serif`;
+  while (ctx.measureText(text).width > maxWidth && size > minSize) {
+    size -= 1;
+    ctx.font = `${weight} ${size}px "Segoe UI", Arial, sans-serif`;
+  }
+  ctx.fillStyle = color;
+  if (ctx.measureText(text).width > maxWidth) {
+    let t = text;
+    while (t.length > 1 && ctx.measureText(t + '…').width > maxWidth) t = t.slice(0, -1);
+    ctx.fillText(t + '…', x, y);
+  } else {
+    ctx.fillText(text, x, y);
+  }
 }
 
 function isBirthdayToday(fechaNac: string): boolean {
@@ -460,7 +483,7 @@ export function BirthdayPoster({ empleados, selectedMonths = [] }: BirthdayPoste
       const COLS = 6;
       const COL_GAP = 18;
       const CARD_W = 700;
-      const CARD_H = 165;
+      const CARD_H = 200;
       const CARD_GAP_Y = 12;
       const MONTH_HEADER_H = 95;
       const SECTION_GAP = 24;
@@ -495,12 +518,17 @@ export function BirthdayPoster({ empleados, selectedMonths = [] }: BirthdayPoste
 
       // Alto: header + cada mes con su contenido + footer pegado al ultimo
       let contentBottom = HEADER_H;
-      activeMonths.forEach((mi, idx) => {
-        const rows = Math.ceil(monthGroups[mi].length / COLS);
-        contentBottom += MONTH_HEADER_H + rows * (CARD_H + CARD_GAP_Y);
-        if (idx < activeMonths.length - 1) contentBottom += SECTION_GAP;
-      });
-      if (activeMonths.length === 0) contentBottom += 200;
+      if (allSelected) {
+        // Modo "Todos": un solo bloque de felicitación central (sin nombres).
+        contentBottom += 360;
+      } else {
+        activeMonths.forEach((mi, idx) => {
+          const rows = Math.ceil(monthGroups[mi].length / COLS);
+          contentBottom += MONTH_HEADER_H + rows * (CARD_H + CARD_GAP_Y);
+          if (idx < activeMonths.length - 1) contentBottom += SECTION_GAP;
+        });
+        if (activeMonths.length === 0) contentBottom += 200;
+      }
       const totalH = contentBottom + FOOTER_GAP + FOOTER_H;
 
       const canvas = document.createElement('canvas');
@@ -674,9 +702,40 @@ export function BirthdayPoster({ empleados, selectedMonths = [] }: BirthdayPoste
       const monthColors = [
         '#e91e63', '#9c27b0', '#4caf50', '#ff9800',
         '#00bcd4', '#e040fb', '#ff5722', '#2979ff',
-        '#ffc107', '#00e5ff', '#7c4dff', '#f44336',
+        '#ffc107', '#0288d1', '#7c4dff', '#f44336',
       ];
 
+      if (allSelected) {
+        // Modo "Todos": un solo bloque de felicitación central (sin nombres).
+        const cx = posterW / 2;
+        const cy = HEADER_H + 40;
+
+        // Círculo decorativo suave
+        ctx.fillStyle = 'rgba(196,77,255,0.07)';
+        ctx.beginPath();
+        ctx.arc(cx, cy + 40, 185, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(196,77,255,0.12)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy + 40, 185, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 62px "Segoe UI", Arial, sans-serif';
+        drawFitText(ctx, '¡Feliz cumpleaños a todos!', cx, cy + 60, posterW - MARGIN * 2 - 60, 62, 30, '#5b2a8f', 'bold');
+
+        ctx.font = 'bold 44px "Segoe UI", Arial, sans-serif';
+        drawFitText(ctx, 'les deseamos en su día', cx, cy + 135, posterW - MARGIN * 2 - 60, 44, 24, '#7c4dff', 'bold');
+
+        ctx.font = 'bold 30px "Segoe UI", Arial, sans-serif';
+        drawFitText(ctx, 'Con cariño para todos los cumpleañeros del año', cx, cy + 215, posterW - MARGIN * 2 - 60, 30, 18, 'rgba(42,21,72,0.6)', 'bold');
+
+        ctx.font = '24px "Segoe UI", Arial, sans-serif';
+        drawFitText(ctx, `¡Un ${new Date().getFullYear()} lleno de alegrías!`, cx, cy + 275, posterW - MARGIN * 2 - 60, 24, 16, 'rgba(42,21,72,0.45)', 'normal');
+
+        ctx.textAlign = 'left';
+      } else {
       for (let mi = 0; mi < 12; mi++) {
         const group = monthGroups[mi];
         if (group.length === 0) continue;
@@ -800,11 +859,10 @@ export function BirthdayPoster({ empleados, selectedMonths = [] }: BirthdayPoste
           const textX = x + 155;
           ctx.textAlign = 'left';
 
-          // Name
-          ctx.fillStyle = '#1a1a2e';
-          ctx.font = 'bold 24px "Segoe UI", Arial, sans-serif';
-          ctx.fillText(truncate(emp.nombres || '', 18), textX, y + 58);
-          ctx.fillText(truncate(emp.apellidos || '', 18), textX, y + 88);
+          // Name (auto-ajustado para que quepa completo)
+          ctx.textAlign = 'left';
+          drawFitText(ctx, emp.nombres || '', textX, y + 58, CARD_W - 175, 24, 13, '#1a1a2e', 'bold');
+          drawFitText(ctx, emp.apellidos || '', textX, y + 88, CARD_W - 175, 24, 13, '#1a1a2e', 'bold');
 
           // Date
           const bdate = parseDateLocal(emp.fechaNac);
@@ -832,9 +890,10 @@ export function BirthdayPoster({ empleados, selectedMonths = [] }: BirthdayPoste
         const rows = Math.ceil(group.length / COLS);
         yPos += rows * (CARD_H + CARD_GAP_Y) + SECTION_GAP;
       }
+      }
 
       // Sin cumpleañeros para la selección: aviso centrado.
-      if (activeMonths.length === 0) {
+      if (activeMonths.length === 0 && !allSelected) {
         ctx.textAlign = 'center';
         ctx.fillStyle = 'rgba(42,21,72,0.55)';
         ctx.font = 'bold 44px "Segoe UI", Arial, sans-serif';
