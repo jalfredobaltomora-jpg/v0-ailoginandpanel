@@ -91,37 +91,18 @@ export function EVARobotComponent(props: EVADesignProps) {
       ctx.lineWidth = 0.6;
       ctx.stroke();
 
-      // ─── Barrido de radar (línea rotatoria pronunciada + arco de estela) ───
-      const radarA = time * 0.9 * activity;
-      const wakeLen = Math.PI * 0.4;
-      ctx.beginPath();
-      ctx.arc(cx, cy, outerR + 5, radarA, radarA + wakeLen);
-      ctx.strokeStyle = dim(0.5);
-      ctx.lineWidth = 2;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-      ctx.lineCap = 'butt';
-      // Línea radial de barrido
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.lineTo(cx + Math.cos(radarA) * outerR * 0.95, cy + Math.sin(radarA) * outerR * 0.95);
-      ctx.strokeStyle = dim(0.7);
-      ctx.lineWidth = 1.4;
-      ctx.stroke();
-
-      // ─── Ticks radiales alrededor del visor (pronunciados) ───
-      for (let i = 0; i < 24; i++) {
-        const a = (i / 24) * Math.PI * 2 + time * 0.05;
-        const major = i % 3 === 0;
-        const inner = outerR + 2;
-        const outerT = outerR + 2 + (major ? 8 : 4.5);
-        ctx.beginPath();
-        ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
-        ctx.lineTo(cx + Math.cos(a) * outerT, cy + Math.sin(a) * outerT);
-        ctx.strokeStyle = dim(major ? 0.85 : 0.3);
-        ctx.lineWidth = major ? 2 : 1;
-        ctx.stroke();
-      }
+      // ─── Anillos concéntricos finos (arc reactor Iron Man, sin barrer) ───
+      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = dim(0.35);
+      ctx.beginPath(); ctx.arc(cx, cy, outerR * 0.05, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, outerR * 0.1, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, outerR * 0.16, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, outerR * 0.24, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, outerR * 0.34, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, outerR * 0.46, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, outerR * 0.6, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, outerR * 0.76, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, outerR * 0.9, 0, Math.PI * 2); ctx.stroke();
 
       // ─── Anillo segmentado rotatorio interno ───
       const segR = R * 0.82;
