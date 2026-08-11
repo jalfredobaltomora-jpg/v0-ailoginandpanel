@@ -22,8 +22,22 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
   const [suggestions, setSuggestions] = useState<Empleado[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedEmp, setSelectedEmp] = useState<Empleado | null>(null);
+  const [badgeColor, setBadgeColor] = useState('#ff6b6b');
   const badgeRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+
+  const colorPalette = [
+    { name: 'Coral', value: '#ff6b6b' },
+    { name: 'Azul', value: '#0288d1' },
+    { name: 'Verde', value: '#2e7d32' },
+    { name: 'Morado', value: '#7b1fa2' },
+    { name: 'Naranja', value: '#e65100' },
+    { name: 'Negro', value: '#212121' },
+    { name: 'Teal', value: '#00695c' },
+    { name: 'Rosa', value: '#c2185b' },
+    { name: 'Indigo', value: '#283593' },
+    { name: 'Lima', value: '#9e9d24' },
+  ];
 
   // Cargar empleados una sola vez
   useEffect(() => {
@@ -41,12 +55,27 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Generar QR: contenido = primer nombre + primer apellido
+  // Generar QR: contenido = 1er nombre + 1er apellido.
+  // Si hay otro empleado con el mismo 1er nombre, usar 1er nombre + 2do nombre + apellido.
+  const getQRContent = useCallback((emp: Empleado): string => {
+    const primerNombre = emp.nombres?.split(' ')[0] || '';
+    const segundoNombre = emp.nombres?.split(' ')[1] || '';
+    const primerApellido = emp.apellidos?.split(' ')[0] || '';
+    // Verificar si hay duplicado del primer nombre
+    const hayDuplicado = empleados.some(e =>
+      e.code !== emp.code &&
+      (e.nombres?.split(' ')[0] || '').toLowerCase() === primerNombre.toLowerCase()
+    );
+    if (hayDuplicado && segundoNombre) {
+      return `${primerNombre} ${segundoNombre} ${primerApellido}`.trim();
+    }
+    return `${primerNombre} ${primerApellido}`.trim();
+  }, [empleados]);
+
+  // Generar QR cuando se selecciona empleado
   useEffect(() => {
     if (selectedEmp) {
-      const primerNombre = selectedEmp.nombres?.split(' ')[0] || '';
-      const primerApellido = selectedEmp.apellidos?.split(' ')[0] || '';
-      const contenido = `${primerNombre} ${primerApellido}`.trim();
+      const contenido = getQRContent(selectedEmp);
       if (contenido) {
         try {
           setQrDataUrl(generateQRDataURL(contenido, 200));
@@ -56,7 +85,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
     } else if (!initialName && !initialCode) {
       setGenerated(false);
     }
-  }, [selectedEmp, initialName, initialCode]);
+  }, [selectedEmp, initialName, initialCode, getQRContent]);
 
   // Si viene con datos iniciales, generar QR directo
   useEffect(() => {
@@ -108,8 +137,8 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
     if (!ctx) return;
     ctx.scale(2, 2);
 
-    // Fondo coral con borde negro
-    ctx.fillStyle = '#ff6b6b';
+    // Fondo con color seleccionado + borde negro
+    ctx.fillStyle = badgeColor;
     ctx.beginPath();
     ctx.roundRect(0, 0, W, H, 28);
     ctx.fill();
@@ -159,10 +188,10 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
       ctx.fill();
       ctx.drawImage(qrImg, qrX + 10, qrY + 10, qrSize, qrSize);
 
-      // Circulo rojo (botón inicio)
+      // Circulo (botón inicio) con color del gafete
       ctx.beginPath();
       ctx.arc(W / 2, H - 33, 18, 0, Math.PI * 2);
-      ctx.fillStyle = '#ff4444';
+      ctx.fillStyle = badgeColor;
       ctx.fill();
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 4;
@@ -188,11 +217,11 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #fff; font-family: sans-serif; }
-        .badge { width: 280px; border-radius: 28px; border: 5px solid #000; background: #ff6b6b; padding: 24px 16px 20px; text-align: center; }
+        .badge { width: 280px; border-radius: 28px; border: 5px solid #000; background: ${badgeColor}; padding: 24px 16px 20px; text-align: center; }
         .badge-name { color: #fff; font-size: 20px; font-weight: 700; margin-bottom: 16px; word-break: break-word; }
         .qr-box { background: #fff; border-radius: 12px; padding: 10px; display: inline-block; }
         .qr-box img { width: 160px; height: 160px; display: block; }
-        .home-btn { width: 36px; height: 36px; border-radius: 50%; background: #ff4444; border: 4px solid #fff; margin: 18px auto 0; }
+        .home-btn { width: 36px; height: 36px; border-radius: 50%; background: ${badgeColor}; border: 4px solid #fff; margin: 18px auto 0; }
       </style></head><body>
       <div class="badge">
         <div class="badge-name">${nombreMostrar}</div>
@@ -206,7 +235,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
   };
 
   const qrLabel = selectedEmp
-    ? `${selectedEmp.nombres?.split(' ')[0] || ''} ${selectedEmp.apellidos?.split(' ')[0] || ''}`.trim()
+    ? getQRContent(selectedEmp)
     : (initialName || search || '');
 
   return (
@@ -270,17 +299,33 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
             />
           </div>
 
+          {/* Paleta de colores del gafete */}
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1 block">Color del gafete</label>
+            <div className="flex flex-wrap gap-2">
+              {colorPalette.map((c) => (
+                <button
+                  key={c.value}
+                  onClick={() => setBadgeColor(c.value)}
+                  title={c.name}
+                  className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${badgeColor === c.value ? 'border-white ring-2 ring-primary scale-110' : 'border-black/20'}`}
+                  style={{ backgroundColor: c.value }}
+                />
+              ))}
+            </div>
+          </div>
+
           {/* Preview del gafete */}
           {generated && qrDataUrl ? (
             <div className="flex justify-center pt-2">
-              <div ref={badgeRef} className="w-[280px] rounded-[28px] border-[5px] border-black bg-[#ff6b6b] px-4 pt-6 pb-5 text-center shadow-xl">
+              <div ref={badgeRef} className="w-[280px] rounded-[28px] border-[5px] border-black px-4 pt-6 pb-5 text-center shadow-xl" style={{ backgroundColor: badgeColor }}>
                 <p className="text-white text-lg font-bold mb-4 break-words leading-tight uppercase">
                   {qrLabel || 'NOMBRE'}
                 </p>
                 <div className="bg-white rounded-xl p-2.5 inline-block">
                   <img src={qrDataUrl} alt="Codigo QR" className="w-40 h-40 block" />
                 </div>
-                <div className="w-9 h-9 rounded-full bg-[#ff4444] border-4 border-white mx-auto mt-4" />
+                <div className="w-9 h-9 rounded-full border-4 border-white mx-auto mt-4" style={{ backgroundColor: badgeColor }} />
               </div>
             </div>
           ) : (
