@@ -23,6 +23,7 @@ import { useWakeWord } from '@/lib/use-wake-word';
 import { speakText } from '@/lib/tts';
 import { isNativeApp } from '@/lib/native-speech';
 import { runAgent } from '@/lib/jab-agent';
+import { keyTokens, detectLang, fuzzyMatch, normalizeText } from '@/lib/nlp';
 import { exportReport } from '@/lib/report-export';
 import type { JABStatus } from '@/lib/voice-types';
 import { getEmpleadoByCodigo, getUserSchedule, saveUserSchedule, type UserSchedule, type Empleado } from '@/lib/firebase';
@@ -743,7 +744,9 @@ export function FloatingAI() {
         }
       } catch (e) { console.warn('JAB: JARVIS command error', e); }
 
-      // Navigate immediately if user asked to go somewhere
+      // ─── Capa NLP: normaliza el texto y detecta la intención canónica ───
+      const nlpLang = detectLang(trimmed);
+      const tokens = keyTokens(trimmed, nlpLang);
       const intent = detectIntent(trimmed, lang);
       const navRoute = intent.action === 'navigate' ? intent.params?.route : null;
       if (navRoute) {
@@ -765,12 +768,17 @@ export function FloatingAI() {
       }
 
       // AI Agent (function calling / tools: navegarA, analizarDatosVista, generarReporte, ejecutarComando)
-      console.log('JAB: calling runAgent');
+      console.log('JAB: calling runAgent', { tokens, intent: intent.action });
       try {
         setStatus('processing');
         const history = messages.slice(-4).map(m => ({ role: m.role, content: m.content }));
+        // Prompt enriquecido: se le indica a JAB la intención canónica detectada
+        // localmente para que responda con más fidelidad a lo que se pregunta.
+        const nlpHint = tokens.length
+          ? `\n\n[Análisis local NLP del usuario: tema(s) → ${tokens.join(', ')}]`
+          : '';
         const agentPromise = runAgent({
-          message: trimmed,
+          message: trimmed + nlpHint,
           lang,
           userName,
           history,
