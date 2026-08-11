@@ -17,7 +17,7 @@ import { getStoredUser } from '@/lib/auth-store';
 import { useLang } from '@/lib/lang-context';
 import { EVARobotComponent, type EVAExpression } from './eva-design';
 import { executeJARVISCommand } from '@/lib/jarvis-commands';
-import { detectIntent, formatClockSpanish, formatClockEnglish, jabIdentityResponse } from './system-knowledge';
+import { detectIntent, formatClockSpanish, formatClockEnglish, jabIdentityResponse, PAGES } from './system-knowledge';
 import { transcribeAudio } from '@/lib/transcribe-client';
 import { useWakeWord } from '@/lib/use-wake-word';
 import { speakText } from '@/lib/tts';
@@ -212,6 +212,10 @@ export function FloatingAI() {
   const [currentUser, setCurrentUser] = useState<UsuarioIT | null>(null);
   const [empleado, setEmpleado] = useState<Empleado | null>(null);
   const [pendientes, setPendientes] = useState<string[]>([]);
+  const [loginGreeting, setLoginGreeting] = useState<string | null>(null);
+  const loginGreetedRef = useRef(false);
+  const lastEmployeeRef = useRef<Empleado | null>(null);
+  const lastEntityLabelRef = useRef<string>('');
   const [schedule, setSchedule] = useState<UserSchedule | null | undefined>(undefined);
   const [dayEndInfo, setDayEndInfo] = useState<{ base: string; label: string; offsetMin: number } | null>(null);
   const [greetComplete, setGreetComplete] = useState(false);
@@ -257,6 +261,21 @@ export function FloatingAI() {
           setDayEndInfo(emp ? getDayEndAdjusted(emp) : { base: getDayEndTime(), label: `Salida ${getDayEndTime()}`, offsetMin: 10 });
           const name = emp?.nombres?.split(' ')[0] || 'User';
           setUserName(name);
+          // JAB saluda una vez al loguearse (hablado, sin abrir el chat).
+          if (!loginGreetedRef.current) {
+            loginGreetedRef.current = true;
+            const loginNow = new Date();
+            const loginHours = loginNow.getHours();
+            const timePart = lang === 'es' ? formatClockSpanish(loginNow) : formatClockEnglish(loginNow);
+            const greeting = lang === 'es'
+              ? `${loginHours >= 6 && loginHours < 12 ? 'Buenos días' : loginHours >= 12 && loginHours < 18 ? 'Buenas tardes' : 'Buenas noches'} ${name}! Soy JAB, tu asistente. ${timePart}. ¿En qué te ayudo?`
+              : `${loginHours >= 6 && loginHours < 12 ? 'Good morning' : loginHours >= 12 && loginHours < 18 ? 'Good afternoon' : 'Good evening'} ${name}! I am JAB, your assistant. ${timePart}. How can I help you?`;
+            setLoginGreeting(greeting);
+            setTimeout(() => {
+              speak(greeting);
+              setTimeout(() => setLoginGreeting(null), 9000);
+            }, 1200);
+          }
           // JAB hidrata el perfil de aprendizaje desde la nube para conocer al
           // usuario aunque se haya logueado antes en otro dispositivo.
           hydrateProfileFromCloud(user.codigo, name).catch(() => {});
@@ -776,9 +795,6 @@ export function FloatingAI() {
       const tokens = keyTokens(trimmed, nlpLang);
       const intent = detectIntent(trimmed, lang);
       const navRoute = intent.action === 'navigate' ? intent.params?.route : null;
-      if (navRoute) {
-        setTimeout(() => router.push(navRoute), 500);
-      }
 
       // Hora: responder SIEMPRE en palabras completas (ej: "Son las doce del
       // medio día con treinta y ocho minutos"), sin omitir palabras.
@@ -842,7 +858,51 @@ export function FloatingAI() {
         return;
       }
 
-      // ─── Información de otro empleado (solo admin/it-manager) ───
+      // ─── Memoria: seguimiento sobre el empleado consultado antes ───
+      // Si el usuario pregunta "y él?", "dime más de ese empleado", "qué cargo
+      // tiene", "cuál es su código", etc. sin repetir el nombre, resolvemos con
+      // la última persona que se consultó en esta conversación.
+      const followUp =
+        /^(y\s+)?(el|ella|ese|esa|este|esta|aqu[ée]l|aquella|ese empleado|esa persona|ese se[nñ]or|esa se[nñ]ora|el empleado|la empleada|dime m[aá]s|cu[ée]ntame m[aá]s|qu[eé] m[aá]s)\b|^d[íi]me m[aá]s de (el|ella|ese|esa)\b|^qu[eé] (cargo|area|área|area|edad|codigo|c[oó]digo|telefono|tel[eé]fono|correo|salario|estado) tiene|^cu[aá]l es su (cargo|area|área|codigo|c[oó]digo|telefono|tel[eé]fono)\b|^d[íi]me (su|el|la|los|las) (cargo|codigo|c[oó]digo|area|área|telefono|tel[eé]fono|datos|info)\b|^su (cargo|codigo|c[oó]digo)\b|^hablame de (el|ella|ese|esa|ellos?)\b|^y dime de (el|ella)\b/i.test(trimmed)
+        && /(empleado|persona|el\b|ella\b|ese\b|esa\b|su|cargo|codigo|c[oó]digo|area|área|datos|info|telefono|tel[eé]fono|m[aá]s|estado|edad)/i.test(trimmed);
+      if (followUp && lastEmployeeRef.current) {
+        const last = lastEmployeeRef.current;
+        const lastLabel = lastEntityLabelRef.current || `${last.nombres || ''} ${last.apellidos || ''}`.trim() || 'ese empleado';
+        const isAdmin = currentUser?.rol === 'admin';
+        const resp = lang === 'es'
+          ? `Hablamos de ${lastLabel} (${last.code || 'sin código'}):\n` +
+            `• Cargo: ${last.cargo || 'N/D'}\n` +
+            `• Área: ${last.area || 'N/D'}\n` +
+            `• Fecha de ingreso: ${last.fechaIng || 'N/D'}\n` +
+            `• Estado: ${last.activo === false ? 'Inactivo' : 'Activo'}\n` +
+            (isAdmin
+              ? `• Cédula: ${last.cedula || 'N/D'}\n` +
+                `• Nacionalidad: ${last.nacionalidad || 'N/D'}\n` +
+                `• Estado civil: ${last.estadoCivil || 'N/D'}\n` +
+                (last.hijos != null ? `• Hijos: ${last.hijos}\n` : '') +
+                (last.embarazada ? '• Embarazada\n' : '')
+              : '')
+          : `We were talking about ${lastLabel} (${last.code || 'no code'}):\n` +
+            `• Position: ${last.cargo || 'N/A'}\n` +
+            `• Area: ${last.area || 'N/A'}\n` +
+            `• Hire date: ${last.fechaIng || 'N/A'}\n` +
+            `• Status: ${last.activo === false ? 'Inactive' : 'Active'}\n` +
+            (isAdmin
+              ? `• ID: ${last.cedula || 'N/A'}\n` +
+                `• Nationality: ${last.nacionalidad || 'N/A'}\n` +
+                `• Marital status: ${last.estadoCivil || 'N/A'}\n` +
+                (last.hijos != null ? `• Children: ${last.hijos}\n` : '') +
+                (last.embarazada ? '• Pregnant\n' : '')
+              : '');
+        addMessage('assistant', resp.trim());
+        setExpression('happy');
+        speak(resp.trim());
+        setIsLoading(false);
+        processingRef.current = false;
+        return;
+      }
+
+      // ─── Info de otro empleado (solo admin/it-manager) ───
       if (resuelveEmpleado) {
         const rolUser = currentUser?.rol || '';
         const esRhhManager = empleado && /rrhh|recurso|humanos|manager|jefe|gerente|director/i.test(`${empleado.cargo || ''} ${empleado.area || ''}`);
@@ -898,6 +958,10 @@ export function FloatingAI() {
           return;
         }
 
+        // Recordar de quién hablamos para preguntas de seguimiento.
+        lastEmployeeRef.current = found;
+        lastEntityLabelRef.current = `${found.nombres || ''} ${found.apellidos || ''}`.trim() || found.code || 'ese empleado';
+
         const isAdmin = currentUser?.rol === 'admin';
         const resp = lang === 'es'
           ? `Aquí tienes los datos de ${found.nombres || ''} ${found.apellidos || ''} (${found.code || 'sin código'}):\n` +
@@ -931,6 +995,79 @@ export function FloatingAI() {
         setIsLoading(false);
         processingRef.current = false;
         return;
+      }
+
+      // ─── Navegación entre páginas ───
+      // Si el usuario pide ir a un módulo de forma explícita ("ve a RRHH",
+      // "abre la agenda", "llévame a IT Manager", etc.), navegar y detener.
+      const isNavRequest = /(?:^|\s)(ve\s+a|ve\s+al|ll[eé]vame|ll[eé]vame\s+a|v[aá]monos\s+a|abre|abr[ie]me|entra\s+a|entro\s+a|ir\s+a|ir\s+al|vamos\s+a|muestra|dir[ií]geme\s+a|nav[eé]game|ponme\s+en|ll[eé]vame\s+al|acced[aá]?[r]?|quiero\s+ir|d[ií]me\s+la\s+ru|navega|navegar\s+a|abr[ie]me)/i.test(trimmed)
+        || /^(ve\s+al?|abre|ll[eé]vame|muestra|entra|vamos)\b/i.test(trimmed);
+      const navPage = isNavRequest
+        ? PAGES.find(p =>
+            trimmed.toLowerCase().includes(p.label.es.toLowerCase()) ||
+            trimmed.toLowerCase().includes(p.label.en.toLowerCase()) ||
+            (p.route === '/panel/rrhh' && /\b(rrhh|recursos humanos|empleados|personal|catalogo)\b/i.test(trimmed)) ||
+            (p.route === '/panel/agenda' && /\b(agenda|notas|nota)\b/i.test(trimmed)) ||
+            (p.route === '/panel/qa-reports' && /\b(qa|quality|calidad|reportes|kpi|dashboard)\b/i.test(trimmed)) ||
+            (p.route === '/panel/it-manager' && /\b(it manager|it\b|soporte|support|tecnico)\b/i.test(trimmed)) ||
+            (p.route === '/panel/it-manager/usuarios' && /\b(usuarios|users|cuentas)\b/i.test(trimmed)) ||
+            (p.route === '/panel/it-manager/ide' && /\b(ide|editor|codigo)/i.test(trimmed)) ||
+            (p.route === '/panel/welcome' && /\b(bienvenida|welcome)/i.test(trimmed)) ||
+            (p.route === '/panel' && /\b(panel principal|inicio|main panel|home|principal)\b/i.test(trimmed))
+          )
+        : navRoute ? PAGES.find(p => p.route === navRoute) : undefined;
+
+      // Detectar vista interna de RRHH (cumpleaneros, reloj, permisos, etc.)
+      const internalView: string | null =
+        /\bcumplea[nñ]er/.test(trimmed) ? 'cumpleaneros' :
+        /\b(cat[aá]logo|lista de empleados|directorio)/.test(trimmed) ? 'catalogo' :
+        /\b(reloj|checador|entrada y salida|marcar|marcaci)/.test(trimmed) ? 'reloj' :
+        /\bpermisos?\b/.test(trimmed) && !/permiso de/i.test(trimmed) ? 'permisos' :
+        /\basistencia\b/.test(trimmed) ? 'asistencia' :
+        null;
+
+      try {
+        if (navPage && pathname !== navPage.route) {
+          const navMsg = lang === 'es'
+            ? `Te llevo a ${navPage.label.es}.`
+            : `Taking you to ${navPage.label.en}.`;
+          addMessage('assistant', navMsg);
+          setExpression('happy');
+          speak(navMsg);
+          router.push(navPage.route);
+          // Tras navegar a RRHH, si se pidio una vista interna, lanzar evento.
+          if (internalView && navPage.route === '/panel/rrhh') {
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('jab-rrhh-view', { detail: internalView }));
+            }, 600);
+          }
+          setIsLoading(false);
+          processingRef.current = false;
+          return;
+        }
+
+        // Ya estamos en RRHH y se pidio una vista interna directamente
+        if (internalView && pathname === '/panel/rrhh') {
+          const viewLabels: Record<string, string> = {
+            cumpleaneros: lang === 'es' ? 'Cumpleañeros' : 'Birthdays',
+            catalogo: lang === 'es' ? 'Catálogo' : 'Catalog',
+            reloj: lang === 'es' ? 'Reloj E/S' : 'Clock In/Out',
+            permisos: lang === 'es' ? 'Permisos' : 'Permissions',
+            asistencia: lang === 'es' ? 'Asistencia' : 'Attendance',
+          };
+          const navMsg = lang === 'es'
+            ? `Te muestro ${viewLabels[internalView]}.`
+            : `Showing you ${viewLabels[internalView]}.`;
+          addMessage('assistant', navMsg);
+          setExpression('happy');
+          speak(navMsg);
+          window.dispatchEvent(new CustomEvent('jab-rrhh-view', { detail: internalView }));
+          setIsLoading(false);
+          processingRef.current = false;
+          return;
+        }
+      } catch (navErr) {
+        console.warn('JAB: nav error', navErr);
       }
 
       // AI Agent (function calling / tools: navegarA, analizarDatosVista, generarReporte, ejecutarComando)
@@ -969,7 +1106,7 @@ export function FloatingAI() {
             onToolStart: () => { setStatus('executing'); setExpression('scanning'); },
           },
         });
-        const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('AI timeout')), 25000));
+        const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('AI timeout')), 45000));
         const agentResult = await Promise.race([agentPromise, timeoutPromise]);
         console.log('JAB: agent result', agentResult?.content?.slice(0, 80), agentResult?.toolCalls);
 
@@ -991,7 +1128,11 @@ export function FloatingAI() {
         }
       } catch (error) {
         console.error('JAB: agent error', error);
-        const errMsg = lang === 'es' ? 'Disculpa, ocurrió un error.' : 'Sorry, an error occurred.';
+        // TEMP DIAG: show real error detail
+        const errDetail = error instanceof Error ? error.message : String(error);
+        const errMsg = lang === 'es'
+          ? `Disculpa, ocurrió un error. [detalle: ${errDetail}]`
+          : `Sorry, an error occurred. [detail: ${errDetail}]`;
         addMessage('assistant', errMsg);
         setExpression('concerned');
         speak(errMsg);
@@ -1333,6 +1474,21 @@ export function FloatingAI() {
               )}
             </div>
           </div>
+
+          {/* Login greeting bubble (spoken, without opening chat) */}
+          {loginGreeting && !isChatOpen && (
+            <div
+              className="fixed z-[65] max-w-[240px] md:max-w-xs pointer-events-none animate-in fade-in slide-in-from-bottom-2"
+              style={{
+                left: posOverrides.right !== undefined ? `${posOverrides.right}rem` : (isMobile ? '1rem' : '2rem'),
+                bottom: (posOverrides.bottom !== undefined ? posOverrides.bottom : (isMobile ? 6.5 : 7)) + 'rem',
+              }}
+            >
+              <div className="bg-black/85 backdrop-blur-xl border border-[#00eeff]/25 rounded-2xl rounded-bl-md px-4 py-3 shadow-2xl shadow-[#00eeff]/10">
+                <p className="text-sm text-cyan-100 leading-snug">{loginGreeting}</p>
+              </div>
+            </div>
+          )}
 
           {/* Chat Panel - Premium Design */}
           {isChatOpen && (

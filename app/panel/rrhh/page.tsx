@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Users, Cake, Clock, FileCheck, ClipboardCheck, Timer, Search, Plus, Edit, Trash2, Gift, PartyPopper, Sparkles, CalendarDays, Calendar, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Users, Cake, Clock, FileCheck, ClipboardCheck, Timer, Search, Plus, Edit, Trash2, Gift, PartyPopper, Sparkles, CalendarDays, Calendar, ChevronRight, QrCode, CreditCard } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,8 @@ const AsistenciaView = dynamic(() => import('@/components/rrhh/asistencia-view')
 const ClockIn = dynamic(() => import('@/components/rrhh/clock-in').then(m => m.ClockIn), { ssr: false });
 const PermisosManager = dynamic(() => import('@/components/rrhh/permisos-manager').then(m => m.PermisosManager), { ssr: false });
 const BirthdayPoster = dynamic(() => import('@/components/rrhh/birthday-poster').then(m => m.BirthdayPoster), { ssr: false });
+const QRBadgeModal = dynamic(() => import('@/components/rrhh/qr-badge-modal').then(m => m.QRBadgeModal), { ssr: false });
+const IDCarnetModal = dynamic(() => import('@/components/rrhh/id-carnet-modal').then(m => m.IDCarnetModal), { ssr: false });
 
 interface TileProps {
   title: string;
@@ -65,6 +67,11 @@ export default function RRHHPage() {
   const [marcasHoy, setMarcasHoy] = useState<Record<string, any>>({});
   const [birthdaySearch, setBirthdaySearch] = useState('');
   const [selectedPosterMonths, setSelectedPosterMonths] = useState<number[]>([new Date().getMonth()]);
+  const [isQRBadgeOpen, setIsQRBadgeOpen] = useState(false);
+  const [qrEmpNombre, setQrEmpNombre] = useState('');
+  const [qrEmpCodigo, setQrEmpCodigo] = useState('');
+  const [carnetEmpleado, setCarnetEmpleado] = useState<Empleado | null>(null);
+  const [isCarnetOpen, setIsCarnetOpen] = useState(false);
   const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
   useEffect(() => {
@@ -78,6 +85,18 @@ export default function RRHHPage() {
     }
     setCurrentUser(user);
   }, [router]);
+
+  // Escuchar evento de JAB para cambiar vista interna (cumpleaneros, reloj, etc.)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const view = (e as CustomEvent).detail;
+      if (['catalogo', 'cumpleaneros', 'reloj', 'permisos', 'asistencia'].includes(view)) {
+        setView(view as typeof view);
+      }
+    };
+    window.addEventListener('jab-rrhh-view', handler);
+    return () => window.removeEventListener('jab-rrhh-view', handler);
+  }, []);
 
   // Real-time Firebase listener for empleados
   useEffect(() => {
@@ -251,6 +270,17 @@ export default function RRHHPage() {
     }
   };
 
+  const handleQREmpleado = (emp: Empleado) => {
+    setQrEmpNombre(`${emp.nombres || ''} ${emp.apellidos || ''}`.trim());
+    setQrEmpCodigo(emp.code || '');
+    setIsQRBadgeOpen(true);
+  };
+
+  const handleCarnetEmpleado = (emp: Empleado) => {
+    setCarnetEmpleado(emp);
+    setIsCarnetOpen(true);
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       {/* Header */}
@@ -326,6 +356,15 @@ export default function RRHHPage() {
                 icon={<Timer className="h-8 w-8" />}
                 color="bg-gradient-to-br from-red-500 to-red-700"
                 onClick={() => {}}
+              />
+            )}
+            {puedeVer(currentUser, 'rrhh_catalogo') && (
+              <Tile
+                title="Codigo QR"
+                subtitle="Generador de gafete"
+                icon={<QrCode className="h-8 w-8" />}
+                color="bg-gradient-to-br from-cyan-500 to-cyan-700"
+                onClick={() => { setQrEmpNombre(''); setQrEmpCodigo(''); setIsQRBadgeOpen(true); }}
               />
             )}
           </div>
@@ -465,6 +504,24 @@ export default function RRHHPage() {
                             1ra vez
                           </span>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-cyan-500"
+                          onClick={(e) => { e.stopPropagation(); handleQREmpleado(emp); }}
+                          title="Codigo QR"
+                        >
+                          <QrCode className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-violet-500"
+                          onClick={(e) => { e.stopPropagation(); handleCarnetEmpleado(emp); }}
+                          title="Imprimir Carné"
+                        >
+                          <CreditCard className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -716,6 +773,23 @@ export default function RRHHPage() {
         <EmployeeInfoModal
           empleado={infoEmpleado}
           onClose={handleCloseInfoModal}
+        />
+      )}
+
+      {/* QR Badge Modal (generador standalone, precargado si viene de empleado) */}
+      {isQRBadgeOpen && (
+        <QRBadgeModal
+          onClose={() => { setIsQRBadgeOpen(false); setQrEmpNombre(''); setQrEmpCodigo(''); }}
+          initialName={qrEmpNombre}
+          initialCode={qrEmpCodigo}
+        />
+      )}
+
+      {/* ID Carné Modal */}
+      {isCarnetOpen && carnetEmpleado && (
+        <IDCarnetModal
+          empleado={carnetEmpleado}
+          onClose={() => { setIsCarnetOpen(false); setCarnetEmpleado(null); }}
         />
       )}
     </main>

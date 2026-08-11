@@ -66,7 +66,7 @@ function readCache(userId: string): UserProfile | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(cacheKeyFor(userId));
-    if (raw) return JSON.parse(raw) as UserProfile;
+    if (raw) return sanitizeProfile(JSON.parse(raw) as UserProfile);
   } catch {}
   return null;
 }
@@ -80,6 +80,31 @@ function writeCache(p: UserProfile) {
 
 function profilePath(userId: string): string {
   return `preferences/${userId}/jab-profile`;
+}
+
+/**
+ * Normaliza un perfil cargado desde caché o la nube para garantizar que
+ * todos los campos críticos (style, temas, modulos, etc.) existan con los
+ * tipos correctos. Evita el error "Cannot convert undefined or null to
+ * object" por perfiles antiguos o corruptos guardados anteriormente.
+ */
+function sanitizeProfile(p: UserProfile): UserProfile {
+  const safe: UserProfile = {
+    userId: typeof p?.userId === 'string' ? p.userId : '',
+    userName: typeof p?.userName === 'string' ? p.userName : '',
+    style: {
+      formality: (p?.style?.formality === 'tu' || p?.style?.formality === 'usted' || p?.style?.formality === null) ? p.style.formality : null,
+      lang: p?.style?.lang === 'en' ? 'en' : 'es',
+      messageLength: (p?.style?.messageLength === 'corto' || p?.style?.messageLength === 'medio' || p?.style?.messageLength === 'largo') ? p.style.messageLength : 'corto',
+      tone: (p?.style?.tone === 'amable' || p?.style?.tone === 'directo' || p?.style?.tone === 'neutral' || p?.style?.tone === null) ? p.style.tone : null,
+      palabrasFrecuentes: Array.isArray(p?.style?.palabrasFrecuentes) ? p.style.palabrasFrecuentes.map(String).filter(Boolean) : [],
+    },
+    temas: p?.temas && typeof p.temas === 'object' && !Array.isArray(p.temas) ? p.temas : {},
+    modulos: p?.modulos && typeof p.modulos === 'object' && !Array.isArray(p.modulos) ? p.modulos : {},
+    interactions: typeof p?.interactions === 'number' ? p.interactions : 0,
+    updatedAt: typeof p?.updatedAt === 'number' ? p.updatedAt : Date.now(),
+  };
+  return safe;
 }
 
 /**
@@ -118,13 +143,14 @@ declare global {
  */
 export function hydrateProfileFromCloud(userId: string, userName: string): Promise<UserProfile> {
   return fetchProfileFromCloud(userId).then((cloud) => {
+    const cloudSafe = cloud ? sanitizeProfile(cloud) : null;
     const local = readCache(userId);
-    if (cloud && cloud.userId === userId) {
+    if (cloudSafe && cloudSafe.userId === userId) {
       // Empezar con lo que el usuario ya haya acumulado localmente si es mayor,
       // de lo contrario usar el de la nube (prevalece el más avanzado).
-      if (!local || (cloud.interactions ?? 0) >= (local.interactions ?? 0)) {
-        writeCache(cloud);
-        return cloud;
+      if (!local || (cloudSafe.interactions ?? 0) >= (local.interactions ?? 0)) {
+        writeCache(cloudSafe);
+        return cloudSafe;
       }
       // El local tiene más interacciones: guardar hacia la nube.
       saveProfileToCloud(local).catch(() => {});
@@ -238,7 +264,8 @@ export function learnFromMessage(userId: string, userName: string, text: string)
 
 /** Serializa el perfil en texto legible para inyectar en el prompt del LLM. */
 export function profileToPrompt(p: UserProfile, lang: 'es' | 'en'): string {
-  const style = p.style;
+  const safe = sanitizeProfile(p);
+  const style = safe.style;
   const lines: string[] = [];
 
   const formalityLabel = style.formality === 'tu'
@@ -261,18 +288,18 @@ export function profileToPrompt(p: UserProfile, lang: 'es' | 'en'): string {
     ? `El usuario prefiere ${formalityLabel}, tono ${toneLabel}, y suele escribir ${lengthLabel}.`
     : `The user prefers ${formalityLabel}, a ${toneLabel} tone, and usually writes ${lengthLabel}.`);
 
-  const maxTopic = Object.values(p.temas).reduce((a, b) => Math.max(a, b), 0);
-  const topTopics = Object.entries(p.temas).filter(([, c]) => c > 0);
+  const maxTopic = Object.values(safe.temas).reduce((a, b) => Math.max(a, b), 0);
+  const topTopics = Object.entries(safe.temas).filter(([, c]) => c > 0);
   if (topTopics.length) {
     const sorted = topTopics.sort((a, b) => b[1] - a[1]).slice(0, 5);
     if (lang === 'es') lines.push(`Le interesa especialmente: ${sorted.map(([t]) => t).join(', ')}.`);
     else lines.push(`He is particularly interested in: ${sorted.map(([t]) => t).join(', ')}.`);
   }
 
-  const maxMod = Object.values(p.modulos).reduce((a, b) => Math.max(a, b), 0);
-  const topMods = Object.entries(p.modulos).filter(([, c]) => rel(c, maxMod) >= 0.4);
+  const maxMod = Object.values(safe.modulos).reduce((a, b) => Math.max(a, b), 0);
+  const topMods = Object.entries(safe.modulos).filter(([, c]) => rel(c, maxMod) >= 0.4);
   if (topMods.length) {
-    const sorted = topMods.sort((a, b) => p.modulos[b[0]] - p.modulos[a[0]]).map(([m]) => m);
+    const sorted = topMods.sort((a, b) => safe.modulos[b[0]] - safe.modulos[a[0]]).map(([m]) => m);
     if (lang === 'es') lines.push(`Usa con frecuencia los módulos: ${sorted.join(', ')}.`);
     else lines.push(`He frequently uses the modules: ${sorted.join(', ')}.`);
   }
@@ -282,10 +309,10 @@ export function profileToPrompt(p: UserProfile, lang: 'es' | 'en'): string {
     else lines.push(`He tends to use words like: ${style.palabrasFrecuentes.join(', ')}.`);
   }
 
-  if (p.interactions > 0 && lang === 'es') {
-    lines.push(`Hasta ahora ha interactuado ${p.interactions} veces contigo; adáptate a su estilo.`);
-  } else if (p.interactions > 0) {
-    lines.push(`So far he has interacted ${p.interactions} times with you; adapt to his style.`);
+  if (safe.interactions > 0 && lang === 'es') {
+    lines.push(`Hasta ahora ha interactuado ${safe.interactions} veces contigo; adáptate a su estilo.`);
+  } else if (safe.interactions > 0) {
+    lines.push(`So far he has interacted ${safe.interactions} times with you; adapt to his style.`);
   }
 
   return lines.join(' ');

@@ -104,30 +104,49 @@ export function EVARobotComponent(props: EVADesignProps) {
       ctx.beginPath(); ctx.arc(cx, cy, outerR * 0.76, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.arc(cx, cy, outerR * 0.9, 0, Math.PI * 2); ctx.stroke();
 
-      // ─── Anillo segmentado rotatorio interno ───
-      const segR = R * 0.82;
-      const segments = 28;
-      for (let i = 0; i < segments; i++) {
-        const a0 = (i / segments) * Math.PI * 2 + time * 0.15 * activity;
-        ctx.beginPath();
-        ctx.arc(cx, cy, segR, a0, a0 + (Math.PI * 2 / segments) * 0.62);
-        const alpha = 0.12 + 0.35 * (0.5 + Math.sin(time * 2 + i * 0.6) * 0.5) * (speaking ? 1.3 : 1);
-        ctx.strokeStyle = dim(alpha);
-        ctx.lineWidth = 1.8;
-        ctx.stroke();
-      }
+      // ─── Anillos rotatorios (sentidos alternos CLAROS, lentos, con glow) ───
+      // Se usan ticks asimétricos (marcas largas/cortas) + un marcador brillante
+      // para que la dirección de giro sea inconfundible a la vista.
+      const glowStr = speaking ? 8 : 3;
+      const ringAlpha = (a: number) => `rgba(${accentRgb},${a})`;
 
-      // ─── Arco de reactor (arc reactor Iron Man) en el centro ───
-      const reactorR = R * 0.62;
-      for (let i = 0; i < 12; i++) {
-        const a0 = (i / 12) * Math.PI * 2 + time * 0.3 * activity;
-        ctx.beginPath();
-        ctx.arc(cx, cy, reactorR, a0, a0 + (Math.PI * 2 / 12) * 0.5);
-        const alpha = 0.3 + 0.5 * (0.5 + Math.sin(time * 2 + i * 1.2) * 0.5) * (speaking ? 1.2 : 1);
-        ctx.strokeStyle = dim(alpha);
-        ctx.lineWidth = 2.2;
-        ctx.stroke();
-      }
+      // Helper: dibuja un anillo de ticks rotatorio. dir = +1 horario, -1 antihorario.
+      const drawTickRing = (radius: number, count: number, speed: number, dir: number, baseWidth: number, longEvery: number) => {
+        for (let i = 0; i < count; i++) {
+          const a = (i / count) * Math.PI * 2 + time * speed * dir * activity;
+          const isLong = i % longEvery === 0;
+          const isMarker = i === 0;
+          const len = isMarker ? 8 : isLong ? 5 : 2.5;
+          const inner = radius - len;
+          const x1 = cx + Math.cos(a) * inner;
+          const y1 = cy + Math.sin(a) * inner;
+          const x2 = cx + Math.cos(a) * radius;
+          const y2 = cy + Math.sin(a) * radius;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          const pulse = 0.5 + Math.sin(time * 1.5 + i * 0.5) * 0.5;
+          const a1 = isMarker ? 0.9 : isLong ? 0.3 + 0.3 * pulse : 0.12 + 0.15 * pulse;
+          ctx.strokeStyle = ringAlpha(a1 * (speaking ? 1.4 : 1));
+          ctx.lineWidth = isMarker ? baseWidth + 1 : baseWidth;
+          ctx.shadowBlur = isMarker ? glowStr + 4 : glowStr;
+          ctx.shadowColor = ringAlpha(a1);
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+      };
+
+      // Anillo 1 — externo, ticks largos/cortos, HORARIO lento
+      drawTickRing(R * 0.92, 24, 0.05, +1, 1.6, 4);
+
+      // Anillo 2 — medio, más denso, ANTIHORARIO (dirección opuesta clara)
+      drawTickRing(R * 0.74, 32, 0.035, -1, 1.2, 8);
+
+      // Anillo 3 — interno, HORARIO muy lento
+      drawTickRing(R * 0.56, 16, 0.04, +1, 1.8, 4);
+
+      // Anillo 4 — reactor, ANTIHORARIO moderado (opuesto al anillo 3)
+      drawTickRing(R * 0.42, 12, 0.055, -1, 2.0, 3);
 
       // ─── Marca cruz central (pronunciada) ───
       ctx.lineWidth = 2;
@@ -150,13 +169,13 @@ export function EVARobotComponent(props: EVADesignProps) {
       ctx.arc(cx, cy, coreSize * 3, 0, Math.PI * 2);
       ctx.fill();
 
-      // ─── Audio visualizer (barras rectas al hablar) ───
+      // ─── Audio visualizer (barras radiantes al hablar, con glow) ───
       if (speaking) {
-        const barCount = 24;
-        const innerR = R * 0.3;
+        const barCount = 28;
+        const innerR = R * 0.28;
         for (let i = 0; i < barCount; i++) {
           const a = (i / barCount) * Math.PI * 2;
-          const h = 4 + Math.sin(time * 6 + i * 0.7) * 6 + Math.sin(time * 4 + i * 1.1) * 4;
+          const h = 5 + Math.sin(time * 7 + i * 0.6) * 7 + Math.sin(time * 4.5 + i * 1.2) * 5;
           const x1 = cx + Math.cos(a) * innerR;
           const y1 = cy + Math.sin(a) * innerR;
           const x2 = cx + Math.cos(a) * (innerR + Math.abs(h));
@@ -164,10 +183,14 @@ export function EVARobotComponent(props: EVADesignProps) {
           ctx.beginPath();
           ctx.moveTo(x1, y1);
           ctx.lineTo(x2, y2);
-          ctx.strokeStyle = `rgba(251,146,60,${0.3 + Math.sin(time * 6 + i) * 0.2})`;
-          ctx.lineWidth = 2;
+          const bAlpha = 0.4 + Math.sin(time * 7 + i) * 0.3;
+          ctx.strokeStyle = `rgba(251,146,60,${bAlpha})`;
+          ctx.lineWidth = 2.2;
+          ctx.shadowBlur = 6;
+          ctx.shadowColor = `rgba(251,146,60,${bAlpha})`;
           ctx.stroke();
         }
+        ctx.shadowBlur = 0;
       }
 
       // ─── Línea de enfoque cuando escucha (recta, pronunciada) ───
