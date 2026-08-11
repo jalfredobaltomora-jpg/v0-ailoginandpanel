@@ -27,7 +27,7 @@ import { keyTokens, detectLang, fuzzyMatch, normalizeText } from '@/lib/nlp';
 import { learnFromMessage, learnModuleVisited, profilePromptText, hydrateProfileFromCloud } from '@/lib/user-profile';
 import { exportReport } from '@/lib/report-export';
 import type { JABStatus } from '@/lib/voice-types';
-import { getEmpleadoByCodigo, getUserSchedule, saveUserSchedule, type UserSchedule, type Empleado, type UsuarioIT, getEmpleados } from '@/lib/firebase';
+import { getEmpleadoByCodigo, getUserSchedule, saveUserSchedule, type UserSchedule, type Empleado, type UsuarioIT, getEmpleados, getPendingFromPreviousDays } from '@/lib/firebase';
 import { getWeekNumber, getDayEndTime, getDayEndAdjusted, setStoredLunchTime, setLunchPromptWeek, getLunchPromptWeek, scheduleTodayAlarms, getStoredLunchTime, setStoredSatExitTime, setStoredSatEatCompany, setStoredSatLunchTime, setSatPromptWeek, getSatPromptWeek, scheduleSaturdayAlarms, getStoredSatExitTime, getStoredSatEatCompany, esQATeam } from '@/lib/alarm-engine';
 
 declare global {
@@ -211,6 +211,7 @@ export function FloatingAI() {
   const [userCode, setUserCode] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<UsuarioIT | null>(null);
   const [empleado, setEmpleado] = useState<Empleado | null>(null);
+  const [pendientes, setPendientes] = useState<string[]>([]);
   const [schedule, setSchedule] = useState<UserSchedule | null | undefined>(undefined);
   const [dayEndInfo, setDayEndInfo] = useState<{ base: string; label: string; offsetMin: number } | null>(null);
   const [greetComplete, setGreetComplete] = useState(false);
@@ -259,6 +260,10 @@ export function FloatingAI() {
           // JAB hidrata el perfil de aprendizaje desde la nube para conocer al
           // usuario aunque se haya logueado antes en otro dispositivo.
           hydrateProfileFromCloud(user.codigo, name).catch(() => {});
+          // Carga las tareas que quedaron sin terminar del día anterior (Agenda).
+          getPendingFromPreviousDays(user.codigo, 3).then((notes) => {
+            setPendientes(notes.map((n) => n.text));
+          }).catch(() => {});
         });
         getUserSchedule(user.codigo).then(setSchedule);
       }
@@ -1315,6 +1320,7 @@ export function FloatingAI() {
                 isListening={isListening}
                 scale={isMobile ? 0.9 : 1}
                 interactive
+                pending={pendientes}
               />
               {voiceActivated && (
                 <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0d1117] animate-pulse ${
