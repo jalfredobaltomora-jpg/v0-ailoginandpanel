@@ -1,6 +1,6 @@
 'use client';
 
-import { PAGES, SYSTEM_INFO, detectIntent, getIntentResponse } from '@/components/ai-agent/system-knowledge';
+import { PAGES, SYSTEM_INFO, detectIntent, getIntentResponse, JAB_ORIGIN, jabAgeText } from '@/components/ai-agent/system-knowledge';
 import type { Lang } from '@/components/ai-agent/system-knowledge';
 import { executeJARVISCommand } from './jarvis-commands';
 
@@ -36,6 +36,15 @@ export interface RunAgentOptions {
   hooks: AgentHooks;
   viewData?: unknown;
   viewLabel?: string;
+  /** Identidad del empleado/usuario logueado (del catálogo RRHH), para que JAB lo conozca. */
+  userIdentity?: {
+    nombres: string;
+    apellidos: string;
+    cargo?: string;
+    area?: string;
+    code?: string;
+    fechaIng?: string;
+  };
 }
 
 const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
@@ -82,7 +91,7 @@ export const AGENT_TOOLS: {
   },
 ];
 
-function buildSystemPrompt(lang: Lang, userName: string, viewLabel?: string): string {
+function buildSystemPrompt(lang: Lang, userName: string, viewLabel?: string, identity?: RunAgentOptions['userIdentity']): string {
   const now = new Date();
   const dateStr = now.toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = now.toLocaleTimeString(lang === 'es' ? 'es-MX' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -93,9 +102,21 @@ function buildSystemPrompt(lang: Lang, userName: string, viewLabel?: string): st
 
   const routes = PAGES.map(p => `${p.route} (${p.label[lang]})`).join(', ');
 
+  const identityBlock = identity && (identity.nombres || identity.apellidos)
+    ? lang === 'es'
+      ? `\nEl usuario logueado es: ${identity.nombres} ${identity.apellidos}${identity.code ? ` (código: ${identity.code})` : ''}${identity.cargo ? `, cargo: ${identity.cargo}` : ''}${identity.area ? `, área: ${identity.area}` : ''}${identity.fechaIng ? `, ingreso: ${identity.fechaIng}` : ''}. Este es un empleado real del catálogo RRHH.`
+      : `\nThe logged-in user is: ${identity.nombres} ${identity.apellidos}${identity.code ? ` (code: ${identity.code})` : ''}${identity.cargo ? `, position: ${identity.cargo}` : ''}${identity.area ? `, area: ${identity.area}` : ''}${identity.fechaIng ? `, started: ${identity.fechaIng}` : ''}. This is a real employee from the HR catalog.`
+    : '';
+
+  const selfBlock = lang === 'es'
+    ? `\nSobre ti (quién eres): ${JAB_ORIGIN.createdLabel}. Llevas ${jabAgeText('es')} de creado. ${JAB_ORIGIN.purposeLabel}`
+    : `\nAbout yourself: ${JAB_ORIGIN.createdLabel}. You have been around for ${jabAgeText('en')}. ${JAB_ORIGIN.purposeLabel}`;
+
   return lang === 'es'
     ? `Eres JAB, un agente de IA con capacidad de acción (function calling) dentro del Sistema de Control Administrativo.
 Fecha: ${dateStr}. Hora: ${timeStr}. Usuario: ${userName}. Vista actual: ${viewLabel || 'principal'}.
+${identityBlock}
+${selfBlock}
 
 Sobre el sistema:
 ${SYSTEM_INFO.es}
@@ -109,9 +130,12 @@ REGLAS:
 - Cuando el usuario pida navegar, usar navegarA. Para análisis de datos de la vista actual, usar analizarDatosVista. Para reportes, usar generarReporte. Para estado del dispositivo, usar ejecutarComando.
 - Cuando ejecutes una herramienta, la herramienta devuelve el resultado; responde al usuario resumiendo ese resultado con claridad.
 - Nunca inventes datos: si la herramienta no devuelve datos, dilo.
-- Responde SIEMPRE en el idioma del usuario (${lang === 'es' ? 'español' : 'inglés'}). Sé conciso y directo.`
+- Si el usuario pregunta quién es o pide datos sobre sí mismo, usa la identidad del usuario indicada arriba.
+- Responde SIEMPRE en el idioma del usuario (${lang === 'es' ? 'español' : 'inglés'}). Sé natural, cercano y fluido.`
     : `You are JAB, an AI agent with action capability (function calling) inside the Administrative Control System.
 Date: ${dateStr}. Time: ${timeStr}. User: ${userName}. Current view: ${viewLabel || 'main'}.
+${identityBlock}
+${selfBlock}
 
 About the system:
 ${SYSTEM_INFO.en}
@@ -125,7 +149,8 @@ RULES:
 - When the user asks to navigate, use navegarA. To analyze the current view data, use analizarDatosVista. For reports, use generarReporte. For device status, use ejecutarComando.
 - When you execute a tool, the tool returns a result; reply to the user summarizing that result clearly.
 - Never invent data: if the tool returns no data, say so.
-- Always reply in the user's language. Be concise and direct.`;
+- If the user asks who they are or for their own info, use the logged-in user identity provided above.
+- Always reply in the user's language. Be natural, warm and fluent.`;
 }
 
 interface ChatMsg { role: 'system' | 'user' | 'assistant' | 'tool'; content: string | null; tool_calls?: unknown; tool_call_id?: string }
@@ -345,7 +370,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<JABAgentResult> {
     return fallbackAgent(opts);
   }
 
-  const systemPrompt = buildSystemPrompt(lang, userName, opts.viewLabel || opts.hooks.getViewLabel?.());
+  const systemPrompt = buildSystemPrompt(lang, userName, opts.viewLabel || opts.hooks.getViewLabel?.(), opts.userIdentity);
   const messages: ChatMsg[] = [
     { role: 'system', content: systemPrompt },
     ...(history || []).slice(-6).map(h => ({ role: h.role as 'user' | 'assistant', content: h.content })),

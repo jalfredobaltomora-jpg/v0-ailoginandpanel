@@ -6,6 +6,54 @@ export function t(es: string, en: string, lang: Lang): string {
   return lang === 'es' ? es : en;
 }
 
+/** Identidad y origen de JAB (cerebro/asistente). */
+export const JAB_ORIGIN = {
+  creator: 'SCA (Sistema de Control Administrativo) — jalfredobaltomora-jpg / José Alfredo Baltomora',
+  createdLabel: 'Soy JAB y nací junto al Sistema de Control Administrativo (SCA), concebido por el equipo de desarrollo de SCA como parte integral de la plataforma',
+  purposeLabel: 'Fui creado para ser el asistente inteligente del Sistema de Control Administrativo: ayudarte a navegar por los módulos (RRHH, QA Reports, IT Manager, Agenda), analizar datos, generar reportes, responder preguntas y ejecutar acciones por voz o texto, de forma natural y fluida.',
+} as const;
+
+/** Fecha de creación de JAB (primer commit del repositorio SCA). */
+const JAB_BIRTH = new Date('2026-06-03T07:38:56-06:00');
+
+/** Devuelve cuánto tiempo tiene JAB de existir, en palabras (es/en). */
+export function jabAgeText(lang: Lang, now = new Date()): string {
+  const diff = now.getTime() - JAB_BIRTH.getTime();
+  if (diff <= 0) {
+    return lang === 'es'
+      ? 'acabo de ser creado'
+      : 'I was just created';
+  }
+  const totalDays = Math.floor(diff / 86400000);
+  const years = Math.floor(totalDays / 365);
+  const months = Math.floor((totalDays % 365) / 30);
+  const days = Math.floor((totalDays % 365) % 30);
+  if (lang === 'es') {
+    const parts: string[] = [];
+    if (years > 0) parts.push(`${years} ${years === 1 ? 'año' : 'años'}`);
+    if (months > 0) parts.push(`${months} ${months === 1 ? 'mes' : 'meses'}`);
+    if (days > 0 && years === 0) parts.push(`${days} ${days === 1 ? 'día' : 'días'}`);
+    if (parts.length === 0) parts.push('menos de un día');
+    return parts.join(', ');
+  } else {
+    const parts: string[] = [];
+    if (years > 0) parts.push(`${years} ${years === 1 ? 'year' : 'years'}`);
+    if (months > 0) parts.push(`${months} ${months === 1 ? 'month' : 'months'}`);
+    if (days > 0 && years === 0) parts.push(`${days} ${days === 1 ? 'day' : 'days'}`);
+    if (parts.length === 0) parts.push('less than a day');
+    return parts.join(', ');
+  }
+}
+
+/** Respuesta natural de JAB sobre su identidad/origen/propósito. */
+export function jabIdentityResponse(lang: Lang): string {
+  const age = jabAgeText(lang);
+  if (lang === 'es') {
+    return `${JAB_ORIGIN.createdLabel}. Llevo ${age} de haber sido creado. ${JAB_ORIGIN.purposeLabel}`;
+  }
+  return `${JAB_ORIGIN.createdLabel}. I have been around for ${age} since I was created. ${JAB_ORIGIN.purposeLabel}`;
+}
+
 export interface PageInfo {
   route: string;
   label: Record<Lang, string>;

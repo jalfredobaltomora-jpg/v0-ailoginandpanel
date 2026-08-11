@@ -17,16 +17,17 @@ import { getStoredUser } from '@/lib/auth-store';
 import { useLang } from '@/lib/lang-context';
 import { EVARobotComponent, type EVAExpression } from './eva-design';
 import { executeJARVISCommand } from '@/lib/jarvis-commands';
-import { detectIntent, formatClockSpanish, formatClockEnglish } from './system-knowledge';
+import { detectIntent, formatClockSpanish, formatClockEnglish, jabIdentityResponse } from './system-knowledge';
 import { transcribeAudio } from '@/lib/transcribe-client';
 import { useWakeWord } from '@/lib/use-wake-word';
 import { speakText } from '@/lib/tts';
 import { isNativeApp } from '@/lib/native-speech';
 import { runAgent } from '@/lib/jab-agent';
 import { keyTokens, detectLang, fuzzyMatch, normalizeText } from '@/lib/nlp';
+import { learnFromMessage, learnModuleVisited, profilePromptText, hydrateProfileFromCloud } from '@/lib/user-profile';
 import { exportReport } from '@/lib/report-export';
 import type { JABStatus } from '@/lib/voice-types';
-import { getEmpleadoByCodigo, getUserSchedule, saveUserSchedule, type UserSchedule, type Empleado } from '@/lib/firebase';
+import { getEmpleadoByCodigo, getUserSchedule, saveUserSchedule, type UserSchedule, type Empleado, type UsuarioIT, getEmpleados } from '@/lib/firebase';
 import { getWeekNumber, getDayEndTime, getDayEndAdjusted, setStoredLunchTime, setLunchPromptWeek, getLunchPromptWeek, scheduleTodayAlarms, getStoredLunchTime, setStoredSatExitTime, setStoredSatEatCompany, setStoredSatLunchTime, setSatPromptWeek, getSatPromptWeek, scheduleSaturdayAlarms, getStoredSatExitTime, getStoredSatEatCompany, esQATeam } from '@/lib/alarm-engine';
 
 declare global {
@@ -208,6 +209,7 @@ export function FloatingAI() {
   const processingRef = useRef(false);
   const sessionPromptShown = useRef(false);
   const [userCode, setUserCode] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<UsuarioIT | null>(null);
   const [empleado, setEmpleado] = useState<Empleado | null>(null);
   const [schedule, setSchedule] = useState<UserSchedule | null | undefined>(undefined);
   const [dayEndInfo, setDayEndInfo] = useState<{ base: string; label: string; offsetMin: number } | null>(null);
@@ -248,15 +250,28 @@ export function FloatingAI() {
       const user = getStoredUser();
       if (user) {
         setUserCode(user.codigo);
+        setCurrentUser(user);
         getEmpleadoByCodigo(user.codigo).then((emp) => {
           setEmpleado(emp);
           setDayEndInfo(emp ? getDayEndAdjusted(emp) : { base: getDayEndTime(), label: `Salida ${getDayEndTime()}`, offsetMin: 10 });
-          setUserName(emp?.nombres?.split(' ')[0] || 'User');
+          const name = emp?.nombres?.split(' ')[0] || 'User';
+          setUserName(name);
+          // JAB hidrata el perfil de aprendizaje desde la nube para conocer al
+          // usuario aunque se haya logueado antes en otro dispositivo.
+          hydrateProfileFromCloud(user.codigo, name).catch(() => {});
         });
         getUserSchedule(user.codigo).then(setSchedule);
       }
     } catch {}
   }, []);
+
+  // JAB aprende los módulos que el usuario visita con frecuencia.
+  useEffect(() => {
+    if (!userCode || !pathname) return;
+    const name = userName === 'User' ? userCode : userName;
+    learnModuleVisited(userCode, name, pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, userCode]);
 
   // Load messages & settings
   useEffect(() => {
@@ -520,6 +535,13 @@ export function FloatingAI() {
       setStatus('processing');
       setExpression('scanning');
 
+      // JAB aprende del usuario: estilo de habla, temas y forma de interactuar.
+      if (userCode) {
+        try {
+          learnFromMessage(userCode, userName, trimmed);
+        } catch (e) { console.warn('JAB: learn error', e); }
+      }
+
       // Clear conversation command: "borra la conversación", "borra todo",
       // "borra la conversación del 5 de enero al 12 de marzo", etc.
       if (/(borra|limpia|elimina|vac[ií]a|clear|delete|erase).*(conversaci[oó]n|historial|mensajes|chat|todo|todito|mensajer[ií]a)/i.test(trimmed) ||
@@ -767,22 +789,174 @@ export function FloatingAI() {
         return;
       }
 
+      // ─── Identidad de JAB: quién lo creó, cuánto tiene, para qué sirve ───
+      if (/quien te cre[oó]|qui[eé]n te cre[oó]|quien te hizo|qui[eé]n te hizo|cuanto tiempo tienes|cu[áa]nto tiempo tienes|cuanto llevas|cu[áa]nto llevas|hace cuanto|hace cu[áa]nto|c[uaá]nto tiempo llevas|desde cuando existes|desde cu[áa]ndo|para que te crearon|para qu[eé] te crearon|para que fuiste creado|para qu[eé] fuiste creado|para que sirves|para qu[eé] sirves|que eres|qu[eé] eres|quien eres|qui[eé]n eres|que eres tu|qu[eé] eres t[uú]|cu[áa]l es tu proposito|cu[áa]l es tu prop[oó]sito|tu proposito|tu prop[oó]sito|a que te dedicas|a qu[eé] te dedicas|who created you|who made you|how old are you|how long have you existed|what are you|what.?s your purpose|what do you do/i.test(trimmed)) {
+        const selfMsg = jabIdentityResponse(lang);
+        addMessage('assistant', selfMsg);
+        setExpression('happy');
+        speak(selfMsg);
+        setIsLoading(false);
+        processingRef.current = false;
+        return;
+      }
+
+      // ─── Consulta de empleados del catálogo RRHH ───
+      // "quién es X", "dame info de X", "busca a X", "datos de X", etc.
+      const consultEmpresa = /quien es|qui[eé]n es|informaci[oó]n de|datos de|busca a|buscar a|b[aú]scame|dame datos|dame informaci[oó]n|que sabes de|qu[eé] sabes de|tell me about|who is|information about|informaci[oó]n sobre|datos sobre|hablame de|h[aá]blame de/i.test(trimmed);
+      const resuelveEmpleado = consultEmpresa && !/quien soy|qui[eé]n soy|who am i|qu[eé] sabes de m[ií]|de ti|de vos|de jel? ?b|de ti mismo|about yourself|about you/i.test(trimmed);
+
+      // ─── Identidad del usuario ───
+      // "quién soy", "sabes quién soy", "conoces mi nombre", etc.
+      if (/quien soy|quié?n soy|sab(e|es|ías)? (quien|quié?n) soy|sabes mi nombre|conoces mi nombre|me conoces|como me llamo|c[oó]mo me llamo|reconoces a quien|que sabes de mi|qu[eé] sabes de m[ií]|who am i|do you know who i am|what.?s my name/i.test(trimmed)) {
+        const emp = empleado;
+        const fullName = emp ? `${emp.nombres || ''} ${emp.apellidos || ''}`.trim() : null;
+        const buildIdent = (es: boolean) => {
+          if (!fullName) {
+            return es
+              ? `Eres ${userName}, el usuario con el que iniciaste sesión en el sistema. ¿En qué te ayudo?`
+              : `You are ${userName}, the user currently logged into the system. How can I help you?`;
+          }
+          const parts: string[] = [];
+          parts.push(`${emp?.nombres || ''} ${emp?.apellidos || ''}`.trim());
+          if (emp?.cargo) parts.push(`tu cargo es ${emp.cargo}`);
+          if (emp?.area) parts.push(`del área de ${emp.area}`);
+          if (emp?.code) parts.push(`tu código de empleado es ${emp.code}`);
+          if (emp?.fechaIng) parts.push(`ingresaste el ${emp.fechaIng}`);
+          if (es) {
+            return `¡Claro que te conozco, ${emp?.nombres?.split(' ')[0] || ''}! Tú eres ${parts.join(', ')}. Estoy aquí para ayudarte en lo que necesites.`;
+          } else {
+            return `Of course I know you, ${emp?.nombres?.split(' ')[0] || ''}! You are ${parts.join(', ')}. I'm here to help you with anything you need.`;
+          }
+        };
+        const identResponse = buildIdent(lang === 'es');
+        addMessage('assistant', identResponse);
+        setExpression('happy');
+        speak(identResponse);
+        setIsLoading(false);
+        processingRef.current = false;
+        return;
+      }
+
+      // ─── Información de otro empleado (solo admin/it-manager) ───
+      if (resuelveEmpleado) {
+        const rolUser = currentUser?.rol || '';
+        const esRhhManager = empleado && /rrhh|recurso|humanos|manager|jefe|gerente|director/i.test(`${empleado.cargo || ''} ${empleado.area || ''}`);
+        const canSeeOthers = rolUser === 'admin' || rolUser === 'it-manager' || !!esRhhManager;
+        if (!canSeeOthers) {
+          const denied = lang === 'es'
+            ? 'Lo siento, no tengo permiso para mostrarte información de otros empleados. Solo un administrador o el IT Manager pueden consultar el catálogo de personal.'
+            : 'Sorry, I do not have permission to show you other employees\' info. Only an admin or the IT Manager can query the personnel catalog.';
+          addMessage('assistant', denied);
+          setExpression('concerned');
+          speak(denied);
+          setIsLoading(false);
+          processingRef.current = false;
+          return;
+        }
+
+        // Extraer posible nombre consultado
+        const queryName = trimmed
+          .replace(/\b(quien es|qui[eé]n es|al empleado|empleado|trabajador|persona|colaborador|dame|datos|informaci[oó]n|sobre|de|busca|buscar|b[aú]scame|que|qu[eé]|sabes|sab[eé]s|tell me|about|who is|find|information|on)\b/gi, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        setStatus('processing');
+        let found: Empleado | null = null;
+        try {
+          const all = await getEmpleados();
+          const q = queryName.toLowerCase().trim();
+          found = all.find(e =>
+            e.code?.toLowerCase() === q ||
+            `${e.nombres || ''} ${e.apellidos || ''}`.toLowerCase().includes(q) ||
+            `${e.nombres || ''} ${e.apellidos || ''}`.toLowerCase().split(/\s+/).some(n => q && n.startsWith(q)) ||
+            `${e.nombres || ''}`.toLowerCase() === q ||
+            `${e.apellidos || ''}`.toLowerCase() === q
+          ) || null;
+          // fallback fuzzy por primer nombre/apellido
+          if (!found && q) {
+            const byAny = all.filter(e => `${e.nombres || ''} ${e.apellidos || ''}`.toLowerCase().split(/\s+/).some(n => n.includes(q) || q.includes(n)));
+            found = byAny[0] || null;
+          }
+        } catch (e) {
+          console.warn('JAB: error consultando empleados', e);
+        }
+
+        if (!found) {
+          const notFound = lang === 'es'
+            ? `No encontré a nadie llamado "${queryName}" en el catálogo de personal. Intenta con el nombre completo o el código.`
+            : `I could not find anyone named "${queryName}" in the personnel catalog. Try the full name or the code.`;
+          addMessage('assistant', notFound);
+          setExpression('concerned');
+          speak(notFound);
+          setIsLoading(false);
+          processingRef.current = false;
+          return;
+        }
+
+        const isAdmin = currentUser?.rol === 'admin';
+        const resp = lang === 'es'
+          ? `Aquí tienes los datos de ${found.nombres || ''} ${found.apellidos || ''} (${found.code || 'sin código'}):\n` +
+            `• Cargo: ${found.cargo || 'N/D'}\n` +
+            `• Área: ${found.area || 'N/D'}\n` +
+            `• Fecha de ingreso: ${found.fechaIng || 'N/D'}\n` +
+            `• Estado: ${found.activo === false ? 'Inactivo' : 'Activo'}\n` +
+            (isAdmin
+              ? `• Cédula: ${found.cedula || 'N/D'}\n` +
+                `• Nacionalidad: ${found.nacionalidad || 'N/D'}\n` +
+                `• Estado civil: ${found.estadoCivil || 'N/D'}\n` +
+                (found.hijos != null ? `• Hijos: ${found.hijos}\n` : '') +
+                (found.embarazada ? '• Embarazada\n' : '') +
+                (found.discapacidad ? '• Con discapacidad\n' : '')
+              : '')
+            : `Here are the details for ${found.nombres || ''} ${found.apellidos || ''} (${found.code || 'no code'}):\n` +
+              `• Position: ${found.cargo || 'N/A'}\n` +
+              `• Area: ${found.area || 'N/A'}\n` +
+              `• Hire date: ${found.fechaIng || 'N/A'}\n` +
+              `• Status: ${found.activo === false ? 'Inactive' : 'Active'}\n` +
+              (isAdmin
+                ? `• ID: ${found.cedula || 'N/A'}\n` +
+                  `• Nationality: ${found.nacionalidad || 'N/A'}\n` +
+                  `• Marital status: ${found.estadoCivil || 'N/A'}\n` +
+                  (found.hijos != null ? `• Children: ${found.hijos}\n` : '') +
+                  (found.embarazada ? '• Pregnant\n' : '')
+                : '');
+        addMessage('assistant', resp.trim());
+        setExpression('happy');
+        speak(resp.trim());
+        setIsLoading(false);
+        processingRef.current = false;
+        return;
+      }
+
       // AI Agent (function calling / tools: navegarA, analizarDatosVista, generarReporte, ejecutarComando)
       console.log('JAB: calling runAgent', { tokens, intent: intent.action });
       try {
         setStatus('processing');
         const history = messages.slice(-4).map(m => ({ role: m.role, content: m.content }));
         // Prompt enriquecido: se le indica a JAB la intención canónica detectada
-        // localmente para que responda con más fidelidad a lo que se pregunta.
-        const nlpHint = tokens.length
+        // localmente para que responda con más fidelidad a lo que se pregunta,
+        // y el perfil aprendido del usuario para que adapte su tono y lenguaje.
+        const nlpTokens = tokens.length
           ? `\n\n[Análisis local NLP del usuario: tema(s) → ${tokens.join(', ')}]`
           : '';
+        const profileHint = userCode
+          ? `\n\n[Perfil de aprendizaje de ${userName}: ${profilePromptText(userCode, userName, lang)}]`
+          : '';
+        const nlpHint = nlpTokens + profileHint;
         const agentPromise = runAgent({
           message: trimmed + nlpHint,
           lang,
           userName,
           history,
           viewLabel: currentViewLabel(pathname, lang),
+          userIdentity: empleado ? {
+            nombres: empleado.nombres || '',
+            apellidos: empleado.apellidos || '',
+            cargo: empleado.cargo,
+            area: empleado.area,
+            code: empleado.code,
+            fechaIng: empleado.fechaIng,
+          } : undefined,
           hooks: {
             navigate: (route) => { if (pathname !== route) router.push(route); },
             getViewData: () => getViewDataForRoute(pathname),
@@ -822,7 +996,7 @@ export function FloatingAI() {
         setStatusState(prev => (prev === 'processing' || prev === 'executing') ? 'idle' : prev);
       }
     },
-    [messages, lang, userName, addMessage, speak, setVoiceActivated, awaitingLunchResponse, userCode, empleado, schedule, pathname, router]
+    [messages, lang, userName, addMessage, speak, setVoiceActivated, awaitingLunchResponse, userCode, empleado, currentUser, schedule, pathname, router]
   );
 
   /** Push-to-talk: open the mic (hold on the JAB button or tap the chat mic). */
