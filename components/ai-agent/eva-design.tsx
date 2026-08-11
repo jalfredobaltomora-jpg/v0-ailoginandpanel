@@ -56,25 +56,9 @@ export function EVARobotComponent(props: EVADesignProps) {
 
     const cx = W / 2;
     const cy = H / 2;
-    // Marco exterior angular (deja espacio para el HUD).
-    const L = 8 * scaleRef.current;
     const R = 58 * scaleRef.current;
 
     let time = 0;
-
-    // Dibuja una esquina en codo (estilo Iron Man): dos líneas perpendiculares
-    // que dejan una abertura de 90 grados en una esquina de un rectángulo.
-    const drawCorner = (
-      x: number, y: number, dx: number, dy: number, len: number, color: string, lw: number,
-    ) => {
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + dx * len, y);
-      ctx.lineTo(x + dx * len, y + dy * len);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = lw;
-      ctx.stroke();
-    };
 
     const render = () => {
       const speaking = isSpeakingRef.current;
@@ -92,82 +76,65 @@ export function EVARobotComponent(props: EVADesignProps) {
       const accentRgb = listening ? '52,211,153' : speaking ? '251,146,60' : '0,238,255';
       const dim = (a: number) => `rgba(${accentRgb},${a})`;
 
-      // ─── Barrido de escaneo horizontal (pronunciado, recto) ───
-      const sweepY = L + ((time * 18) % (H - 2 * L));
-      const grad = ctx.createLinearGradient(0, sweepY - 2, 0, sweepY + 14);
-      grad.addColorStop(0, 'transparent');
-      grad.addColorStop(0.5, dim(0.5));
-      grad.addColorStop(1, 'transparent');
-      ctx.fillStyle = grad;
-      ctx.fillRect(L, sweepY - 2, W - 2 * L, 14);
+      // ─── Visor redondo exterior (arc reactor JARVIS) ───
+      const outerR = R * 1.18;
+      // Círculo exterior pronunciado
       ctx.beginPath();
-      ctx.moveTo(L, sweepY);
-      ctx.lineTo(W - L, sweepY);
-      ctx.strokeStyle = dim(0.7);
-      ctx.lineWidth = 1.2;
+      ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+      ctx.strokeStyle = dim(0.9);
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+      // Segundo anillo tenue
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerR + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = dim(0.18);
+      ctx.lineWidth = 0.6;
       ctx.stroke();
 
-      // ─── Marco exterior angular (esquinas en codo) ───
-      const m = 4 * scaleRef.current;
-      ctx.lineWidth = 1.5 * scaleRef.current;
-      // laterales verticales
-      ctx.beginPath(); ctx.moveTo(L + m, L); ctx.lineTo(L + m, H - L); ctx.strokeStyle = dim(0.85); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(W - L - m, L); ctx.lineTo(W - L - m, H - L); ctx.strokeStyle = dim(0.85); ctx.stroke();
-      // horizontales superiores e inferiores
-      ctx.beginPath(); ctx.moveTo(L, H - L - m); ctx.lineTo(W - L, H - L - m); ctx.strokeStyle = dim(0.6); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(L, L + m); ctx.lineTo(W - L, L + m); ctx.strokeStyle = dim(0.6); ctx.stroke();
-
-      // ─── Esquinas pronunciadas (ticks angulares en cada esquina) ───
-      const cor = 4;
-      const cornerColor = dim(1);
-      // superior-izquierda
-      drawCorner(L, L, 1, 1, 10 * cor * 0.6, cornerColor, 2);
-      drawCorner(L, L, 1, 0, 20 * cor * 0.6, cornerColor, 2);
-      drawCorner(L, L, 0, 1, 20, cornerColor, 2);
-      // superior-derecha
-      drawCorner(W - L, L, -1, 1, 20, cornerColor, 2);
-      drawCorner(W - L, L, -1, 0, 20, cornerColor, 2);
-      // inferior-izquierda
-      drawCorner(L, H - L, 1, -1, 20, cornerColor, 2);
-      drawCorner(L, H - L, 0, -1, 20, cornerColor, 2);
-      // inferior-derecha
-      drawCorner(W - L, H - L, -1, -1, 20, cornerColor, 2);
-
-      // ─── Ticks de medición a lo largo del marco (pronunciados) ───
-      for (let i = 0; i <= 10; i++) {
-        const tx = L + ((W - 2 * L) / 10) * i;
-        const th = i % 5 === 0 ? 8 : 4;
-        ctx.beginPath();
-        ctx.moveTo(tx, H - L - m);
-        ctx.lineTo(tx, H - L - m + th);
-        ctx.strokeStyle = dim(i % 5 === 0 ? 0.8 : 0.35);
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-
-      // ─── Barras HUD laterales (elementos de datos rectos) ───
-      const barH = R * 0.5;
-      const barX = L + m + 4;
-      const bars = 5;
-      for (let i = 0; i < bars; i++) {
-        const seg = (time * 0.8 + i * 0.6) % 1;
-        ctx.beginPath();
-        ctx.moveTo(barX, cy - barH / 2 + (barH / (bars - 1)) * i);
-        ctx.lineTo(barX + (W * 0.16) * seg, cy - barH / 2 + (barH / (bars - 1)) * i);
-        ctx.strokeStyle = dim(0.4);
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-
-      // ─── Anillo marcador central (cuadrado rotado, no círculo) ───
-      const rot = time * 0.2 * activity;
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(rot);
+      // ─── Barrido de radar (línea rotatoria pronunciada + arco de estela) ───
+      const radarA = time * 0.9 * activity;
+      const wakeLen = Math.PI * 0.4;
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerR + 5, radarA, radarA + wakeLen);
       ctx.strokeStyle = dim(0.5);
-      ctx.lineWidth = 1.2;
-      ctx.strokeRect(-R * 0.95, -R * 0.95, R * 1.9, R * 1.9);
-      ctx.restore();
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      ctx.lineCap = 'butt';
+      // Línea radial de barrido
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(radarA) * outerR * 0.95, cy + Math.sin(radarA) * outerR * 0.95);
+      ctx.strokeStyle = dim(0.7);
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+
+      // ─── Ticks radiales alrededor del visor (pronunciados) ───
+      for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * Math.PI * 2 + time * 0.05;
+        const major = i % 3 === 0;
+        const inner = outerR + 2;
+        const outerT = outerR + 2 + (major ? 8 : 4.5);
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+        ctx.lineTo(cx + Math.cos(a) * outerT, cy + Math.sin(a) * outerT);
+        ctx.strokeStyle = dim(major ? 0.85 : 0.3);
+        ctx.lineWidth = major ? 2 : 1;
+        ctx.stroke();
+      }
+
+      // ─── Anillo segmentado rotatorio interno ───
+      const segR = R * 0.82;
+      const segments = 28;
+      for (let i = 0; i < segments; i++) {
+        const a0 = (i / segments) * Math.PI * 2 + time * 0.15 * activity;
+        ctx.beginPath();
+        ctx.arc(cx, cy, segR, a0, a0 + (Math.PI * 2 / segments) * 0.62);
+        const alpha = 0.12 + 0.35 * (0.5 + Math.sin(time * 2 + i * 0.6) * 0.5) * (speaking ? 1.3 : 1);
+        ctx.strokeStyle = dim(alpha);
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+      }
 
       // ─── Arco de reactor (arc reactor Iron Man) en el centro ───
       const reactorR = R * 0.62;
