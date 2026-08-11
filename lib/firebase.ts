@@ -611,6 +611,26 @@ export async function listenToAgendaNotes(userCode: string, callback: (notes: Ag
   });
 }
 
+/**
+ * Obtiene las tareas "pendientes del día anterior": notas de la Agenda con
+ * `done === false` cuya fecha sea anterior a hoy (quedaron sin terminar).
+ * Devuelve hasta `limit` resultados, priorizando por prioridad.
+ */
+export async function getPendingFromPreviousDays(userCode: string, limit = 4): Promise<AgendaNote[]> {
+  try {
+    await _init();
+    const all = await getAgendaNotes(userCode);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const pending = all
+      .filter((n) => !n.done && n.createdAt < today.getTime())
+      .sort((a, b) => (a.priority || 2) - (b.priority || 2) || b.createdAt - a.createdAt);
+    return pending.slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
 // ─── IDE helpers (no Firebase) ────────────────────────────────────
 
 export async function ideReadFile(path: string): Promise<string | null> {
