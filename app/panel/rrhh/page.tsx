@@ -358,15 +358,6 @@ export default function RRHHPage() {
                 onClick={() => {}}
               />
             )}
-            {puedeVer(currentUser, 'rrhh_catalogo') && (
-              <Tile
-                title="Codigo QR"
-                subtitle="Generador de gafete"
-                icon={<QrCode className="h-8 w-8" />}
-                color="bg-gradient-to-br from-cyan-500 to-cyan-700"
-                onClick={() => { setQrEmpNombre(''); setQrEmpCodigo(''); setIsQRBadgeOpen(true); }}
-              />
-            )}
           </div>
         )}
 

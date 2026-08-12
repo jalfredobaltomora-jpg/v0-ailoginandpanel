@@ -175,18 +175,18 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
     const startY = 24;
     lines.forEach((l, i) => ctx.fillText(l, W / 2, startY + i * lineH));
 
-    // Caja blanca con QR
+    // Caja blanca con QR (QR grande, llena el marco)
     const qrImg = new Image();
     qrImg.src = qrDataUrl;
     qrImg.onload = () => {
-      const qrSize = 160;
-      const qrX = (W - qrSize) / 2 - 10;
-      const qrY = 90;
+      const qrSize = 180;
+      const qrX = (W - qrSize) / 2 - 8;
+      const qrY = 88;
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.roundRect(qrX, qrY, qrSize + 20, qrSize + 20, 12);
+      ctx.roundRect(qrX, qrY, qrSize + 16, qrSize + 16, 12);
       ctx.fill();
-      ctx.drawImage(qrImg, qrX + 10, qrY + 10, qrSize, qrSize);
+      ctx.drawImage(qrImg, qrX + 8, qrY + 8, qrSize, qrSize);
 
       // Circulo (botón inicio) con color del gafete
       ctx.beginPath();
@@ -219,8 +219,8 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
         body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #fff; font-family: sans-serif; }
         .badge { width: 280px; border-radius: 28px; border: 5px solid #000; background: ${badgeColor}; padding: 24px 16px 20px; text-align: center; }
         .badge-name { color: #fff; font-size: 20px; font-weight: 700; margin-bottom: 16px; word-break: break-word; }
-        .qr-box { background: #fff; border-radius: 12px; padding: 10px; display: inline-block; }
-        .qr-box img { width: 160px; height: 160px; display: block; }
+        .qr-box { background: #fff; border-radius: 12px; padding: 8px; display: inline-block; }
+        .qr-box img { width: 180px; height: 180px; display: block; }
         .home-btn { width: 36px; height: 36px; border-radius: 50%; background: ${badgeColor}; border: 4px solid #fff; margin: 18px auto 0; }
       </style></head><body>
       <div class="badge">
@@ -322,8 +322,8 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
                 <p className="text-white text-lg font-bold mb-4 break-words leading-tight uppercase">
                   {qrLabel || 'NOMBRE'}
                 </p>
-                <div className="bg-white rounded-xl p-2.5 inline-block">
-                  <img src={qrDataUrl} alt="Codigo QR" className="w-40 h-40 block" />
+                <div className="bg-white rounded-xl p-2 inline-block">
+                  <img src={qrDataUrl} alt="Codigo QR" className="w-48 h-48 block" />
                 </div>
                 <div className="w-9 h-9 rounded-full border-4 border-white mx-auto mt-4" style={{ backgroundColor: badgeColor }} />
               </div>
