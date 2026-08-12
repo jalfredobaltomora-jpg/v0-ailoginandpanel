@@ -24,31 +24,49 @@ function gfMul(a: number, b: number): number {
   return EXP[LOG[a] + LOG[b]];
 }
 
+function rsMul(p1: number[], p2: number[]): number[] {
+  const coeff = new Array(p1.length + p2.length - 1).fill(0);
+  for (let i = 0; i < p1.length; i++) {
+    for (let j = 0; j < p2.length; j++) {
+      coeff[i + j] ^= gfMul(p1[i], p2[j]);
+    }
+  }
+  return coeff;
+}
+
+function rsMod(divident: number[], divisor: number[]): number[] {
+  let result = divident.slice();
+  while (result.length - divisor.length >= 0) {
+    const coeff = result[0];
+    for (let i = 0; i < divisor.length; i++) {
+      result[i] ^= gfMul(divisor[i], coeff);
+    }
+    let offset = 0;
+    while (offset < result.length && result[offset] === 0) offset++;
+    result = result.slice(offset);
+  }
+  return result;
+}
+
 function rsGeneratorPoly(degree: number): number[] {
   let poly = [1];
   for (let i = 0; i < degree; i++) {
-    const next = new Array(poly.length + 1).fill(0);
-    for (let j = 0; j < poly.length; j++) {
-      next[j] ^= gfMul(poly[j], 1);
-      next[j + 1] ^= gfMul(poly[j], EXP[i]);
-    }
-    poly = next;
+    poly = rsMul(poly, [1, EXP[i]]);
   }
   return poly;
 }
 
 function rsEncode(data: number[], ecLen: number): number[] {
   const gen = rsGeneratorPoly(ecLen);
-  const res = new Array(ecLen).fill(0);
-  for (const d of data) {
-    const factor = d ^ res[0];
-    res.shift();
-    res.push(0);
-    for (let j = 0; j < gen.length; j++) {
-      res[j] ^= gfMul(gen[j], factor);
-    }
+  const paddedData = data.concat(new Array(ecLen).fill(0));
+  const remainder = rsMod(paddedData, gen);
+  const start = ecLen - remainder.length;
+  if (start > 0) {
+    const buff = new Array(ecLen).fill(0);
+    for (let i = 0; i < remainder.length; i++) buff[start + i] = remainder[i];
+    return buff;
   }
-  return res;
+  return remainder;
 }
 
 // ─── QR capacity & version data (byte mode, EC level L) ───
@@ -228,8 +246,8 @@ function placeData(matrix: (number | null)[][], codewords: number[]) {
   let col = size - 1;
   while (col >= 0) {
     if (col === 6) col--; // skip timing column
+    const upward = ((col + 1) & 2) === 0; // alterna por par de columnas
     for (let row = 0; row < size; row++) {
-      const upward = col % 2 === (size % 2 === 0 ? 1 : 0);
       const actualRow = upward ? size - 1 - row : row;
       for (let c = 0; c < 2; c++) {
         const cc = col - c;
@@ -277,9 +295,13 @@ function getMaskFunction(num: number): (row: number, col: number) => boolean {
   return (r, c) => (r + c) % 2 === 0;
 }
 
-// EC level L = 01, mask bits: 3 bits for EC + 5 bits for mask penalty
+// Format info: 32 valores (4 niveles EC x 8 máscaras).
+// EC bits: M=00, L=01, H=10, Q=11. Índice = (ecLevel << 3) | maskNum
 const FORMAT_INFO_STRINGS: number[] = [
-  0x77c4, 0x72f3, 0x7daa, 0x789d, 0x662f, 0x6318, 0x6c41, 0x6976,
+  0x5412, 0x5125, 0x5e7c, 0x5b4b, 0x45f9, 0x40ce, 0x4f97, 0x4aa0, // M
+  0x77c4, 0x72f3, 0x7daa, 0x789d, 0x662f, 0x6318, 0x6c41, 0x6976, // L
+  0x1689, 0x13be, 0x1ce7, 0x19d0, 0x0762, 0x0255, 0x0d0c, 0x083b, // H
+  0x355f, 0x3068, 0x3f31, 0x3a06, 0x24b4, 0x2183, 0x2eda, 0x2bed, // Q
 ];
 
 function addFormatInfo(matrix: (number | null)[][], ecLevel: number, maskNum: number) {
