@@ -56,21 +56,11 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
   }, []);
 
   // Generar QR: contenido = 1er nombre + 1er apellido.
-  // Si hay otro empleado con el mismo 1er nombre, usar 1er nombre + 2do nombre + apellido.
   const getQRContent = useCallback((emp: Empleado): string => {
     const primerNombre = emp.nombres?.split(' ')[0] || '';
-    const segundoNombre = emp.nombres?.split(' ')[1] || '';
     const primerApellido = emp.apellidos?.split(' ')[0] || '';
-    // Verificar si hay duplicado del primer nombre
-    const hayDuplicado = empleados.some(e =>
-      e.code !== emp.code &&
-      (e.nombres?.split(' ')[0] || '').toLowerCase() === primerNombre.toLowerCase()
-    );
-    if (hayDuplicado && segundoNombre) {
-      return `${primerNombre} ${segundoNombre} ${primerApellido}`.trim();
-    }
     return `${primerNombre} ${primerApellido}`.trim();
-  }, [empleados]);
+  }, []);
 
   // Generar QR cuando se selecciona empleado
   useEffect(() => {
@@ -78,7 +68,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
       const contenido = getQRContent(selectedEmp);
       if (contenido) {
         try {
-          setQrDataUrl(generateQRDataURL(contenido, 200, 2));
+          setQrDataUrl(generateQRDataURL(contenido, 200, 1));
           setGenerated(true);
         } catch { setGenerated(false); }
       }
@@ -93,7 +83,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
       const parts = initialName.split(' ');
       const contenido = `${parts[0] || ''} ${initialName.split(' ')[1] || ''}`.trim() || initialName;
       try {
-        setQrDataUrl(generateQRDataURL(contenido, 200, 2));
+        setQrDataUrl(generateQRDataURL(contenido, 200, 1));
         setGenerated(true);
       } catch { /* ignore */ }
     }
@@ -129,7 +119,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
   // Descargar: captura el gafete completo (nombre + QR + diseño) como imagen
   const handleDownload = () => {
     if (!qrDataUrl || !badgeRef.current) return;
-    const W = 280, H = 420;
+    const W = 320, H = 470;
     const canvas = document.createElement('canvas');
     canvas.width = W * 2;
     canvas.height = H * 2;
@@ -149,11 +139,11 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
     // Nombre (blanco, negrita, centrado)
     const nombreMostrar = (qrLabel || 'NOMBRE').toUpperCase();
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 20px sans-serif';
+    ctx.font = 'bold 24px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     // Ajustar texto si es muy largo
-    let fontSize = 20;
+    let fontSize = 24;
     while (ctx.measureText(nombreMostrar).width > W - 32 && fontSize > 10) {
       fontSize -= 1;
       ctx.font = `bold ${fontSize}px sans-serif`;
@@ -171,7 +161,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
       }
     }
     if (line) lines.push(line);
-    const lineH = fontSize + 4;
+    const lineH = fontSize + 5;
     const startY = 24;
     lines.forEach((l, i) => ctx.fillText(l, W / 2, startY + i * lineH));
 
@@ -179,9 +169,9 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
     const qrImg = new Image();
     qrImg.src = qrDataUrl;
     qrImg.onload = () => {
-      const qrSize = 240;
+      const qrSize = 280;
       const qrX = (W - qrSize) / 2 - 2;
-      const qrY = 100;
+      const qrY = 110;
       ctx.fillStyle = '#fff';
       ctx.beginPath();
       ctx.roundRect(qrX, qrY, qrSize + 4, qrSize + 4, 8);
@@ -190,7 +180,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
 
       // Circulo (botón inicio) con color del gafete
       ctx.beginPath();
-      ctx.arc(W / 2, H - 30, 18, 0, Math.PI * 2);
+      ctx.arc(W / 2, H - 36, 20, 0, Math.PI * 2);
       ctx.fillStyle = badgeColor;
       ctx.fill();
       ctx.strokeStyle = '#fff';
@@ -217,8 +207,8 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #fff; font-family: sans-serif; }
-        .badge { width: 280px; border-radius: 28px; border: 5px solid #000; background: ${badgeColor}; padding: 24px 12px 20px; text-align: center; }
-        .badge-name { color: #fff; font-size: 20px; font-weight: 700; margin-bottom: 16px; word-break: break-word; }
+        .badge { width: 320px; border-radius: 28px; border: 5px solid #000; background: ${badgeColor}; padding: 24px 12px 20px; text-align: center; }
+        .badge-name { color: #fff; font-size: 24px; font-weight: 700; margin-bottom: 16px; word-break: break-word; }
         .qr-box { background: #fff; border-radius: 8px; padding: 4px; display: block; }
         .qr-box img { width: 100%; height: auto; display: block; }
         .home-btn { width: 36px; height: 36px; border-radius: 50%; background: ${badgeColor}; border: 4px solid #fff; margin: 18px auto 0; }
@@ -318,8 +308,8 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
           {/* Preview del gafete */}
           {generated && qrDataUrl ? (
             <div className="flex justify-center pt-2">
-              <div ref={badgeRef} className="w-[280px] rounded-[28px] border-[5px] border-black px-3 pt-6 pb-5 text-center shadow-xl" style={{ backgroundColor: badgeColor }}>
-                <p className="text-white text-lg font-bold mb-4 break-words leading-tight uppercase">
+              <div ref={badgeRef} className="w-[320px] rounded-[28px] border-[5px] border-black px-3 pt-6 pb-5 text-center shadow-xl" style={{ backgroundColor: badgeColor }}>
+                <p className="text-white text-2xl font-bold mb-4 break-words leading-tight uppercase">
                   {qrLabel || 'NOMBRE'}
                 </p>
                 <div className="bg-white rounded-lg p-1 inline-block w-full">
@@ -330,7 +320,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
             </div>
           ) : (
             <div className="flex justify-center pt-2">
-              <div className="w-[280px] h-[340px] rounded-[28px] border-[5px] border-black/20 bg-muted/30 flex items-center justify-center">
+              <div className="w-[320px] h-[380px] rounded-[28px] border-[5px] border-black/20 bg-muted/30 flex items-center justify-center">
                 <p className="text-muted-foreground text-sm text-center px-4">
                   Busca y selecciona un empleado para generar su QR
                 </p>
