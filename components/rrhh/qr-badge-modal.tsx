@@ -68,7 +68,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
       const contenido = getQRContent(selectedEmp);
       if (contenido) {
         try {
-          setQrDataUrl(generateQRDataURL(contenido, 200, 1));
+          setQrDataUrl(generateQRDataURL(contenido, 200, 4));
           setGenerated(true);
         } catch { setGenerated(false); }
       }
@@ -85,7 +85,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
         ? getQRContent(emp)
         : initialName.split(' ').slice(0, 1).concat(initialName.split(' ').slice(-1)).join(' ');
       try {
-        setQrDataUrl(generateQRDataURL(contenido, 200, 1));
+        setQrDataUrl(generateQRDataURL(contenido, 200, 4));
         setGenerated(true);
       } catch { /* ignore */ }
     }
@@ -168,7 +168,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
     const qrImg = new Image();
     qrImg.src = qrDataUrl;
     qrImg.onload = () => {
-      const qrSize = 250;
+      const qrSize = 253;
       const qrX = (W - qrSize) / 2 - 2;
       const qrY = 118;
       ctx.fillStyle = '#fff';
