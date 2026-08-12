@@ -129,7 +129,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
   // Descargar: captura el gafete completo (nombre + QR + diseño) como imagen
   const handleDownload = () => {
     if (!qrDataUrl || !badgeRef.current) return;
-    const W = 280, H = 340;
+    const W = 280, H = 420;
     const canvas = document.createElement('canvas');
     canvas.width = W * 2;
     canvas.height = H * 2;
@@ -175,22 +175,22 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
     const startY = 24;
     lines.forEach((l, i) => ctx.fillText(l, W / 2, startY + i * lineH));
 
-    // Caja blanca con QR (QR grande, llena el marco)
+    // Caja blanca con QR (QR ocupa casi todo el ancho del marco)
     const qrImg = new Image();
     qrImg.src = qrDataUrl;
     qrImg.onload = () => {
-      const qrSize = 180;
-      const qrX = (W - qrSize) / 2 - 8;
-      const qrY = 88;
+      const qrSize = 232;
+      const qrX = (W - qrSize) / 2 - 4;
+      const qrY = 100;
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.roundRect(qrX, qrY, qrSize + 16, qrSize + 16, 12);
+      ctx.roundRect(qrX, qrY, qrSize + 8, qrSize + 8, 10);
       ctx.fill();
-      ctx.drawImage(qrImg, qrX + 8, qrY + 8, qrSize, qrSize);
+      ctx.drawImage(qrImg, qrX + 4, qrY + 4, qrSize, qrSize);
 
       // Circulo (botón inicio) con color del gafete
       ctx.beginPath();
-      ctx.arc(W / 2, H - 33, 18, 0, Math.PI * 2);
+      ctx.arc(W / 2, H - 30, 18, 0, Math.PI * 2);
       ctx.fillStyle = badgeColor;
       ctx.fill();
       ctx.strokeStyle = '#fff';
@@ -217,10 +217,10 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #fff; font-family: sans-serif; }
-        .badge { width: 280px; border-radius: 28px; border: 5px solid #000; background: ${badgeColor}; padding: 24px 16px 20px; text-align: center; }
+        .badge { width: 280px; border-radius: 28px; border: 5px solid #000; background: ${badgeColor}; padding: 24px 12px 20px; text-align: center; }
         .badge-name { color: #fff; font-size: 20px; font-weight: 700; margin-bottom: 16px; word-break: break-word; }
-        .qr-box { background: #fff; border-radius: 12px; padding: 8px; display: inline-block; }
-        .qr-box img { width: 180px; height: 180px; display: block; }
+        .qr-box { background: #fff; border-radius: 12px; padding: 8px; display: block; }
+        .qr-box img { width: 100%; height: auto; display: block; }
         .home-btn { width: 36px; height: 36px; border-radius: 50%; background: ${badgeColor}; border: 4px solid #fff; margin: 18px auto 0; }
       </style></head><body>
       <div class="badge">
@@ -318,12 +318,12 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
           {/* Preview del gafete */}
           {generated && qrDataUrl ? (
             <div className="flex justify-center pt-2">
-              <div ref={badgeRef} className="w-[280px] rounded-[28px] border-[5px] border-black px-4 pt-6 pb-5 text-center shadow-xl" style={{ backgroundColor: badgeColor }}>
+              <div ref={badgeRef} className="w-[280px] rounded-[28px] border-[5px] border-black px-3 pt-6 pb-5 text-center shadow-xl" style={{ backgroundColor: badgeColor }}>
                 <p className="text-white text-lg font-bold mb-4 break-words leading-tight uppercase">
                   {qrLabel || 'NOMBRE'}
                 </p>
-                <div className="bg-white rounded-xl p-2 inline-block">
-                  <img src={qrDataUrl} alt="Codigo QR" className="w-48 h-48 block" />
+                <div className="bg-white rounded-xl p-2 inline-block w-full">
+                  <img src={qrDataUrl} alt="Codigo QR" className="w-full h-auto block" />
                 </div>
                 <div className="w-9 h-9 rounded-full border-4 border-white mx-auto mt-4" style={{ backgroundColor: badgeColor }} />
               </div>
