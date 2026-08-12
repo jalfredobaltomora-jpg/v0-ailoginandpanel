@@ -77,17 +77,19 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
     }
   }, [selectedEmp, initialName, initialCode, getQRContent]);
 
-  // Si viene con datos iniciales, generar QR directo
+  // Si viene con datos iniciales, generar QR directo (1er nombre + 1er apellido)
   useEffect(() => {
     if (initialName && initialCode) {
-      const parts = initialName.split(' ');
-      const contenido = `${parts[0] || ''} ${initialName.split(' ')[1] || ''}`.trim() || initialName;
+      const emp = empleados.find(e => e.code === initialCode);
+      const contenido = emp
+        ? getQRContent(emp)
+        : initialName.split(' ').slice(0, 1).concat(initialName.split(' ').slice(-1)).join(' ');
       try {
         setQrDataUrl(generateQRDataURL(contenido, 200, 1));
         setGenerated(true);
       } catch { /* ignore */ }
     }
-  }, [initialName, initialCode]);
+  }, [initialName, initialCode, empleados, getQRContent]);
 
   const handleSearch = useCallback((value: string) => {
     setSearch(value);
@@ -226,7 +228,17 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
 
   const qrLabel = selectedEmp
     ? getQRContent(selectedEmp)
-    : (initialName || search || '');
+    : (() => {
+        const empInicial = initialCode ? empleados.find(e => e.code === initialCode) : undefined;
+        if (empInicial) return getQRContent(empInicial);
+        if (initialName) {
+          const words = initialName.trim().split(/\s+/);
+          return words.length > 1
+            ? `${words[0]} ${words[words.length - 1]}`
+            : initialName;
+        }
+        return search || '';
+      })();
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
