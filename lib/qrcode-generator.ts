@@ -501,13 +501,13 @@ export function generateQRSVG(data: string, size: number): string {
 /**
  * Generate QR as data URL (PNG) for embedding in images.
  */
-export function generateQRDataURL(data: string, size: number): string {
+export function generateQRDataURL(data: string, size: number, quietZone = 4): string {
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d');
   if (!ctx) return '';
   const { matrix, size: qrSize } = generateQR(data);
-  drawQRToCanvas(ctx, matrix, qrSize, size);
+  drawQRToCanvas(ctx, matrix, qrSize, size, { quietZone });
   return canvas.toDataURL('image/png');
 }

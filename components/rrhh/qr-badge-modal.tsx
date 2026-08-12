@@ -78,7 +78,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
       const contenido = getQRContent(selectedEmp);
       if (contenido) {
         try {
-          setQrDataUrl(generateQRDataURL(contenido, 200));
+          setQrDataUrl(generateQRDataURL(contenido, 200, 2));
           setGenerated(true);
         } catch { setGenerated(false); }
       }
@@ -93,7 +93,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
       const parts = initialName.split(' ');
       const contenido = `${parts[0] || ''} ${initialName.split(' ')[1] || ''}`.trim() || initialName;
       try {
-        setQrDataUrl(generateQRDataURL(contenido, 200));
+        setQrDataUrl(generateQRDataURL(contenido, 200, 2));
         setGenerated(true);
       } catch { /* ignore */ }
     }
@@ -175,18 +175,18 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
     const startY = 24;
     lines.forEach((l, i) => ctx.fillText(l, W / 2, startY + i * lineH));
 
-    // Caja blanca con QR (QR ocupa casi todo el ancho del marco)
+    // Caja blanca con QR (QR ocupa casi todo el ancho, borde blanco pequeño)
     const qrImg = new Image();
     qrImg.src = qrDataUrl;
     qrImg.onload = () => {
-      const qrSize = 232;
-      const qrX = (W - qrSize) / 2 - 4;
+      const qrSize = 240;
+      const qrX = (W - qrSize) / 2 - 2;
       const qrY = 100;
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.roundRect(qrX, qrY, qrSize + 8, qrSize + 8, 10);
+      ctx.roundRect(qrX, qrY, qrSize + 4, qrSize + 4, 8);
       ctx.fill();
-      ctx.drawImage(qrImg, qrX + 4, qrY + 4, qrSize, qrSize);
+      ctx.drawImage(qrImg, qrX + 2, qrY + 2, qrSize, qrSize);
 
       // Circulo (botón inicio) con color del gafete
       ctx.beginPath();
@@ -219,7 +219,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
         body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #fff; font-family: sans-serif; }
         .badge { width: 280px; border-radius: 28px; border: 5px solid #000; background: ${badgeColor}; padding: 24px 12px 20px; text-align: center; }
         .badge-name { color: #fff; font-size: 20px; font-weight: 700; margin-bottom: 16px; word-break: break-word; }
-        .qr-box { background: #fff; border-radius: 12px; padding: 8px; display: block; }
+        .qr-box { background: #fff; border-radius: 8px; padding: 4px; display: block; }
         .qr-box img { width: 100%; height: auto; display: block; }
         .home-btn { width: 36px; height: 36px; border-radius: 50%; background: ${badgeColor}; border: 4px solid #fff; margin: 18px auto 0; }
       </style></head><body>
@@ -322,7 +322,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
                 <p className="text-white text-lg font-bold mb-4 break-words leading-tight uppercase">
                   {qrLabel || 'NOMBRE'}
                 </p>
-                <div className="bg-white rounded-xl p-2 inline-block w-full">
+                <div className="bg-white rounded-lg p-1 inline-block w-full">
                   <img src={qrDataUrl} alt="Codigo QR" className="w-full h-auto block" />
                 </div>
                 <div className="w-9 h-9 rounded-full border-4 border-white mx-auto mt-4" style={{ backgroundColor: badgeColor }} />
