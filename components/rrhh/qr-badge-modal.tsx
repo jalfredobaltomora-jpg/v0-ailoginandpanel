@@ -55,41 +55,44 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Generar QR: contenido = 1er nombre + 1er apellido.
+  // Nombre a mostrar en el gafete: 1er nombre + 1er apellido.
   const getQRContent = useCallback((emp: Empleado): string => {
     const primerNombre = emp.nombres?.split(' ')[0] || '';
     const primerApellido = emp.apellidos?.split(' ')[0] || '';
     return `${primerNombre} ${primerApellido}`.trim();
   }, []);
 
+  // Contenido del QR: codigo del trabajador.
+  const getQRData = useCallback((emp: Empleado): string => emp.code, []);
+
   // Generar QR cuando se selecciona empleado
   useEffect(() => {
     if (selectedEmp) {
-      const contenido = getQRContent(selectedEmp);
+      const contenido = getQRData(selectedEmp);
       if (contenido) {
         try {
-          setQrDataUrl(generateQRDataURL(contenido, 200, 4));
+          setQrDataUrl(generateQRDataURL(contenido, 280, 2));
           setGenerated(true);
         } catch { setGenerated(false); }
       }
     } else if (!initialName && !initialCode) {
       setGenerated(false);
     }
-  }, [selectedEmp, initialName, initialCode, getQRContent]);
+  }, [selectedEmp, initialName, initialCode, getQRData]);
 
-  // Si viene con datos iniciales, generar QR directo (1er nombre + 1er apellido)
+  // Si viene con datos iniciales, generar QR directo (codigo del trabajador)
   useEffect(() => {
     if (initialName && initialCode) {
       const emp = empleados.find(e => e.code === initialCode);
       const contenido = emp
-        ? getQRContent(emp)
-        : initialName.split(' ').slice(0, 1).concat(initialName.split(' ').slice(-1)).join(' ');
+        ? getQRData(emp)
+        : initialCode;
       try {
-        setQrDataUrl(generateQRDataURL(contenido, 200, 4));
+        setQrDataUrl(generateQRDataURL(contenido, 280, 2));
         setGenerated(true);
       } catch { /* ignore */ }
     }
-  }, [initialName, initialCode, empleados, getQRContent]);
+  }, [initialName, initialCode, empleados, getQRData]);
 
   const handleSearch = useCallback((value: string) => {
     setSearch(value);
@@ -168,7 +171,7 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
     const qrImg = new Image();
     qrImg.src = qrDataUrl;
     qrImg.onload = () => {
-      const qrSize = 253;
+      const qrSize = 280;
       const qrX = (W - qrSize) / 2 - 2;
       const qrY = 118;
       ctx.fillStyle = '#fff';
