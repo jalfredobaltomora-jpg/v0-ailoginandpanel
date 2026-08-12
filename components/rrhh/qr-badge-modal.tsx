@@ -138,42 +138,39 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
     ctx.lineWidth = 5;
     ctx.stroke();
 
-    // Nombre (blanco, negrita, centrado)
-    const nombreMostrar = (qrLabel || 'NOMBRE').toUpperCase();
+    // Nombre (blanco, negrita, centrado): 1er nombre y 1er apellido en dos lineas grandes
+    const wordsLabel = (qrLabel || 'NOMBRE').toUpperCase().split(' ').filter(Boolean);
+    const nombreLine = wordsLabel[0] || 'NOMBRE';
+    const apellidoLine = wordsLabel.slice(1).join(' ');
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 24px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    // Ajustar texto si es muy largo
-    let fontSize = 24;
-    while (ctx.measureText(nombreMostrar).width > W - 32 && fontSize > 10) {
-      fontSize -= 1;
-      ctx.font = `bold ${fontSize}px sans-serif`;
+    // Linea 1: primer nombre
+    let nombreFont = 34;
+    ctx.font = `bold ${nombreFont}px sans-serif`;
+    while (ctx.measureText(nombreLine).width > W - 24 && nombreFont > 16) {
+      nombreFont -= 1;
+      ctx.font = `bold ${nombreFont}px sans-serif`;
     }
-    const lines: string[] = [];
-    const words = nombreMostrar.split(' ');
-    let line = '';
-    for (const word of words) {
-      const test = line ? `${line} ${word}` : word;
-      if (ctx.measureText(test).width > W - 32) {
-        if (line) lines.push(line);
-        line = word;
-      } else {
-        line = test;
+    ctx.fillText(nombreLine, W / 2, 22);
+    // Linea 2: primer apellido
+    if (apellidoLine) {
+      let apellidoFont = 34;
+      ctx.font = `bold ${apellidoFont}px sans-serif`;
+      while (ctx.measureText(apellidoLine).width > W - 24 && apellidoFont > 16) {
+        apellidoFont -= 1;
+        ctx.font = `bold ${apellidoFont}px sans-serif`;
       }
+      ctx.fillText(apellidoLine, W / 2, 22 + 36);
     }
-    if (line) lines.push(line);
-    const lineH = fontSize + 5;
-    const startY = 24;
-    lines.forEach((l, i) => ctx.fillText(l, W / 2, startY + i * lineH));
 
     // Caja blanca con QR (QR ocupa casi todo el ancho, borde blanco pequeño)
     const qrImg = new Image();
     qrImg.src = qrDataUrl;
     qrImg.onload = () => {
-      const qrSize = 280;
+      const qrSize = 250;
       const qrX = (W - qrSize) / 2 - 2;
-      const qrY = 110;
+      const qrY = 118;
       ctx.fillStyle = '#fff';
       ctx.beginPath();
       ctx.roundRect(qrX, qrY, qrSize + 4, qrSize + 4, 8);
@@ -200,23 +197,25 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow || !badgeRef.current) return;
-    const primerNombre = selectedEmp?.nombres?.split(' ')[0] || search.split(' ')[0] || '';
-    const primerApellido = selectedEmp?.apellidos?.split(' ')[0] || search.split(' ')[1] || '';
-    const nombreMostrar = selectedEmp ? `${primerNombre} ${primerApellido}`.trim() : search || 'NOMBRE';
+    const nombreMostrar = selectedEmp ? getQRContent(selectedEmp) : search || 'NOMBRE';
+    const wordsPrint = nombreMostrar.split(' ').filter(Boolean);
+    const nombreLine = wordsPrint[0] || 'NOMBRE';
+    const apellidoLine = wordsPrint.slice(1).join(' ');
     printWindow.document.write(`
       <!DOCTYPE html>
       <html><head><title>QR - ${nombreMostrar}</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #fff; font-family: sans-serif; }
-        .badge { width: 320px; border-radius: 28px; border: 5px solid #000; background: ${badgeColor}; padding: 24px 12px 20px; text-align: center; }
-        .badge-name { color: #fff; font-size: 24px; font-weight: 700; margin-bottom: 16px; word-break: break-word; }
-        .qr-box { background: #fff; border-radius: 8px; padding: 4px; display: block; }
+        .badge { width: 320px; border-radius: 28px; border: 5px solid #000; background: ${badgeColor}; padding: 16px 12px 20px; text-align: center; }
+        .badge-name { color: #fff; font-size: 34px; font-weight: 700; line-height: 1.05; word-break: break-word; }
+        .qr-box { background: #fff; border-radius: 8px; padding: 4px; display: block; margin-top: 12px; }
         .qr-box img { width: 100%; height: auto; display: block; }
         .home-btn { width: 36px; height: 36px; border-radius: 50%; background: ${badgeColor}; border: 4px solid #fff; margin: 18px auto 0; }
       </style></head><body>
       <div class="badge">
-        <div class="badge-name">${nombreMostrar}</div>
+        <div class="badge-name">${nombreLine}</div>
+        ${apellidoLine ? `<div class="badge-name">${apellidoLine}</div>` : ''}
         <div class="qr-box"><img src="${qrDataUrl}" alt="QR"/></div>
         <div class="home-btn"></div>
       </div>
@@ -320,11 +319,19 @@ export function QRBadgeModal({ onClose, initialName = '', initialCode = '' }: QR
           {/* Preview del gafete */}
           {generated && qrDataUrl ? (
             <div className="flex justify-center pt-2">
-              <div ref={badgeRef} className="w-[320px] rounded-[28px] border-[5px] border-black px-3 pt-6 pb-5 text-center shadow-xl" style={{ backgroundColor: badgeColor }}>
-                <p className="text-white text-2xl font-bold mb-4 break-words leading-tight uppercase">
-                  {qrLabel || 'NOMBRE'}
-                </p>
-                <div className="bg-white rounded-lg p-1 inline-block w-full">
+              <div ref={badgeRef} className="w-[320px] rounded-[28px] border-[5px] border-black px-3 pt-4 pb-5 text-center shadow-xl" style={{ backgroundColor: badgeColor }}>
+                {(() => {
+                  const words = (qrLabel || 'NOMBRE').split(' ').filter(Boolean);
+                  return (
+                    <>
+                      <p className="text-white text-4xl font-bold leading-tight uppercase">{words[0] || 'NOMBRE'}</p>
+                      {words.length > 1 && (
+                        <p className="text-white text-4xl font-bold leading-tight uppercase">{words.slice(1).join(' ')}</p>
+                      )}
+                    </>
+                  );
+                })()}
+                <div className="bg-white rounded-lg p-1 inline-block w-full mt-3">
                   <img src={qrDataUrl} alt="Codigo QR" className="w-full h-auto block" />
                 </div>
                 <div className="w-9 h-9 rounded-full border-4 border-white mx-auto mt-4" style={{ backgroundColor: badgeColor }} />
