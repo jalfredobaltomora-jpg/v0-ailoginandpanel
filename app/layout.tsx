@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const base = process.env.VERCEL === '1' ? '' : '/v0-ailoginandpanel';
+const base = (process.env.VERCEL === '1' || process.env.CAPACITOR_BUILD === '1') ? '' : '/v0-ailoginandpanel';
 
 export const metadata: Metadata = {
   title: 'SCA - JB',
