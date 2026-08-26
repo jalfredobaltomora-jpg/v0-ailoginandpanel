@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { X, Loader2, Camera, Brain, Check, ClipboardCheck } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { X, Loader2, Camera, Brain, Check, ClipboardCheck, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { updateEquipoInventario, type EquipoInventario } from '@/lib/firebase';
@@ -11,8 +12,8 @@ import { analyzeFotos } from '@/lib/ai-client';
 import { SignaturePad } from './signature-pad';
 
 interface ReinspectionModalProps {
-  equipo: EquipoInventario;
-  empleadoNombre: string;
+  equipos: EquipoInventario[];
+  empleadoNombre?: string;
   onClose: () => void;
   onEdit: () => void;
   onSaved: () => void;
@@ -55,7 +56,9 @@ const accesorioLabels: Record<string, string> = {
   microSDTrayKey: 'Llave MicroSD',
 };
 
-export function ReinspectionModal({ equipo, empleadoNombre, onClose, onEdit, onSaved }: ReinspectionModalProps) {
+export function ReinspectionModal({ equipos, onClose, onEdit, onSaved }: ReinspectionModalProps) {
+  const [searchSerie, setSearchSerie] = useState('');
+  const [selectedEquipo, setSelectedEquipo] = useState<EquipoInventario | null>(null);
   const [fotos, setFotos] = useState({ ...defaultFotos });
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<{ score: number; analisis: string } | null>(null);
@@ -63,6 +66,32 @@ export function ReinspectionModal({ equipo, empleadoNombre, onClose, onEdit, onS
   const [error, setError] = useState('');
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
   const [firma, setFirma] = useState('');
+
+  const searchResults = useMemo(() => {
+    if (!searchSerie.trim()) return [];
+    const q = searchSerie.trim().toLowerCase();
+    return equipos.filter(e =>
+      (e.serialNumber || '').toLowerCase().includes(q) ||
+      (e.marca || '').toLowerCase().includes(q) ||
+      (e.modelo || '').toLowerCase().includes(q)
+    ).slice(0, 10);
+  }, [searchSerie, equipos]);
+
+  const handleSelectEquipo = (eq: EquipoInventario) => {
+    setSelectedEquipo(eq);
+    setSearchSerie(eq.serialNumber);
+    setFotos({ ...defaultFotos });
+    setResult(null);
+    setFirma('');
+    setChecks({ tipo: false, codigo: false, nombre: false, marca: false, modelo: false, serie: false, comentario: false, accesorios: false });
+  };
+
+  const equipo = selectedEquipo;
+
+  const getEmpleadoNombre = (code: string) => {
+    if (!code) return 'Sin asignar';
+    return code;
+  };
 
   // Validation checkboxes - all start unchecked
   const [checks, setChecks] = useState({
@@ -108,6 +137,7 @@ export function ReinspectionModal({ equipo, empleadoNombre, onClose, onEdit, onS
   };
 
   const handleSave = async () => {
+    if (!equipo) return;
     setSaving(true);
     setError('');
     const hasNewFotos = Object.values(fotos).some(Boolean);
@@ -131,7 +161,7 @@ export function ReinspectionModal({ equipo, empleadoNombre, onClose, onEdit, onS
     else setError('Error al guardar. Intenta de nuevo.');
   };
 
-  const tipoLabel = equipo.tipo === 'tablet' ? 'Tablet' : 'Scanner';
+  const tipoLabel = equipo?.tipo === 'tablet' ? 'Tablet' : 'Scanner';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -146,10 +176,50 @@ export function ReinspectionModal({ equipo, empleadoNombre, onClose, onEdit, onS
           </Button>
         </CardHeader>
         <CardContent className="space-y-5 p-6">
-          <p className="text-sm text-muted-foreground">
-            Equipo: <strong>{equipo.serialNumber}</strong> &mdash;{' '}
-            <strong>{empleadoNombre || 'Sin asignar'}</strong>
-          </p>
+          {/* Search by serial number, brand, or model — shows ALL equipment (assigned or not) */}
+          {!equipo && (
+            <div>
+              <label className="mb-2 block text-sm font-medium text-primary">Buscar equipo por serie, marca o modelo</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={searchSerie}
+                  onChange={(e) => setSearchSerie(e.target.value)}
+                  placeholder="Escribe para buscar..."
+                  className="w-full border-border bg-input pl-9"
+                  autoFocus
+                />
+              </div>
+              {searchResults.length > 0 && (
+                <div className="mt-2 rounded-lg border border-border bg-card max-h-48 overflow-y-auto">
+                  {searchResults.map(eq => (
+                    <button
+                      key={eq.id}
+                      onClick={() => handleSelectEquipo(eq)}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted/20 flex items-center gap-2 border-b border-border last:border-0"
+                    >
+                      <span className="font-mono text-primary text-xs">{eq.serialNumber}</span>
+                      <span className="text-muted-foreground">{eq.marca} {eq.modelo}</span>
+                      <span className="ml-auto text-xs text-muted-foreground">{eq.empleadoAsignado || 'Sin asignar'}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {searchSerie && searchResults.length === 0 && (
+                <div className="mt-2 py-4 text-center text-muted-foreground text-sm">No se encontraron equipos</div>
+              )}
+            </div>
+          )}
+
+          {equipo && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Equipo: <strong>{equipo.serialNumber}</strong> &mdash;{' '}
+                <strong>{getEmpleadoNombre(equipo.empleadoAsignado) || 'Sin asignar'}</strong>
+                <Button variant="ghost" size="sm" className="ml-3 h-7 text-xs" onClick={() => { setSelectedEquipo(null); setSearchSerie(''); }}>
+                  Cambiar equipo
+                </Button>
+              </p>
 
           {/* Validation fields */}
           <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
@@ -169,7 +239,7 @@ export function ReinspectionModal({ equipo, empleadoNombre, onClose, onEdit, onS
             />
             <FieldCheck
               label="Nombre Completo"
-              value={empleadoNombre || 'Sin asignar'}
+              value={equipo.empleadoAsignado || 'Sin asignar'}
               checked={checks.nombre}
               onCheck={(v) => setChecks(prev => ({ ...prev, nombre: v }))}
             />
@@ -291,6 +361,8 @@ export function ReinspectionModal({ equipo, empleadoNombre, onClose, onEdit, onS
               {!allChecked ? 'Valida todos los campos' : !firma ? 'Firma requerida' : 'Confirmar Reinspeccion'}
             </Button>
           </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

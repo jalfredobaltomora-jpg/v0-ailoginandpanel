@@ -89,7 +89,7 @@ export function IDCarnetModal({ empleado = null, onClose }: IDCarnetModalProps) 
         .body { display: flex; gap: 14px; flex: 1; margin-top: 6px; }
         .photo { width: 72px; height: 85px; border-radius: 8px; border: 2px solid rgba(0,238,255,0.4); background: #fff; object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: #0f3460; overflow: hidden; flex-shrink: 0; }
         .photo img { width: 100%; height: 100%; object-fit: cover; }
-        .data { flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; }
+        .data { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 8px; min-width: 0; }
         .name { font-size: 15px; font-weight: 700; line-height: 1.2; word-break: break-word; }
         .cedula { font-size: 9px; color: rgba(255,255,255,0.6); }
         .info { font-size: 8.5px; line-height: 1.5; color: rgba(255,255,255,0.75); }
@@ -200,7 +200,7 @@ export function IDCarnetModal({ empleado = null, onClose }: IDCarnetModalProps) 
                   </Avatar>
                 </div>
 
-                <div className="flex-1 flex flex-col justify-between z-10 min-w-0">
+                <div className="flex-1 flex flex-col justify-center gap-2 z-10 min-w-0">
                   <div>
                     <p className="text-[15px] font-bold leading-tight break-words">
                       {nombreCompleto}

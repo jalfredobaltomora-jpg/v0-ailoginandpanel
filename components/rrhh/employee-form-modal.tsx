@@ -106,6 +106,8 @@ export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: E
     embarazada: false,
     semanasEmbarazo: 0,
     discapacidad: false,
+    recordPolicial: false,
+    recordPolicialFecha: '',
     firstHireDate: '',
     firstEmployeeCode: '',
     renewalCount: 0,
@@ -132,6 +134,8 @@ export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: E
         embarazada: empleado.embarazada ?? false,
         semanasEmbarazo: empleado.semanasEmbarazo ?? 0,
         discapacidad: empleado.discapacidad ?? false,
+        recordPolicial: empleado.recordPolicial ?? false,
+        recordPolicialFecha: empleado.recordPolicialFecha || '',
         firstHireDate: empleado.firstHireDate || '',
         firstEmployeeCode: empleado.firstEmployeeCode || '',
         renewalCount: empleado.renewalCount ?? 0,
@@ -291,7 +295,14 @@ export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: E
           const oldHire = currentDb?.firstHireDate || empleado.fechaIng;
           saveData.firstHireDate = oldHire;
           saveData.firstEmployeeCode = oldCode;
-          saveData.renewalCount = (currentDb?.renewalCount ?? 0) + 1;
+          const newRenewalCount = (currentDb?.renewalCount ?? 0) + 1;
+          saveData.renewalCount = newRenewalCount;
+
+          // Reset recordPolicial on even renewals (2, 4, 6...) — every 2 years
+          if (newRenewalCount % 2 === 0) {
+            saveData.recordPolicial = false;
+            saveData.recordPolicialFecha = '';
+          }
 
           const historialEntry: HistorialContractual = {
             oldCode: empleado.code,
@@ -688,6 +699,69 @@ export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: E
                   Discapacidad
                 </label>
               </div>
+            </div>
+          )}
+
+          {/* Record Policial Checkbox */}
+          {isEditing && !isRenewing && (
+            <div className="flex items-center space-x-2 rounded-lg border border-border bg-muted/30 p-4">
+              <Checkbox
+                id="recordPolicial"
+                checked={formData.recordPolicial ?? false}
+                onCheckedChange={(checked) => {
+                  handleChange('recordPolicial', !!checked);
+                  if (checked) {
+                    handleChange('recordPolicialFecha', new Date().toISOString().split('T')[0]);
+                  } else {
+                    handleChange('recordPolicialFecha', '');
+                  }
+                }}
+              />
+              <label
+                htmlFor="recordPolicial"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Trajo Documento de Record Policial
+              </label>
+            </div>
+          )}
+
+          {/* Record Policial status when renewing */}
+          {isEditing && isRenewing && (
+            <div className={`rounded-lg border p-4 ${
+              (formData.renewalCount ?? 0) % 2 === 0
+                ? 'border-amber-500/50 bg-amber-500/10'
+                : 'border-green-500/50 bg-green-500/10'
+            }`}>
+              <p className={`text-sm font-medium ${
+                (formData.renewalCount ?? 0) % 2 === 0 ? 'text-amber-400' : 'text-green-400'
+              }`}>
+                {(formData.renewalCount ?? 0) % 2 === 0
+                  ? '⚠ Debe traer Record Policial (requerido cada 2 años)'
+                  : '✓ No necesita Record Policial — lo trajo en la renovación anterior'}
+              </p>
+              {(formData.renewalCount ?? 0) % 2 !== 0 && formData.recordPolicialFecha && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Última vez: {formData.recordPolicialFecha}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Record Policial status when viewing (not editing) */}
+          {!isEditing && (
+            <div className={`rounded-lg border p-3 ${
+              formData.recordPolicial
+                ? 'border-green-500/50 bg-green-500/10'
+                : 'border-amber-500/50 bg-amber-500/10'
+            }`}>
+              <p className={`text-sm font-medium ${
+                formData.recordPolicial ? 'text-green-400' : 'text-amber-400'
+              }`}>
+                {formData.recordPolicial
+                  ? `✓ Record Policial: Traído${formData.recordPolicialFecha ? ` (${formData.recordPolicialFecha})` : ''}`
+                  : '⚠ Record Policial: No traído'}
+              </p>
             </div>
           )}
 

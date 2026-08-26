@@ -220,6 +220,8 @@ export interface Empleado {
   embarazada: boolean;
   semanasEmbarazo: number;
   discapacidad: boolean;
+  recordPolicial?: boolean;
+  recordPolicialFecha?: string;
   firstHireDate?: string;
   firstEmployeeCode?: string;
   renewalCount?: number;
@@ -803,6 +805,21 @@ export async function deleteEquipoInventario(id: string): Promise<boolean> {
     await remove(ref(db, `equipos-inventario/${id}`));
     return true;
   } catch { return false; }
+}
+
+export async function searchEquiposBySerial(query: string): Promise<EquipoInventario[]> {
+  try {
+    await _init();
+    const snapshot = await get(ref(db, 'equipos-inventario'));
+    const raw: Record<string, any> = snapshot.val() || {};
+    const q = query.trim().toLowerCase();
+    return Object.keys(raw)
+      .map(key => ({ ...raw[key], id: raw[key].id || key }))
+      .filter(e => (e.serialNumber || '').toLowerCase().includes(q));
+  } catch (e) {
+    console.error('Firebase searchEquiposBySerial error:', e);
+    return [];
+  }
 }
 
 export function listenToEquiposInventario(callback: (equipos: EquipoInventario[]) => void): () => void {

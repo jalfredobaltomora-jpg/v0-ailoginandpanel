@@ -4,33 +4,12 @@ import { useRef, useEffect, useState } from 'react';
 import { Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { EquipoInventario } from '@/lib/firebase';
-import QRCode from '@/lib/qrcode-engine';
-
-// The bundled qrcode-engine has a buggy makeImage() that crashes after draw().
-// The canvas is already drawn by draw(), so makeImage is unnecessary.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const QRCodeAny = QRCode as any;
-if (QRCodeAny.prototype?.makeImage) {
-  QRCodeAny.prototype.makeImage = function () {};
-}
-
+import { generateQR, drawQRToCanvas } from '@/lib/qrcode-generator';
 
 interface QRLabelProps {
   equipo: EquipoInventario;
   empleadoNombre: string;
   size?: number;
-}
-
-const accesorioLabelsQR: Record<string, string> = {
-  usbCable: 'Cable USB',
-  chargerCube: 'Cubo Cargador',
-  microSDTrayKey: 'Llave MicroSD',
-  cableOTG: 'Cable OTG',
-};
-
-function truncate(v: string | undefined | null, max: number): string {
-  if (!v) return '-';
-  return v.length > max ? v.slice(0, max) + '…' : v;
 }
 
 function buildQRLines(equipo: EquipoInventario, empleadoNombre: string): string {
@@ -78,36 +57,34 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
     container.innerHTML = '';
 
     try {
-      new QRCode(container, {
-        text: buildQRLines(equipo, empleadoNombre),
-        width: size,
-        height: size,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel?.L || 1,
-      });
+      const qrData = buildQRLines(equipo, empleadoNombre);
+      const { matrix, size: qrSize } = generateQR(qrData);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      canvas.style.display = 'block';
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { setQrError(true); return; }
+
+      drawQRToCanvas(ctx, matrix, qrSize, size, { quietZone: 2 });
+      container.appendChild(canvas);
     } catch (e) {
-      console.warn('QR non-fatal error (canvas may still be drawn):', e);
-      // If the canvas was drawn before the error, keep it visible
-      if (!container.querySelector('canvas')) {
-        setQrError(true);
-      }
+      console.warn('QR generation error:', e);
+      setQrError(true);
     }
   }, [equipo, empleadoNombre, size]);
 
   const getCanvasDataUrl = (): string | null => {
     const canvas = containerRef.current?.querySelector('canvas');
-    if (!canvas) { console.warn('QR print: no canvas found'); return null; }
-    try {
-      const url = canvas.toDataURL('image/png');
-      console.log('QR print: data URL length', url.length);
-      return url;
-    } catch (e) { console.warn('QR print: toDataURL failed', e); return null; }
+    if (!canvas) return null;
+    try { return canvas.toDataURL('image/png'); } catch { return null; }
   };
 
   const handlePrint = () => {
     const dataUrl = getCanvasDataUrl();
-    if (!dataUrl) { console.warn('QR print: no data URL, aborting'); return; }
+    if (!dataUrl) return;
     const { asignado, equipo: eqData } = buildLabelLines(equipo, empleadoNombre);
     const tipo = equipo.tipo === 'tablet' ? 'Tablet' : 'Scanner';
     const html = `<!DOCTYPE html><html><head>
@@ -143,7 +120,7 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
             ${eqData.map(r => `<div class="row"><span class="lbl">${r.label}:</span><span class="val">${r.value}</span></div>`).join('')}
           </div>
           <div class="qr-side">
-            <img src="${dataUrl}" alt="QR" id="qr-img" onerror="console.warn('QR img load error')" />
+            <img src="${dataUrl}" alt="QR" id="qr-img" />
           </div>
         </div>
         <div class="footer">
@@ -156,47 +133,19 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
     iframe.style.cssText = 'position:fixed;right:-9999px;bottom:-9999px;width:1px;height:1px;border:none';
     document.body.appendChild(iframe);
     const win = iframe.contentWindow;
-    if (!win) { console.warn('QR print: no iframe contentWindow'); return; }
-    const doc = win.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
-    const cleanup = () => {
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-      window.focus();
-    };
+    if (!win) return;
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    const cleanup = () => { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); window.focus(); };
     const img = win.document.getElementById('qr-img') as HTMLImageElement | null;
     if (img) {
-      img.onload = () => {
-        console.log('QR print: image loaded, printing');
-        win.print();
-        win.addEventListener('afterprint', cleanup, { once: true });
-        setTimeout(cleanup, 2000);
-      };
-      img.onerror = () => {
-        console.warn('QR print: image error, printing anyway');
-        win.print();
-        win.addEventListener('afterprint', cleanup, { once: true });
-        setTimeout(cleanup, 2000);
-      };
-      if (img.complete) {
-        if (img.naturalWidth > 0) {
-          console.log('QR print: image already complete, printing');
-          win.print();
-          win.addEventListener('afterprint', cleanup, { once: true });
-          setTimeout(cleanup, 2000);
-        } else {
-          console.warn('QR print: image complete but 0 width');
-          win.print();
-          win.addEventListener('afterprint', cleanup, { once: true });
-          setTimeout(cleanup, 2000);
-        }
-      }
+      const doPrint = () => { win.print(); cleanup(); };
+      img.onload = doPrint;
+      img.onerror = doPrint;
+      if (img.complete) doPrint();
     } else {
-      console.warn('QR print: no img element found, printing anyway');
-      win.print();
-      win.addEventListener('afterprint', cleanup, { once: true });
-      setTimeout(cleanup, 2000);
+      win.print(); cleanup();
     }
   };
 

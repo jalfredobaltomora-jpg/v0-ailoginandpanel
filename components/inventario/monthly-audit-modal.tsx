@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SignaturePad } from './signature-pad';
-import { updateEquipoInventario, getEquipoInventario, type EquipoInventario, type HistorialMensual } from '@/lib/firebase';
+import { updateEquipoInventario, getEquipoInventario, searchEquiposBySerial, type EquipoInventario, type HistorialMensual } from '@/lib/firebase';
 
 interface MonthlyAuditModalProps {
   equipos: EquipoInventario[];

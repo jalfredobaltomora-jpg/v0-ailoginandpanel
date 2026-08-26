@@ -495,6 +495,15 @@ export default function RRHHPage() {
                             1ra vez
                           </span>
                         )}
+                        {emp.recordPolicial ? (
+                          <span className="rounded bg-green-500/15 px-2 py-0.5 text-xs text-green-400" title={`Record Policial: Traído (${emp.recordPolicialFecha || 'sin fecha'})`}>
+                            RP ✓
+                          </span>
+                        ) : (
+                          <span className="rounded bg-amber-500/15 px-2 py-0.5 text-xs text-amber-400" title="Record Policial: Pendiente">
+                            RP ✗
+                          </span>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
