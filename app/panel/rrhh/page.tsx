@@ -152,6 +152,21 @@ export default function RRHHPage() {
     return age;
   };
 
+  const calcAntiguedad = (fechaIng: string) => {
+    if (!fechaIng) return null;
+    const ing = parseDateLocal(fechaIng);
+    const today = new Date();
+    let years = today.getFullYear() - ing.getFullYear();
+    const m = today.getMonth() - ing.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < ing.getDate())) years--;
+    const nextAnniversary = new Date(ing);
+    nextAnniversary.setFullYear(today.getFullYear());
+    if (nextAnniversary <= today) nextAnniversary.setFullYear(today.getFullYear() + 1);
+    const diffMs = nextAnniversary.getTime() - today.getTime();
+    const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    return { years, daysLeft };
+  };
+
   const getInitials = (emp: Empleado) => {
     const n = emp.nombres?.charAt(0) || '';
     const a = emp.apellidos?.charAt(0) || '';
@@ -478,6 +493,22 @@ export default function RRHHPage() {
                           <span className="font-medium">Área:</span> {emp.area} | {' '}
                           <span className="font-medium">Edad:</span> {calcEdad(emp.fechaNac)}
                           {emp.renewalCount ? ` | Renov.: ${emp.renewalCount}` : ''}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          <span className="font-medium">Ingreso:</span> {emp.fechaIng || '-'}
+                          {(() => {
+                            const ant = calcAntiguedad(emp.fechaIng);
+                            if (!ant) return null;
+                            return (
+                              <>
+                                {' | '}<span className="font-medium">Antigüedad:</span> {ant.years} {ant.years === 1 ? 'año' : 'años'}
+                                {' | '}<span className="font-medium">Próx. año:</span>{' '}
+                                <span className={ant.daysLeft <= 30 ? 'text-amber-400 font-semibold' : ''}>
+                                  {ant.daysLeft} {ant.daysLeft === 1 ? 'día' : 'días'}
+                                </span>
+                              </>
+                            );
+                          })()}
                         </div>
                         <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                           <span>{emp.sexo === 'femenino' ? '♀' : '♂'} {emp.sexo}</span>
