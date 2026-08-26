@@ -299,10 +299,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: E
           saveData.renewalCount = newRenewalCount;
 
           // Reset recordPolicial on even renewals (2, 4, 6...) — every 2 years
-          if (newRenewalCount % 2 === 0) {
-            saveData.recordPolicial = false;
-            saveData.recordPolicialFecha = '';
-          }
+          // (the form state is already reset when entering renewal mode)
 
           const historialEntry: HistorialContractual = {
             oldCode: empleado.code,
@@ -387,7 +384,15 @@ export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: E
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => { setIsEditing(true); setIsRenewing(true); }}
+                  onClick={() => {
+                    setIsEditing(true);
+                    setIsRenewing(true);
+                    // Reset recordPolicial on even renewals (2, 4, 6...)
+                    const newCount = (empleado?.renewalCount ?? 0) + 1;
+                    if (newCount % 2 === 0) {
+                      setFormData(prev => ({ ...prev, recordPolicial: false, recordPolicialFecha: '' }));
+                    }
+                  }}
                   className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
@@ -703,7 +708,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: E
           )}
 
           {/* Record Policial Checkbox */}
-          {isEditing && !isRenewing && (
+          {isEditing && (!isRenewing || ((formData.renewalCount ?? 0) + 1) % 2 === 0) && (
             <div className="flex items-center space-x-2 rounded-lg border border-border bg-muted/30 p-4">
               <Checkbox
                 id="recordPolicial"
@@ -711,7 +716,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: E
                 onCheckedChange={(checked) => {
                   handleChange('recordPolicial', !!checked);
                   if (checked) {
-                    handleChange('recordPolicialFecha', new Date().toISOString().split('T')[0]);
+                    handleChange('recordPolicialFecha', formData.fechaIng || new Date().toISOString().split('T')[0]);
                   } else {
                     handleChange('recordPolicialFecha', '');
                   }
@@ -729,18 +734,18 @@ export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: E
           {/* Record Policial status when renewing */}
           {isEditing && isRenewing && (
             <div className={`rounded-lg border p-4 ${
-              (formData.renewalCount ?? 0) % 2 === 0
+              ((formData.renewalCount ?? 0) + 1) % 2 === 0
                 ? 'border-amber-500/50 bg-amber-500/10'
                 : 'border-green-500/50 bg-green-500/10'
             }`}>
               <p className={`text-sm font-medium ${
-                (formData.renewalCount ?? 0) % 2 === 0 ? 'text-amber-400' : 'text-green-400'
+                ((formData.renewalCount ?? 0) + 1) % 2 === 0 ? 'text-amber-400' : 'text-green-400'
               }`}>
-                {(formData.renewalCount ?? 0) % 2 === 0
+                {((formData.renewalCount ?? 0) + 1) % 2 === 0
                   ? '⚠ Debe traer Record Policial (requerido cada 2 años)'
                   : '✓ No necesita Record Policial — lo trajo en la renovación anterior'}
               </p>
-              {(formData.renewalCount ?? 0) % 2 !== 0 && formData.recordPolicialFecha && (
+              {((formData.renewalCount ?? 0) + 1) % 2 !== 0 && formData.recordPolicialFecha && (
                 <p className="mt-1 text-xs text-muted-foreground">
                   Última vez: {formData.recordPolicialFecha}
                 </p>
