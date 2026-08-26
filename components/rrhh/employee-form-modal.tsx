@@ -85,6 +85,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: E
 
   // Only IT Manager roles can change the employee code on a regular edit
   const puedeEditarCodigo = !!currentUser && tienePermiso(currentUser, 'itManager');
+  const puedeEditarFechaIng = !!currentUser && tienePermiso(currentUser, 'itManager');
 
   // Form state
   const [formData, setFormData] = useState<Empleado>({
@@ -316,7 +317,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: E
             await deleteEmpleado(empleado.code);
           }
         } else {
-          saveData.firstHireDate = empleado.firstHireDate;
+          saveData.firstHireDate = puedeEditarFechaIng ? formData.fechaIng : empleado.firstHireDate;
           saveData.firstEmployeeCode = empleado.firstEmployeeCode;
           saveData.renewalCount = empleado.renewalCount ?? 0;
           success = await updateEmpleado(code, saveData as Partial<Empleado>);
@@ -530,7 +531,7 @@ export function EmployeeFormModal({ empleado, onClose, onSaved, currentUser }: E
                 value={formData.fechaIng}
                 onChange={(e) => handleChange('fechaIng', e.target.value)}
                 className="border-border bg-input"
-                disabled={!isEditing || (!!empleado && !isRenewing)}
+                disabled={!isEditing || (!!empleado && !isRenewing && !puedeEditarFechaIng)}
               />
             </div>
           </div>
