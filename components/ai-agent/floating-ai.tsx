@@ -271,10 +271,7 @@ export function FloatingAI() {
               ? `${loginHours >= 6 && loginHours < 12 ? 'Buenos días' : loginHours >= 12 && loginHours < 18 ? 'Buenas tardes' : 'Buenas noches'} ${name}! Soy JAB, tu asistente. ${timePart}. ¿En qué te ayudo?`
               : `${loginHours >= 6 && loginHours < 12 ? 'Good morning' : loginHours >= 12 && loginHours < 18 ? 'Good afternoon' : 'Good evening'} ${name}! I am JAB, your assistant. ${timePart}. How can I help you?`;
             setLoginGreeting(greeting);
-            setTimeout(() => {
-              speak(greeting);
-              setTimeout(() => setLoginGreeting(null), 9000);
-            }, 1200);
+            setTimeout(() => setLoginGreeting(null), 9000);
           }
           // JAB hidrata el perfil de aprendizaje desde la nube para conocer al
           // usuario aunque se haya logueado antes en otro dispositivo.
@@ -443,8 +440,7 @@ export function FloatingAI() {
       : `${timeGreeting} ${userName}!\n\nToday is ${fecha} and ${hora}.\n\nMy name is JAB, your intelligent assistant, I'm here to help you with anything you need.\n\nJust say "JAB I need" + what you want, or type directly.`);
 
     setMessages((prev) => prev.length === 0 ? [{ role: 'assistant', content: intro, timestamp: Date.now() }] : prev);
-    setTimeout(() => speak(intro), 800);
-  }, [isChatOpen, lang, userName, speak]);
+  }, [isChatOpen, lang, userName]);
 
   const addMessage = useCallback((role: 'user' | 'assistant', content: string, report?: Message['report']) => {
     setMessages((prev) => [...prev, { role, content, timestamp: Date.now(), report }]);
