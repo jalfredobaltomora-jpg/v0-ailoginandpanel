@@ -82,6 +82,84 @@ export default function InventarioPage() {
     return empleadosMap[code] || code;
   };
 
+  const handlePrintList = (list: EquipoInventario[], titulo: string) => {
+    const asignados = list.filter(e => e.empleadoAsignado);
+    const sinAsignar = list.filter(e => !e.empleadoAsignado);
+
+    const buildRows = (items: EquipoInventario[]) => items.map((eq, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td><strong>${eq.serialNumber}</strong></td>
+        <td>${eq.tipo === 'tablet' ? 'Tablet' : 'Scanner'}</td>
+        <td>${eq.marca || '-'}</td>
+        <td>${eq.modelo || '-'}</td>
+        <td>${getEmpleadoNombre(eq.empleadoAsignado)}</td>
+        <td>${eq.fechaAsignacion || '-'}</td>
+        <td>${eq.mesInventario || '-'}</td>
+        <td>${eq.estado || '-'}</td>
+        <td>${Object.entries(eq.accesorios).filter(([,v]) => v).map(([k]) => accesorioLabels[k]).join(', ') || '-'}</td>
+      </tr>
+    `).join('');
+
+    const buildSection = (label: string, items: EquipoInventario[], color: string) => {
+      if (items.length === 0) return '';
+      return `
+        <div class="section-header" style="background:${color}">
+          <span>${label}</span>
+          <span class="section-count">${items.length} equipo${items.length !== 1 ? 's' : ''}</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Serie</th>
+              <th>Tipo</th>
+              <th>Marca</th>
+              <th>Modelo</th>
+              <th>Empleado</th>
+              <th>Fecha Asig.</th>
+              <th>Mes Inv.</th>
+              <th>Estado</th>
+              <th>Accesorios</th>
+            </tr>
+          </thead>
+          <tbody>${buildRows(items)}</tbody>
+        </table>
+      `;
+    };
+
+    const html = `<!DOCTYPE html><html><head>
+      <title>${titulo} - Inventario</title>
+      <style>
+        @page { size: landscape; margin: 10mm; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; font-size: 11px; }
+        h1 { text-align: center; color: #1a365d; margin: 0 0 4px; font-size: 18px; }
+        h2 { text-align: center; color: #4a5568; margin: 0 0 12px; font-size: 13px; font-weight: normal; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; border-radius: 6px; color: white; font-weight: 700; font-size: 12px; margin: 12px 0 6px; }
+        .section-count { font-weight: 400; font-size: 11px; opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+        th { background: #1a365d; color: white; padding: 6px 8px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; font-size: 10px; }
+        tr:nth-child(even) { background: #f7fafc; }
+        tr:hover { background: #edf2f7; }
+        .footer { text-align: center; margin-top: 15px; font-size: 9px; color: #a0aec0; border-top: 1px solid #e2e8f0; padding-top: 6px; }
+        @media print { body { padding: 0; } .section-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } th { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+      </style></head><body>
+      <h1>Inventario de Equipos</h1>
+      <h2>${titulo}</h2>
+      ${buildSection('Equipos Asignados', asignados, '#16a34a')}
+      ${buildSection('Equipos Sin Asignar', sinAsignar, '#6b7280')}
+      <div class="footer">SCA — Sistema de Control Administrativo | ${new Date().toLocaleDateString('es-NI', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+    </body></html>`;
+
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => { win.print(); }, 300);
+    }
+  };
+
   const filteredEquipos = equipos.filter((e) => {
     if (activeTab === 'agregar' || activeTab === 'inspection') return false;
     const matchesTipo = e.tipo === activeTab;
@@ -536,6 +614,10 @@ export default function InventarioPage() {
                           <span className="ml-1 rounded-full bg-green-500/10 px-2 py-0.5 text-xs text-green-500">
                             {(activeTab === 'tablet' ? tabletAsignados : scannerAsignados).length}
                           </span>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto text-muted-foreground hover:text-foreground"
+                            onClick={() => handlePrintList(activeTab === 'tablet' ? tabletAsignados : scannerAsignados, `Equipos Asignados — ${activeTab === 'tablet' ? 'Tablets' : 'Scanners'}`)}>
+                            <Printer className="h-3.5 w-3.5" />
+                          </Button>
                         </h3>
                         {renderEquipmentList(
                           activeTab === 'tablet' ? tabletAsignados : scannerAsignados,
@@ -550,6 +632,10 @@ export default function InventarioPage() {
                           <span className="ml-1 rounded-full bg-muted-foreground/10 px-2 py-0.5 text-xs text-muted-foreground">
                             {(activeTab === 'tablet' ? tabletSinAsignar : scannerSinAsignar).length}
                           </span>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto text-muted-foreground hover:text-foreground"
+                            onClick={() => handlePrintList(activeTab === 'tablet' ? tabletSinAsignar : scannerSinAsignar, `Equipos Sin Asignar — ${activeTab === 'tablet' ? 'Tablets' : 'Scanners'}`)}>
+                            <Printer className="h-3.5 w-3.5" />
+                          </Button>
                         </h3>
                         {renderEquipmentList(
                           activeTab === 'tablet' ? tabletSinAsignar : scannerSinAsignar,

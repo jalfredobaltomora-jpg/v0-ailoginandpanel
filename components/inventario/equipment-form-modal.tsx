@@ -365,6 +365,20 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
             />
           </div>
 
+          {/* Fecha de Asignacion */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-primary">
+              Fecha de Asignacion
+            </label>
+            <Input
+              type="date"
+              value={formData.fechaAsignacion || ''}
+              onChange={(e) => handleChange('fechaAsignacion', e.target.value)}
+              className="border-border bg-input"
+              disabled={!isEditing}
+            />
+          </div>
+
           {/* Accesorios */}
           <div>
             <label className="mb-2 block text-sm font-medium text-primary">
