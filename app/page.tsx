@@ -68,20 +68,22 @@ export default function LoginPage() {
       {/* Rotating JB Logo */}
       <style>{`
 @keyframes rotateJB {
-  0% { transform: perspective(600px) rotateY(-25deg); }
-  50% { transform: perspective(600px) rotateY(25deg); }
-  100% { transform: perspective(600px) rotateY(-25deg); }
+  0% { transform: perspective(600px) rotateY(-20deg); }
+  50% { transform: perspective(600px) rotateY(20deg); }
+  100% { transform: perspective(600px) rotateY(-20deg); }
 }
 .logo-jb {
   animation: rotateJB 4s ease-in-out infinite;
   transform-style: preserve-3d;
+  will-change: transform;
 }
 `}</style>
-      <div className="fixed left-4 top-4 z-10 flex h-28 w-28 items-center justify-center overflow-visible rounded-xl border border-primary/20 bg-background/80 shadow-lg backdrop-blur-sm">
+      <div className="fixed left-4 top-4 z-10 flex h-28 w-28 items-center justify-center rounded-xl border border-primary/20 bg-background/80 shadow-lg backdrop-blur-sm">
         <img
           src="/logo.png"
           alt="JB"
-          className="logo-jb h-24 w-auto"
+          className="logo-jb h-24 w-auto max-w-full object-contain"
+          onError={(e) => { (e.target as HTMLImageElement).src = '/icon-512x512.png'; }}
         />
       </div>
 

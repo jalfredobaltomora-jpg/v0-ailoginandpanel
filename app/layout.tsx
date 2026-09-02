@@ -45,9 +45,9 @@ export default function RootLayout({
       <body className="font-sans antialiased bg-background text-foreground">
         {children}
         {process.env.VERCEL === '1' && <Analytics />}
-        {base && <script dangerouslySetInnerHTML={{
-          __html: `if('serviceWorker'in navigator)navigator.serviceWorker.register(${JSON.stringify(base + '/sw.js')})`,
-        }} />}
+        <script dangerouslySetInnerHTML={{
+          __html: `if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js')`,
+        }} />
       </body>
     </html>
   )

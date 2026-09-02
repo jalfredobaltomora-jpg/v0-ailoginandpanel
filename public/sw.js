@@ -1,11 +1,12 @@
-const CACHE = 'jabm-panel-v5';
-const BASE = self.location?.origin || '';
+const CACHE = 'jabm-panel-v6';
 const ASSETS = [
-  BASE + '/',
-  BASE + '/manifest.json',
-  BASE + '/icon-192x192.png',
-  BASE + '/icon-512x512.png',
-  BASE + '/icon.svg',
+  '/',
+  '/manifest.json',
+  '/icon-192x192.png',
+  '/icon-512x512.png',
+  '/icon.svg',
+  '/logo.png',
+  '/apple-icon.png',
 ];
 
 self.addEventListener('install', (event) => {
