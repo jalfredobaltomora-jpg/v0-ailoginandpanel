@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: 'SCA - JB',
   description: 'Sistema de Control Administrativo con IA',
   generator: 'v0.app',
-  manifest: `${base}/manifest.json`,
+  manifest: `${base}/manifest.json?v=7`,
   appleWebApp: {
     capable: true,
     title: 'SCA - JB',
