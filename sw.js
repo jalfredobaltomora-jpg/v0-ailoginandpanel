@@ -1,4 +1,4 @@
-const CACHE = 'jabm-panel-v6';
+const CACHE = 'jabm-panel-v7';
 const ASSETS = [
   '/',
   '/manifest.json',
@@ -10,7 +10,9 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
+  event.waitUntil(
+    caches.open(CACHE).then((c) => c.addAll(ASSETS))
+  );
   self.skipWaiting();
 });
 
@@ -26,6 +28,13 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return;
+
+  const url = new URL(event.request.url);
+
+  if (url.pathname === '/manifest.json') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
