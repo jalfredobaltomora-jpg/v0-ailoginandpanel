@@ -12,22 +12,10 @@ interface QRLabelProps {
   size?: number;
 }
 
-function buildQRLines(equipo: EquipoInventario, empleadoNombre: string): string {
-  const emp = (empleadoNombre || '-').slice(0, 40).replace(/[^ -~]/g, '');
-  const cod = (equipo.empleadoAsignado || '-').slice(0, 15);
-  const tipo = equipo.tipo === 'tablet' ? 'T' : 'S';
-  const marca = (equipo.marca || '-').slice(0, 20).replace(/[^ -~]/g, '');
-  const modelo = (equipo.modelo || '-').slice(0, 20).replace(/[^ -~]/g, '');
-  const serie = equipo.serialNumber.slice(0, 30);
-  const estado = (equipo.estado || '-').slice(0, 60).replace(/[^ -~]/g, '');
-  const mes = (equipo.mesInventario || '-').slice(0, 10);
-  return [
-    `${serie}`,
-    `${cod}|${emp}`,
-    `${tipo}|${marca} ${modelo}`,
-    `${estado}`,
-    `${mes}`,
-  ].join('\n');
+function buildQRUrl(equipo: EquipoInventario): string {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const serial = encodeURIComponent(equipo.serialNumber);
+  return `${origin}/inventario/equipo?serial=${serial}`;
 }
 
 function buildLabelLines(equipo: EquipoInventario, empleadoNombre: string) {
@@ -57,8 +45,8 @@ export function QRLabel({ equipo, empleadoNombre, size = 120 }: QRLabelProps) {
     container.innerHTML = '';
 
     try {
-      const qrData = buildQRLines(equipo, empleadoNombre);
-      const { matrix, size: qrSize } = generateQR(qrData);
+      const qrUrl = buildQRUrl(equipo);
+      const { matrix, size: qrSize } = generateQR(qrUrl);
 
       const canvas = document.createElement('canvas');
       canvas.width = size;
