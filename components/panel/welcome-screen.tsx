@@ -226,23 +226,26 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-gradient-to-br from-background via-background to-primary/10 p-4">
-      {/* Rotating JB Logo */}
+      {/* Watermark JB Logo */}
       <style>{`
-@keyframes rotateJB {
-  0% { transform: perspective(600px) rotateY(-25deg); }
-  50% { transform: perspective(600px) rotateY(25deg); }
-  100% { transform: perspective(600px) rotateY(-25deg); }
+@keyframes watermarkFloat {
+  0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 0.04; }
+  25% { transform: translate(-48%, -52%) scale(1.02) rotate(1deg); opacity: 0.06; }
+  50% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 0.04; }
+  75% { transform: translate(-52%, -48%) scale(1.02) rotate(-1deg); opacity: 0.06; }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 0.04; }
 }
-.logo-jb {
-  animation: rotateJB 4s ease-in-out infinite;
-  transform-style: preserve-3d;
+.watermark-jb {
+  animation: watermarkFloat 8s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 `}</style>
-      <div className="fixed left-4 top-4 z-[60] flex h-20 w-20 items-center justify-center overflow-visible rounded-xl border border-primary/20 bg-background/80 shadow-lg backdrop-blur-sm sm:h-28 sm:w-28">
+      <div className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center">
         <img
           src="/logo.png"
-          alt="JB"
-          className="logo-jb h-16 w-auto sm:h-24"
+          alt=""
+          className="watermark-jb w-[60vw] max-w-[500px] h-auto object-contain mix-blend-screen"
+          style={{ filter: 'grayscale(1) brightness(2) contrast(0.8)', imageRendering: 'auto' }}
         />
       </div>
       <div className="w-full max-w-lg">
