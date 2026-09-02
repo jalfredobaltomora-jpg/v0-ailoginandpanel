@@ -13,9 +13,14 @@ interface QRLabelProps {
 }
 
 function buildQRUrl(equipo: EquipoInventario): string {
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const serial = encodeURIComponent(equipo.serialNumber);
-  return `${origin}/inventario/equipo?serial=${serial}`;
+  const publicUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (publicUrl) {
+    return `${publicUrl}/inventario/equipo?serial=${serial}`;
+  }
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const base = '/v0-ailoginandpanel';
+  return `${origin}${base}/inventario/equipo?serial=${serial}`;
 }
 
 function buildLabelLines(equipo: EquipoInventario, empleadoNombre: string) {
