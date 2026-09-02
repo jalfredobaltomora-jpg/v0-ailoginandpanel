@@ -53,6 +53,7 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
   const isSaturday = day === 6;
 
   useEffect(() => {
+    const fallback = setTimeout(() => setLoading(false), 5000);
     const load = async () => {
       const emp = await getEmpleadoByCodigo(user.codigo);
       setEmpleado(emp);
@@ -143,10 +144,11 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
         }
       }
 
+      clearTimeout(fallback);
       setLoading(false);
     });
 
-    return unsub;
+    return () => { clearTimeout(fallback); unsub(); };
   }, [user, isWeekend, isSaturday, empleado]);
 
   const handleLunchSave = async () => {
@@ -238,7 +240,7 @@ export function WelcomeScreen({ user, onEnter }: WelcomeScreenProps) {
 `}</style>
       <div className="fixed left-4 top-4 z-[60] flex h-20 w-20 items-center justify-center overflow-visible rounded-xl border border-primary/20 bg-background/80 shadow-lg backdrop-blur-sm sm:h-28 sm:w-28">
         <img
-          src="/v0-ailoginandpanel/logo.png"
+          src="/logo.png"
           alt="JB"
           className="logo-jb h-16 w-auto sm:h-24"
         />

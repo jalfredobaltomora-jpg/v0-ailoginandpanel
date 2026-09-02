@@ -30,11 +30,15 @@ async function _init(): Promise<void> {
       _db = _dbMod.getDatabase(_app);
       _storageMod = await import('firebase/storage');
       _storage = _storageMod.getStorage(_app);
-      _msgMod = await import('firebase/messaging');
+      try {
+        _msgMod = await import('firebase/messaging');
+      } catch { /* messaging optional */ }
       _ready = true;
       _readyResolve();
     } catch (e) {
       console.error('Firebase init failed:', e);
+      _ready = true;
+      _readyResolve();
     }
   })();
   return _initPromise;
