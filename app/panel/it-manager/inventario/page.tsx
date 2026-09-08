@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Tablet, Scan, Search, Plus, Trash2, Camera, ClipboardCheck, ClipboardList, UserCheck, UserX, CheckCircle, XCircle, Edit, Printer, FileSpreadsheet } from 'lucide-react';
+import { ArrowLeft, Tablet, Scan, Search, Plus, Trash2, Camera, ClipboardCheck, ClipboardList, UserCheck, UserX, CheckCircle, XCircle, Edit, Printer, FileSpreadsheet, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -235,6 +235,11 @@ export default function InventarioPage() {
   const handleEdit = (equipo: EquipoInventario) => {
     setSelectedEquipo(equipo);
     setIsModalOpen(true);
+  };
+
+  const handleViewCard = (equipo: EquipoInventario) => {
+    const url = `/inventario/equipo?serial=${encodeURIComponent(equipo.serialNumber)}`;
+    window.open(url, '_blank');
   };
 
   const handleCloseModal = () => {
@@ -795,7 +800,7 @@ export default function InventarioPage() {
     return (
       <div className="space-y-2">
         {filtered.map((eq) => (
-          <div key={eq.id} className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-4 py-3 hover:bg-muted/40 cursor-pointer transition-colors" onClick={() => handleEdit(eq)}>
+          <div key={eq.id} className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-4 py-3 hover:bg-muted/40 cursor-pointer transition-colors" onClick={() => handleViewCard(eq)}>
             <div className="flex-1 min-w-0 flex items-center gap-3">
               <span className="rounded bg-primary/20 px-2 py-0.5 font-mono text-xs text-primary shrink-0">{eq.serialNumber}</span>
               <span className="text-xs text-muted-foreground shrink-0">{eq.tipo === 'tablet' ? 'Tablet' : 'Scanner'}</span>
@@ -815,6 +820,10 @@ export default function InventarioPage() {
               {eq.fotos && Object.values(eq.fotos).some(f => f) && (
                 <span className="text-[10px] text-muted-foreground/60 mr-1">{Object.values(eq.fotos).filter(f => f).length} fotos</span>
               )}
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-blue-500"
+                onClick={(e) => { e.stopPropagation(); handleEdit(eq); }} title="Editar">
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
               <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-500"
                 onClick={(e) => { e.stopPropagation(); handleDelete(eq); }} title="Eliminar">
                 <Trash2 className="h-3.5 w-3.5" />

@@ -25,25 +25,39 @@ function buildQRUrl(equipo: EquipoInventario): string {
 }
 
 function QRSection({ equipo }: { equipo: EquipoInventario }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const [svgHtml, setSvgHtml] = useState('');
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el || !equipo.serialNumber) return;
-    el.innerHTML = '';
     try {
       const url = buildQRUrl(equipo);
       const svg = generateQRSVG(url, 100);
-      el.innerHTML = svg;
+      setSvgHtml(svg);
+      setError(false);
     } catch (e) {
-      console.warn('QR error:', e);
-      el.innerHTML = '<span style="color:#f87171;font-size:10px">Error QR</span>';
+      console.warn('QR generation failed:', e);
+      setError(true);
     }
-  }, [equipo]);
+  }, [equipo.serialNumber]);
+
+  if (error || !svgHtml) {
+    return (
+      <div className="flex items-center gap-4 bg-white/[0.04] rounded-xl px-4 py-3 border border-white/[0.06]">
+        <div className="shrink-0 bg-slate-700 rounded-lg flex items-center justify-center" style={{ width: 100, height: 100 }}>
+          <span className="text-slate-500 text-[10px]">QR N/A</span>
+        </div>
+        <div className="min-w-0">
+          <div className="text-[9px] text-slate-500 uppercase tracking-[0.12em] font-medium">Código QR</div>
+          <div className="text-white text-xs font-semibold truncate">{equipo.serialNumber}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-4 bg-white/[0.04] rounded-xl px-4 py-3 border border-white/[0.06]">
-      <div ref={ref} className="shrink-0 bg-white rounded-lg p-1 flex items-center justify-center" style={{ width: 100, height: 100 }} />
+      <div className="shrink-0 bg-white rounded-lg p-1 flex items-center justify-center" style={{ width: 100, height: 100 }}
+        dangerouslySetInnerHTML={{ __html: svgHtml }} />
       <div className="min-w-0">
         <div className="text-[9px] text-slate-500 uppercase tracking-[0.12em] font-medium">Código QR</div>
         <div className="text-white text-xs font-semibold truncate">{equipo.serialNumber}</div>
