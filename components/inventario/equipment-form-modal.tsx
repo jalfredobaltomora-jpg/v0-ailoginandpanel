@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { X, Loader2, Camera, Tablet, Scan } from 'lucide-react';
+import { removeBackground } from '@/lib/remove-bg';
 import { SignaturePad } from './signature-pad';
+import { Photo3DViewer } from './photo-3d-viewer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,6 +60,7 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
   const [error, setError] = useState('');
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+  const [show3D, setShow3D] = useState(false);
 
   const defaultFotos = { lateralIzquierdo: '', lateralDerecho: '', frontal: '', trasero: '' };
 
@@ -126,6 +129,8 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
     }));
   };
 
+  const [bgRemovalStatus, setBgRemovalStatus] = useState<Record<string, boolean>>({});
+
   const handlePhotoUpload = (slot: keyof typeof defaultFotos, autoAdvance = false) => {
     const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
     const input = document.createElement('input');
@@ -144,6 +149,12 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
       reader.onload = async () => {
         const resized = await compressImageBase64(reader.result as string);
         setFormData(prev => ({ ...prev, fotos: { ...prev.fotos, [slot]: resized } }));
+        setBgRemovalStatus(prev => ({ ...prev, [slot]: true }));
+        try {
+          const noBg = await removeBackground(resized);
+          setFormData(prev => ({ ...prev, fotos: { ...prev.fotos, [slot]: noBg } }));
+        } catch { /* keep original if removal fails */ }
+        setBgRemovalStatus(prev => ({ ...prev, [slot]: false }));
         if (autoAdvance) {
           const slotOrder: (keyof typeof defaultFotos)[] = ['frontal', 'trasero', 'lateralIzquierdo', 'lateralDerecho'];
           const currentIdx = slotOrder.indexOf(slot);
@@ -457,8 +468,15 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
                           src={formData.fotos[key]}
                           alt={label}
                           className="h-full w-full object-cover cursor-pointer"
+                          style={{ background: 'repeating-conic-gradient(#333 0% 25%, #444 0% 50%) 50% / 12px 12px' }}
                           onClick={() => setViewingPhoto(formData.fotos[key])}
                         />
+                        {bgRemovalStatus[key] && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                            <Loader2 className="h-5 w-5 text-white animate-spin" />
+                            <span className="text-[9px] text-white ml-1">Quitando fondo...</span>
+                          </div>
+                        )}
                         {isEditing && (
                           <button
                             onClick={() => removePhoto(key)}
@@ -487,6 +505,12 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
                 </div>
               ))}
             </div>
+            {Object.values(formData.fotos).some(f => f) && (
+              <Button variant="outline" size="sm" className="mt-3 border-primary/30 text-primary hover:bg-primary/10"
+                onClick={() => setShow3D(true)}>
+                🎲 Ver Vista 3D
+              </Button>
+            )}
           </div>
 
           {/* Photo viewer */}
@@ -497,6 +521,19 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
             >
               <img src={viewingPhoto} alt="Foto" className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain" />
             </div>
+          )}
+
+          {/* 3D Photo Viewer */}
+          {show3D && (
+            <Photo3DViewer
+              photos={[
+                { url: formData.fotos.frontal, label: 'Frontal' },
+                { url: formData.fotos.lateralDerecho, label: 'Lateral Der.' },
+                { url: formData.fotos.trasero, label: 'Trasero' },
+                { url: formData.fotos.lateralIzquierdo, label: 'Lateral Izq.' },
+              ].filter(p => p.url)}
+              onClose={() => setShow3D(false)}
+            />
           )}
 
           {/* Firma */}

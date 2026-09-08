@@ -793,52 +793,31 @@ export default function InventarioPage() {
     }
 
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         {filtered.map((eq) => (
-          <div key={eq.id} className="rounded-lg border border-border bg-muted/20 p-4 hover:bg-muted/40 cursor-pointer transition-colors" onClick={() => handleEdit(eq)}>
-            <div className="mb-3 flex gap-2">
-              {fotoAngleLabels.map(({ key, label }) => (
-                <div key={key} className="relative flex h-20 flex-1 items-center justify-center rounded-md border border-border/50 bg-muted/10 overflow-hidden">
-                  {eq.fotos?.[key] ? (
-                    <img src={eq.fotos[key]} alt={label} className="h-full w-full object-cover"
-                      onClick={(e) => { e.stopPropagation(); const ordered = fotoAngleLabels.filter(f => eq.fotos[f.key]).map(f => ({ url: eq.fotos[f.key], label: f.label })); setPhotoGallery({ photos: ordered, index: Math.max(0, ordered.findIndex(p => p.url === eq.fotos[key])) }); }}
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center gap-0.5 text-muted-foreground/40">
-                      <Camera className="h-5 w-5" />
-                      <span className="text-[10px]">{label}</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="rounded bg-primary/20 px-2 py-0.5 font-mono text-xs text-primary">{eq.serialNumber}</span>
-                  {eq.marca && <span className="rounded bg-blue-500/10 px-2 py-0.5 text-xs text-blue-400">{eq.marca}</span>}
-                  {eq.modelo && <span className="rounded bg-muted-foreground/10 px-2 py-0.5 text-xs text-muted-foreground">{eq.modelo}</span>}
-                  <span className="font-medium text-foreground truncate">{getEmpleadoNombre(eq.empleadoAsignado)}</span>
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  <span className="font-medium">Comentario:</span> {eq.estado || 'Sin comentarios'}
-                  <span className="mx-2">|</span>
-                  <span className="font-medium">Asignacion:</span> {eq.fechaAsignacion}
-                  <span className="mx-2">|</span>
-                  <span className="font-medium">Mes:</span> {eq.mesInventario}
-                </div>
-                <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
+          <div key={eq.id} className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-4 py-3 hover:bg-muted/40 cursor-pointer transition-colors" onClick={() => handleEdit(eq)}>
+            <div className="flex-1 min-w-0 flex items-center gap-3">
+              <span className="rounded bg-primary/20 px-2 py-0.5 font-mono text-xs text-primary shrink-0">{eq.serialNumber}</span>
+              <span className="text-xs text-muted-foreground shrink-0">{eq.tipo === 'tablet' ? 'Tablet' : 'Scanner'}</span>
+              {eq.marca && <span className="rounded bg-blue-500/10 px-2 py-0.5 text-xs text-blue-400 shrink-0">{eq.marca}</span>}
+              {eq.modelo && <span className="rounded bg-muted-foreground/10 px-2 py-0.5 text-xs text-muted-foreground shrink-0">{eq.modelo}</span>}
+              <span className="font-medium text-foreground text-sm truncate">{getEmpleadoNombre(eq.empleadoAsignado)}</span>
+              <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">{eq.fechaAsignacion}</span>
+              {Object.entries(eq.accesorios).filter(([,v]) => v).length > 0 && (
+                <div className="hidden md:flex gap-1.5">
                   {Object.entries(eq.accesorios).filter(([,v]) => v).map(([k]) => (
-                    <span key={k} className="rounded bg-green-500/10 px-1.5 py-0.5 text-green-500">{accesorioLabels[k]}</span>
+                    <span key={k} className="rounded bg-green-500/10 px-1.5 py-0.5 text-[10px] text-green-500">{accesorioLabels[k]}</span>
                   ))}
                 </div>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <QRLabel equipo={eq} empleadoNombre={getEmpleadoNombre(eq.empleadoAsignado)} size={100} />
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500 shrink-0"
-                onClick={(e) => { e.stopPropagation(); handleDelete(eq); }} title="Eliminar equipo">
-                <Trash2 className="h-4 w-4" />
+              )}
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {eq.fotos && Object.values(eq.fotos).some(f => f) && (
+                <span className="text-[10px] text-muted-foreground/60 mr-1">{Object.values(eq.fotos).filter(f => f).length} fotos</span>
+              )}
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-500"
+                onClick={(e) => { e.stopPropagation(); handleDelete(eq); }} title="Eliminar">
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
