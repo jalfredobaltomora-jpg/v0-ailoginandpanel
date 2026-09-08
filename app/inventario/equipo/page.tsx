@@ -7,7 +7,7 @@ import type { EquipoInventario, Empleado } from '@/lib/firebase';
 import { Download, Printer, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import html2canvas from 'html2canvas';
-import { generateQR, drawQRToCanvas } from '@/lib/qrcode-generator';
+import { generateQRSVG } from '@/lib/qrcode-generator';
 
 const ACC_LABELS: Record<string, string> = {
   usbCable: 'Cable USB',
@@ -33,22 +33,17 @@ function QRSection({ equipo }: { equipo: EquipoInventario }) {
     el.innerHTML = '';
     try {
       const url = buildQRUrl(equipo);
-      const { matrix, size } = generateQR(url);
-      const canvas = document.createElement('canvas');
-      canvas.width = 100;
-      canvas.height = 100;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      drawQRToCanvas(ctx, matrix, size, 100, { quietZone: 2 });
-      el.appendChild(canvas);
+      const svg = generateQRSVG(url, 100);
+      el.innerHTML = svg;
     } catch (e) {
       console.warn('QR error:', e);
+      el.innerHTML = '<span style="color:#f87171;font-size:10px">Error QR</span>';
     }
   }, [equipo]);
 
   return (
     <div className="flex items-center gap-4 bg-white/[0.04] rounded-xl px-4 py-3 border border-white/[0.06]">
-      <div ref={ref} className="shrink-0 bg-white rounded-lg p-1" />
+      <div ref={ref} className="shrink-0 bg-white rounded-lg p-1 flex items-center justify-center" style={{ width: 100, height: 100 }} />
       <div className="min-w-0">
         <div className="text-[9px] text-slate-500 uppercase tracking-[0.12em] font-medium">Código QR</div>
         <div className="text-white text-xs font-semibold truncate">{equipo.serialNumber}</div>
