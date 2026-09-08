@@ -261,22 +261,27 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
                 <Tablet className="h-5 w-5 text-primary" />
                 <span className="font-medium">Tablet</span>
               </label>
-              <label className={`flex items-center gap-2 rounded-lg border-2 p-3 cursor-pointer transition-colors ${
-                !isEditing ? 'opacity-60 cursor-not-allowed' :
-                formData.tipo === 'scanner' ? 'border-primary bg-primary/10' : 'border-border bg-muted/20 hover:border-primary/50'
-              }`}>
-                <input
-                  type="radio"
-                  name="tipo"
-                  value="scanner"
-                  checked={formData.tipo === 'scanner'}
-                  onChange={() => isEditing && handleChange('tipo', 'scanner')}
-                  className="accent-primary"
-                  disabled={!isEditing}
-                />
-                <Scan className="h-5 w-5 text-primary" />
-                <span className="font-medium">Scanner</span>
-              </label>
+              {formData.empleadoAsignado && (
+                <label className={`flex items-center gap-2 rounded-lg border-2 p-3 cursor-pointer transition-colors ${
+                  !isEditing ? 'opacity-60 cursor-not-allowed' :
+                  formData.tipo === 'scanner' ? 'border-primary bg-primary/10' : 'border-border bg-muted/20 hover:border-primary/50'
+                }`}>
+                  <input
+                    type="radio"
+                    name="tipo"
+                    value="scanner"
+                    checked={formData.tipo === 'scanner'}
+                    onChange={() => isEditing && handleChange('tipo', 'scanner')}
+                    className="accent-primary"
+                    disabled={!isEditing}
+                  />
+                  <Scan className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Scanner</span>
+                </label>
+              )}
+              {!formData.empleadoAsignado && formData.tipo === 'scanner' && (
+                <span className="text-xs text-muted-foreground self-center">Scanner requiere empleado asignado</span>
+              )}
             </div>
           </div>
 
@@ -287,7 +292,14 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
             </label>
             <Select
               value={formData.empleadoAsignado}
-              onValueChange={(v) => handleChange('empleadoAsignado', v === '__unassigned__' ? '' : v)}
+              onValueChange={(v) => {
+                const code = v === '__unassigned__' ? '' : v;
+                setFormData(prev => ({
+                  ...prev,
+                  empleadoAsignado: code,
+                  tipo: code ? prev.tipo : 'tablet',
+                }));
+              }}
               disabled={!isEditing}
             >
               <SelectTrigger className="border-border bg-input">
