@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, Loader2, Camera, Tablet, Scan } from 'lucide-react';
 import { removeBackground } from '@/lib/remove-bg';
 import { SignaturePad } from './signature-pad';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { generateQRSVG } from '@/lib/qrcode-generator';
 import {
   Select,
   SelectContent,
@@ -55,7 +56,7 @@ function compressImageBase64(base64: string, maxSize = 300): Promise<string> {
 }
 
 export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormModalProps) {
-  const [isEditing, setIsEditing] = useState(true);
+  const [isEditing, setIsEditing] = useState(equipo ? false : true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
@@ -548,6 +549,19 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
             />
           )}
 
+          {/* QR Code */}
+          {equipo?.serialNumber && (
+            <div className="flex items-center gap-4 bg-white/[0.04] rounded-xl px-4 py-3 border border-white/[0.06]">
+              <div className="shrink-0 bg-white rounded-lg p-1 flex items-center justify-center" style={{ width: 80, height: 80 }}
+                dangerouslySetInnerHTML={{ __html: (() => { try { return generateQRSVG(`${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/inventario/equipo?serial=${encodeURIComponent(equipo.serialNumber)}`, 80); } catch { return '<span style="color:#999;font-size:9px">QR</span>'; } })() }} />
+              <div className="min-w-0">
+                <div className="text-[9px] text-muted-foreground uppercase tracking-[0.12em] font-medium">Código QR</div>
+                <div className="text-foreground text-xs font-semibold truncate">{equipo.serialNumber}</div>
+                <div className="text-muted-foreground text-[10px] mt-0.5">Escanea para ver ficha completa</div>
+              </div>
+            </div>
+          )}
+
           {/* Firma */}
           <SignaturePad
             value={formData.firma || ''}
@@ -563,9 +577,9 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
           )}
 
           {/* Actions */}
-          {isEditing && (
+          {isEditing ? (
             <div className="flex justify-end gap-3 border-t border-border pt-4">
-              <Button variant="outline" onClick={onClose}>
+              <Button variant="outline" onClick={() => setIsEditing(false)}>
                 Cancelar
               </Button>
               <Button
@@ -575,6 +589,15 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
               >
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Guardar
+              </Button>
+            </div>
+          ) : (
+            <div className="flex justify-end gap-3 border-t border-border pt-4">
+              <Button variant="outline" onClick={onClose}>
+                Cerrar
+              </Button>
+              <Button onClick={() => setIsEditing(true)} className="bg-primary text-primary-foreground">
+                Editar
               </Button>
             </div>
           )}
