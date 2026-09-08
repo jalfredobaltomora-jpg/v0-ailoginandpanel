@@ -297,7 +297,7 @@ export function EquipmentFormModal({ equipo, onClose, onSaved }: EquipmentFormMo
                 setFormData(prev => ({
                   ...prev,
                   empleadoAsignado: code,
-                  tipo: code ? prev.tipo : 'tablet',
+                  tipo: (!code && prev.tipo === 'scanner') ? 'tablet' : prev.tipo,
                 }));
               }}
               disabled={!isEditing}

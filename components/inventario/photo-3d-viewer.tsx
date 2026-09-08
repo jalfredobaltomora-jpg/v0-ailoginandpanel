@@ -9,8 +9,8 @@ interface Photo3DViewerProps {
 }
 
 export function Photo3DViewer({ photos, onClose }: Photo3DViewerProps) {
-  const [rotateX, setRotateX] = useState(-15);
   const [rotateY, setRotateY] = useState(0);
+  const [rotateX, setRotateX] = useState(-20);
   const [autoRotate, setAutoRotate] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const lastPos = useRef({ x: 0, y: 0 });
@@ -21,10 +21,12 @@ export function Photo3DViewer({ photos, onClose }: Photo3DViewerProps) {
   const der = photos.find(p => p.label.includes('Der'))?.url || '';
   const izq = photos.find(p => p.label.includes('Izq'))?.url || '';
 
+  const faces = [frontal, der, trasero, izq];
+
   useEffect(() => {
     if (!autoRotate || isDragging) return;
     const tick = () => {
-      setRotateY(prev => prev + 0.4);
+      setRotateY(prev => prev + 0.3);
       animRef.current = requestAnimationFrame(tick);
     };
     animRef.current = requestAnimationFrame(tick);
@@ -43,25 +45,27 @@ export function Photo3DViewer({ photos, onClose }: Photo3DViewerProps) {
     const dx = e.clientX - lastPos.current.x;
     const dy = e.clientY - lastPos.current.y;
     lastPos.current = { x: e.clientX, y: e.clientY };
-    setRotateY(prev => prev + dx * 0.6);
-    setRotateX(prev => Math.max(-60, Math.min(60, prev - dy * 0.6)));
+    setRotateY(prev => prev + dx * 0.8);
+    setRotateX(prev => Math.max(-60, Math.min(60, prev - dy * 0.5)));
   };
 
   const handlePointerUp = () => setIsDragging(false);
 
   const resetView = () => {
-    setRotateX(-15);
+    setRotateX(-20);
     setRotateY(0);
     setAutoRotate(true);
   };
 
-  const size = 280;
+  const faceWidth = 240;
+  const faceHeight = 320;
+  const radius = faceWidth / (2 * Math.tan(Math.PI / 4));
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90" onClick={onClose}>
       {/* Header */}
       <div className="absolute top-4 left-0 right-0 flex items-center justify-center gap-3 z-10">
-        <span className="text-white/60 text-sm font-medium">Vista 3D del Equipo</span>
+        <span className="text-white/60 text-sm font-medium">Vista 3D — Arrastra para girar</span>
       </div>
       <div className="absolute top-4 right-4 flex gap-2 z-10">
         <button onClick={(e) => { e.stopPropagation(); resetView(); }}
@@ -74,15 +78,10 @@ export function Photo3DViewer({ photos, onClose }: Photo3DViewerProps) {
         </button>
       </div>
 
-      {/* Hint */}
-      <div className="absolute bottom-8 text-white/40 text-xs z-10">
-        Arrastra para girar • Scroll para inclinar
-      </div>
-
-      {/* 3D Scene */}
+      {/* 3D Cylindrical Viewer */}
       <div
         className="cursor-grab active:cursor-grabbing select-none"
-        style={{ perspective: '1000px', width: size + 40, height: size + 40 }}
+        style={{ perspective: '900px', width: faceWidth + 80, height: faceHeight + 80 }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -94,61 +93,52 @@ export function Photo3DViewer({ photos, onClose }: Photo3DViewerProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div
-          className="relative"
           style={{
-            width: size,
-            height: size,
-            margin: '20px',
+            width: faceWidth,
+            height: faceHeight,
+            margin: '40px',
+            position: 'relative',
             transformStyle: 'preserve-3d',
             transform: `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`,
-            transition: isDragging ? 'none' : 'transform 0.08s linear',
+            transition: isDragging ? 'none' : 'transform 0.1s linear',
           }}
         >
-          {/* Front */}
-          <div className="absolute inset-0 rounded-xl overflow-hidden border border-white/20"
-            style={{ transform: `translateZ(${size / 2}px)`, backfaceVisibility: 'hidden' }}>
-            {frontal ? <img src={frontal} className="w-full h-full object-cover" alt="Frontal" /> :
-              <div className="w-full h-full bg-slate-800 flex items-center justify-center text-white/30 text-sm">Frontal</div>}
-          </div>
-
-          {/* Back */}
-          <div className="absolute inset-0 rounded-xl overflow-hidden border border-white/20"
-            style={{ transform: `rotateY(180deg) translateZ(${size / 2}px)`, backfaceVisibility: 'hidden' }}>
-            {trasero ? <img src={trasero} className="w-full h-full object-cover" alt="Trasero" /> :
-              <div className="w-full h-full bg-slate-800 flex items-center justify-center text-white/30 text-sm">Trasero</div>}
-          </div>
-
-          {/* Right */}
-          <div className="absolute inset-0 rounded-xl overflow-hidden border border-white/20"
-            style={{ transform: `rotateY(90deg) translateZ(${size / 2}px)`, backfaceVisibility: 'hidden' }}>
-            {der ? <img src={der} className="w-full h-full object-cover" alt="Lateral Derecho" /> :
-              <div className="w-full h-full bg-slate-800 flex items-center justify-center text-white/30 text-sm">Lateral Der.</div>}
-          </div>
-
-          {/* Left */}
-          <div className="absolute inset-0 rounded-xl overflow-hidden border border-white/20"
-            style={{ transform: `rotateY(-90deg) translateZ(${size / 2}px)`, backfaceVisibility: 'hidden' }}>
-            {izq ? <img src={izq} className="w-full h-full object-cover" alt="Lateral Izquierdo" /> :
-              <div className="w-full h-full bg-slate-800 flex items-center justify-center text-white/30 text-sm">Lateral Izq.</div>}
-          </div>
-
-          {/* Top */}
-          <div className="absolute inset-0 rounded-xl overflow-hidden border border-white/20"
-            style={{ transform: `rotateX(90deg) translateZ(${size / 2}px)`, backfaceVisibility: 'hidden' }}>
-            <div className="w-full h-full bg-gradient-to-b from-slate-700 to-slate-800" />
-          </div>
-
-          {/* Bottom */}
-          <div className="absolute inset-0 rounded-xl overflow-hidden border border-white/20"
-            style={{ transform: `rotateX(-90deg) translateZ(${size / 2}px)`, backfaceVisibility: 'hidden' }}>
-            <div className="w-full h-full bg-gradient-to-t from-slate-700 to-slate-800" />
-          </div>
+          {faces.map((url, i) => {
+            const angle = (i * 360) / 4;
+            return (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  width: faceWidth,
+                  height: faceHeight,
+                  backfaceVisibility: 'hidden',
+                  transform: `rotateY(${angle}deg) translateZ(${radius}px)`,
+                  overflow: 'hidden',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  boxShadow: 'inset 0 0 20px rgba(0,0,0,0.3)',
+                }}
+              >
+                {url ? (
+                  <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div className="w-full h-full bg-slate-800 flex items-center justify-center text-white/30 text-sm">
+                    Sin foto
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* Angle indicator */}
-      <div className="absolute bottom-14 text-white/50 text-xs z-10 font-mono">
-        X: {Math.round(rotateX)}°  Y: {Math.round(rotateY % 360)}°
+      <div className="absolute bottom-8 text-white/50 text-xs z-10 font-mono">
+        Ángulo: {Math.round(((rotateY % 360) + 360) % 360)}°
+      </div>
+      <div className="absolute bottom-14 text-white/30 text-xs z-10">
+        Scroll para inclinar · Arrastra para rotar
       </div>
     </div>
   );
