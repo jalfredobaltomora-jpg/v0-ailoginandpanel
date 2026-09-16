@@ -69,10 +69,11 @@ export function MonthlyIssues() {
   const [selectedWeek, setSelectedWeek] = useState<Record<string, number>>({});
 
   const getFilteredData = (group: MonthGroup, key: string): FactoryRow[] => {
+    if (editKey === key) return editData;
     const weekNum = selectedWeek[key];
-    if (!weekNum) return editKey === key ? editData : group.factories;
+    if (!weekNum) return group.factories;
     const week = group.weeks.find(w => w.weekNumber === weekNum);
-    if (!week) return editKey === key ? editData : group.factories;
+    if (!week) return group.factories;
     return week.factories.map(f => ({
       ...f,
       totalRate: calcularPorcentaje(f.totalFail, f.totalAudit),
