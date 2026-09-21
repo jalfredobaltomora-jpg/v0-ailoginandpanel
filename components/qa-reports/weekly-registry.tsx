@@ -135,6 +135,7 @@ export function WeeklyRegistry() {
   const [records, setRecords] = useState<WeeklyRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [collapsedYears, setCollapsedYears] = useState<Record<number, boolean>>({});
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
   const [editStart, setEditStart] = useState('');
   const [editEnd, setEditEnd] = useState('');
@@ -457,8 +458,12 @@ export function WeeklyRegistry() {
           <div className="space-y-6">
             {sortedYears.map(year => (
               <div key={year} className="space-y-4">
-                {/* Year header */}
-                <div className="flex items-center gap-2 border-b border-primary/20 pb-2">
+                {/* Year header - clickable to collapse */}
+                <div
+                  className="flex items-center gap-2 border-b border-primary/20 pb-2 cursor-pointer hover:bg-muted/10 rounded px-2 py-1 transition-colors"
+                  onClick={() => setCollapsedYears(prev => ({ ...prev, [year]: !prev[year] }))}
+                >
+                  {collapsedYears[year] ? <ChevronRight className="h-5 w-5 text-primary" /> : <ChevronDown className="h-5 w-5 text-primary" />}
                   <CalendarDays className="h-5 w-5 text-primary" />
                   <h3 className="text-lg font-bold text-foreground">{year}</h3>
                   <span className="text-xs text-muted-foreground">
@@ -466,6 +471,8 @@ export function WeeklyRegistry() {
                   </span>
                 </div>
 
+                {!collapsedYears[year] && (
+                <div className="space-y-4">
                 {/* Months */}
                 {groupedByYear[year].map(monthGroup => {
                   const monthKey = `${year}-${monthGroup.month}`;
@@ -629,6 +636,8 @@ export function WeeklyRegistry() {
                     </div>
                   );
                 })}
+                </div>
+                )}
               </div>
             ))}
           </div>
