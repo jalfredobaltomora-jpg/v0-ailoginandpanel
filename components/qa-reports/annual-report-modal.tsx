@@ -57,6 +57,9 @@ function pct(a: number, b: number): string {
 
 export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: AnnualReportModalProps) {
   const [selectedFactories, setSelectedFactories] = useState<string[]>(allFactories.length > 0 ? [allFactories[0]] : []);
+  const [goalFR, setGoalFR] = useState('');
+  const [goalOML, setGoalOML] = useState('');
+  const [goalOQL, setGoalOQL] = useState('');
   const chartFailureRef = useRef<HTMLCanvasElement>(null);
   const chartOmlRef = useRef<HTMLCanvasElement>(null);
   const chartOqlRef = useRef<HTMLCanvasElement>(null);
@@ -158,14 +161,41 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
       return datasets;
     };
 
-    const makeChart = (canvas: HTMLCanvasElement | null, title: string, datasets: any[]) => {
+    const makeChart = (canvas: HTMLCanvasElement | null, title: string, datasets: any[], goalValue?: number) => {
       if (!canvas || datasets.length === 0) return null;
-      // Calculate Y max: highest value + ~15% buffer, min 5%
+      // Calculate Y max: highest value + ~15% buffer, min 5%, also consider goal
       let yMax = 0;
       datasets.forEach(ds => { ds.data.forEach((v: number) => { if (v > yMax) yMax = v; }); });
+      if (goalValue !== undefined && goalValue > yMax) yMax = goalValue;
       if (yMax === 0) yMax = 5;
       const buffer = Math.max(yMax * 0.15, 0.5);
       yMax = Math.ceil((yMax + buffer) * 10) / 10;
+
+      // Goal line plugin
+      const goalLinePlugin = {
+        id: 'goalLine',
+        afterDatasetsDraw(chart: any) {
+          if (goalValue === undefined || goalValue === null) return;
+          const { ctx, chartArea, scales } = chart;
+          const yPixel = scales.y.getPixelForValue(goalValue);
+          if (yPixel < chartArea.top || yPixel > chartArea.bottom) return;
+          ctx.save();
+          ctx.beginPath();
+          ctx.setLineDash([8, 4]);
+          ctx.strokeStyle = '#22c55e';
+          ctx.lineWidth = 2;
+          ctx.moveTo(chartArea.left, yPixel);
+          ctx.lineTo(chartArea.right, yPixel);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#22c55e';
+          ctx.font = 'bold 10px sans-serif';
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(`GOAL: ${goalValue}%`, chartArea.right, yPixel - 3);
+          ctx.restore();
+        },
+      };
 
       // Datalabels plugin — smart positioning to avoid overlap
       const datalabelsPlugin = {
@@ -186,14 +216,16 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
               const th = 11;
               ctx.restore();
 
-              // Try positions: above, below, above-right, below-right
+              // Try positions with enough distance from point circle (pointRadius=4-5, need 16+ gap)
               const offsets = [
-                { dx: 0, dy: -(th + 6) },
-                { dx: 0, dy: 8 },
-                { dx: tw / 2 + 4, dy: -(th + 6) },
-                { dx: tw / 2 + 4, dy: 8 },
-                { dx: -(tw / 2 + 4), dy: -(th + 6) },
-                { dx: -(tw / 2 + 4), dy: 8 },
+                { dx: 0, dy: -18 },
+                { dx: 0, dy: 18 },
+                { dx: tw / 2 + 6, dy: -18 },
+                { dx: tw / 2 + 6, dy: 18 },
+                { dx: -(tw / 2 + 6), dy: -18 },
+                { dx: -(tw / 2 + 6), dy: 18 },
+                { dx: 0, dy: -24 },
+                { dx: 0, dy: 24 },
               ];
               let bestX = point.x;
               let bestY = point.y - (th + 6);
@@ -223,7 +255,7 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
       return new (window as any).Chart(canvas, {
         type: 'line',
         data: { labels: months, datasets },
-        plugins: [datalabelsPlugin],
+        plugins: [datalabelsPlugin, goalLinePlugin],
         options: {
           responsive: true,
           maintainAspectRatio: false,
@@ -268,9 +300,12 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
     const oqlDS = buildDatasets('oql');
 
     const timer = setTimeout(() => {
-      chartsRef.current[0] = makeChart(chartFailureRef.current, 'Failure Rate %', frDS);
-      chartsRef.current[1] = makeChart(chartOmlRef.current, 'OML % (Outbound Measurement Level)', omlDS);
-      chartsRef.current[2] = makeChart(chartOqlRef.current, 'OQL % (Outbound Quality Level)', oqlDS);
+      const gFR = goalFR !== '' ? parseFloat(goalFR) : undefined;
+      const gOML = goalOML !== '' ? parseFloat(goalOML) : undefined;
+      const gOQL = goalOQL !== '' ? parseFloat(goalOQL) : undefined;
+      chartsRef.current[0] = makeChart(chartFailureRef.current, 'Failure Rate %', frDS, gFR);
+      chartsRef.current[1] = makeChart(chartOmlRef.current, 'OML % (Outbound Measurement Level)', omlDS, gOML);
+      chartsRef.current[2] = makeChart(chartOqlRef.current, 'OQL % (Outbound Quality Level)', oqlDS, gOQL);
     }, 50);
 
     return () => {
@@ -278,7 +313,7 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
       chartsRef.current.forEach(c => { if (c) c.destroy(); });
       chartsRef.current = [];
     };
-  }, [chartLoaded, selectedFactories, monthlyData]);
+  }, [chartLoaded, selectedFactories, monthlyData, goalFR, goalOML, goalOQL]);
 
   const buildTableRows = () => {
     const rows: { factory: string; month: string; failureRate: string; oml: string; oql: string }[] = [];
@@ -435,15 +470,16 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
 <script>
 const labels=${JSON.stringify(months)};
 const mkScales=(yMax)=>({x:{ticks:{color:'#9ca3af'},grid:{color:'#374151'}},y:{min:0,max:yMax,ticks:{color:'#9ca3af',callback:v=>v+'%'},grid:{color:'#374151'}}});
-const dlPlugin={id:'qaDL',afterDatasetsDraw(chart){const ctx=chart.ctx;const placed=[];chart.data.datasets.forEach((ds,di)=>{const meta=chart.getDatasetMeta(di);if(meta.hidden)return;meta.data.forEach((pt,i)=>{const v=ds.data[i];const lbl=v.toFixed(1)+'%';ctx.save();ctx.font='bold 9px sans-serif';const tw=ctx.measureText(lbl).width;const th=11;ctx.restore();const offsets=[{dx:0,dy:-(th+6)},{dx:0,dy:8},{dx:tw/2+4,dy:-(th+6)},{dx:tw/2+4,dy:8},{dx:-(tw/2+4),dy:-(th+6)},{dx:-(tw/2+4),dy:8}];let bx=pt.x,by=pt.y-(th+6);for(const o of offsets){const cx=pt.x+o.dx,cy=pt.y+o.dy;const box={x:cx-tw/2,y:cy-th,w:tw,h:th+2};const hit=placed.some(p=>box.x<p.x+p.w&&box.x+box.w>p.x&&box.y<p.y+p.h&&box.y+box.h>p.y);if(!hit){bx=cx;by=cy;break}}ctx.save();ctx.font='bold 9px sans-serif';ctx.fillStyle=ds.borderColor||'#fff';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(lbl,bx,by);placed.push({x:bx-tw/2,y:by-th,w:tw,h:th+2});ctx.restore()})})}};
+const dlPlugin={id:'qaDL',afterDatasetsDraw(chart){const ctx=chart.ctx;const placed=[];chart.data.datasets.forEach((ds,di)=>{const meta=chart.getDatasetMeta(di);if(meta.hidden)return;meta.data.forEach((pt,i)=>{const v=ds.data[i];const lbl=v.toFixed(1)+'%';ctx.save();ctx.font='bold 9px sans-serif';const tw=ctx.measureText(lbl).width;const th=11;ctx.restore();const offsets=[{dx:0,dy:-18},{dx:0,dy:18},{dx:tw/2+6,dy:-18},{dx:tw/2+6,dy:18},{dx:-(tw/2+6),dy:-18},{dx:-(tw/2+6),dy:18},{dx:0,dy:-24},{dx:0,dy:24}];let bx=pt.x,by=pt.y-18;for(const o of offsets){const cx=pt.x+o.dx,cy=pt.y+o.dy;const box={x:cx-tw/2,y:cy-th,w:tw,h:th+2};const hit=placed.some(p=>box.x<p.x+p.w&&box.x+box.w>p.x&&box.y<p.y+p.h&&box.y+box.h>p.y);if(!hit){bx=cx;by=cy;break}}ctx.save();ctx.font='bold 9px sans-serif';ctx.fillStyle=ds.borderColor||'#fff';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(lbl,bx,by);placed.push({x:bx-tw/2,y:by-th,w:tw,h:th+2});ctx.restore()})})}};
+const glPlugin=(goalVal,goalColor)=>({id:'gl',afterDatasetsDraw(chart){if(!goalVal&&goalVal!==0)return;const{ctx,chartArea,scales}=chart;const yPx=scales.y.getPixelForValue(goalVal);if(yPx<chartArea.top||yPx>chartArea.bottom)return;ctx.save();ctx.beginPath();ctx.setLineDash([8,4]);ctx.strokeStyle=goalColor;ctx.lineWidth=2;ctx.moveTo(chartArea.left,yPx);ctx.lineTo(chartArea.right,yPx);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=goalColor;ctx.font='bold 10px sans-serif';ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillText('GOAL: '+goalVal+'%',chartArea.right,yPx-3);ctx.restore()}});
 const mkOpts=(title,yMax)=>({responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},layout:{padding:{top:20}},plugins:{legend:{labels:{color:'#d1d5db',font:{size:11},usePointStyle:true,pointStyle:'circle'},position:'bottom'},title:{display:true,text:title,color:'#f3f4f6',font:{size:14,weight:'bold'},padding:{bottom:12}},tooltip:{backgroundColor:'#1f2937',titleColor:'#f3f4f6',bodyColor:'#d1d5db',borderColor:'#374151',borderWidth:1,callbacks:{label:ctx=>ctx.dataset.label+': '+ctx.parsed.y.toFixed(2)+'%'}}},scales:mkScales(yMax)});
-function calcYMax(ds){let m=0;ds.forEach(d=>d.data.forEach(v=>{if(v>m)m=v}));if(m===0)m=5;const b=Math.max(m*0.15,0.5);return Math.ceil((m+b)*10)/10}
+function calcYMax(ds,goal){let m=0;ds.forEach(d=>d.data.forEach(v=>{if(v>m)m=v}));if(goal&&goal>m)m=goal;if(m===0)m=5;const b=Math.max(m*0.15,0.5);return Math.ceil((m+b)*10)/10}
 const frDS=[${buildDSJson('failureRate')}];
 const omlDS=[${buildDSJson('oml')}];
 const oqlDS=[${buildDSJson('oql')}];
-new Chart(document.getElementById('ch-fr'),{type:'line',data:{labels,datasets:frDS},plugins:[dlPlugin],options:mkOpts('Failure Rate %',calcYMax(frDS))});
-new Chart(document.getElementById('ch-oml'),{type:'line',data:{labels,datasets:omlDS},plugins:[dlPlugin],options:mkOpts('OML %',calcYMax(omlDS))});
-new Chart(document.getElementById('ch-oql'),{type:'line',data:{labels,datasets:oqlDS},plugins:[dlPlugin],options:mkOpts('OQL %',calcYMax(oqlDS))});
+new Chart(document.getElementById('ch-fr'),{type:'line',data:{labels,datasets:frDS},plugins:[dlPlugin,glPlugin(${goalFR !== '' ? goalFR : 'null'},'#22c55e')],options:mkOpts('Failure Rate %',calcYMax(frDS,${goalFR !== '' ? goalFR : 'null'}))});
+new Chart(document.getElementById('ch-oml'),{type:'line',data:{labels,datasets:omlDS},plugins:[dlPlugin,glPlugin(${goalOML !== '' ? goalOML : 'null'},'#22c55e')],options:mkOpts('OML %',calcYMax(omlDS,${goalOML !== '' ? goalOML : 'null'}))});
+new Chart(document.getElementById('ch-oql'),{type:'line',data:{labels,datasets:oqlDS},plugins:[dlPlugin,glPlugin(${goalOQL !== '' ? goalOQL : 'null'},'#22c55e')],options:mkOpts('OQL %',calcYMax(oqlDS,${goalOQL !== '' ? goalOQL : 'null'}))});
 <\/script></body></html>`;
     const w = window.open('', '_blank');
     if (w) { w.document.write(html); w.document.close(); }
@@ -491,7 +527,27 @@ new Chart(document.getElementById('ch-oql'),{type:'line',data:{labels,datasets:o
           </div>
         </div>
 
-        {/* Charts + Table */}
+        {/* Goal inputs */}
+        <div className="px-6 pt-3 pb-2 border-b border-border/50 shrink-0">
+          <p className="text-xs text-muted-foreground mb-2">GOAL (opcional) — linea verde punteada en la gráfica:</p>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-red-400">Failure Rate %</label>
+              <input type="number" step="0.1" min="0" max="100" value={goalFR} onChange={e => setGoalFR(e.target.value)}
+                placeholder="—" className="w-20 rounded border border-border bg-muted/20 px-2 py-1 text-xs text-foreground text-center focus:outline-none focus:border-red-400" />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-amber-400">OML %</label>
+              <input type="number" step="0.1" min="0" max="100" value={goalOML} onChange={e => setGoalOML(e.target.value)}
+                placeholder="—" className="w-20 rounded border border-border bg-muted/20 px-2 py-1 text-xs text-foreground text-center focus:outline-none focus:border-amber-400" />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-violet-400">OQL %</label>
+              <input type="number" step="0.1" min="0" max="100" value={goalOQL} onChange={e => setGoalOQL(e.target.value)}
+                placeholder="—" className="w-20 rounded border border-border bg-muted/20 px-2 py-1 text-xs text-foreground text-center focus:outline-none focus:border-violet-400" />
+            </div>
+          </div>
+        </div>
         <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-6">
           {chartError ? (
             <div className="text-center py-12 text-muted-foreground">
