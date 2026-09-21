@@ -136,6 +136,7 @@ export function WeeklyRegistry() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [collapsedYears, setCollapsedYears] = useState<Record<number, boolean>>({});
+  const [collapsedMonths, setCollapsedMonths] = useState<Record<string, boolean>>({});
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
   const [editStart, setEditStart] = useState('');
   const [editEnd, setEditEnd] = useState('');
@@ -478,11 +479,16 @@ export function WeeklyRegistry() {
                   const monthKey = `${year}-${monthGroup.month}`;
                   return (
                     <div key={monthKey} className="ml-4 space-y-2">
-                      <h4 className="flex items-center gap-2 text-sm font-semibold text-primary/80 border-l-2 border-primary/40 pl-3">
+                      <h4
+                        className="flex items-center gap-2 text-sm font-semibold text-primary/80 border-l-2 border-primary/40 pl-3 cursor-pointer hover:bg-muted/10 rounded px-2 py-1 -ml-2 transition-colors"
+                        onClick={() => setCollapsedMonths(prev => ({ ...prev, [monthKey]: !prev[monthKey] }))}
+                      >
+                        {collapsedMonths[monthKey] ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                         {MONTHS[monthGroup.month - 1]}
                         <span className="text-xs text-muted-foreground font-normal">{monthGroup.records.length} semana(s)</span>
                       </h4>
 
+                      {!collapsedMonths[monthKey] && (
                       <div className="ml-4 space-y-2">
                         {monthGroup.records.map(record => (
                           <div key={record.id} className="rounded-lg border border-border bg-muted/10 overflow-hidden">
@@ -633,6 +639,7 @@ export function WeeklyRegistry() {
                           </div>
                         ))}
                       </div>
+                      )}
                     </div>
                   );
                 })}
