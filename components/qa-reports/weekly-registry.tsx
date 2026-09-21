@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Database, Trash2, ChevronDown, ChevronRight, CalendarDays, Edit, Save, Scissors, Search, X, ChevronLeft, ChevronRight as ChevronRightIcon, Plus, Pencil } from 'lucide-react';
+import { Database, Trash2, ChevronDown, ChevronRight, CalendarDays, Edit, Save, Scissors, Search, X, ChevronLeft, ChevronRight as ChevronRightIcon, Plus, Pencil, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { get, ref, db, remove, update, push, set } from '@/lib/firebase';
+import { AnnualReportModal } from '@/components/qa-reports/annual-report-modal';
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const DAYS = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
@@ -152,6 +153,9 @@ export function WeeklyRegistry() {
   // Split modal
   const [splitRecord, setSplitRecord] = useState<WeeklyRecord | null>(null);
   const [splitEditData, setSplitEditData] = useState<Record<string, FactoryRow[]>>({});
+
+  // Annual report
+  const [reportYear, setReportYear] = useState<number | null>(null);
 
   useEffect(() => { loadRecords(); }, []);
 
@@ -470,6 +474,12 @@ export function WeeklyRegistry() {
                   <span className="text-xs text-muted-foreground">
                     {groupedByYear[year].reduce((s, g) => s + g.records.length, 0)} registro(s)
                   </span>
+                  <button
+                    className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium transition-colors"
+                    onClick={e => { e.stopPropagation(); setReportYear(year); }}
+                  >
+                    <FileText className="h-3.5 w-3.5" /> Generar Reporte Anual
+                  </button>
                 </div>
 
                 {!collapsedYears[year] && (
@@ -765,6 +775,50 @@ export function WeeklyRegistry() {
             </div>
           </div>
         )}
+
+        {/* Annual Report Modal */}
+        {reportYear !== null && (() => {
+          const yearRecords = records.filter(r => {
+            const y = parseInt(r.startDate.slice(0, 4));
+            return y === reportYear;
+          });
+          const monthMap: Record<number, { records: number; factories: Record<string, { totalAudit: number; totalFail: number; measQty: number; measDef: number; visQty: number; visDef: number }>; totalAudit: number; totalFail: number; measQty: number; measDef: number; visQty: number; visDef: number }> = {};
+          const allFactoriesSet = new Set<string>();
+          yearRecords.forEach(r => {
+            const m = parseInt(r.startDate.slice(5, 7));
+            if (!monthMap[m]) monthMap[m] = { records: 0, factories: {}, totalAudit: 0, totalFail: 0, measQty: 0, measDef: 0, visQty: 0, visDef: 0 };
+            const md = monthMap[m];
+            md.records++;
+            const src = r._monthSplit ? r._monthSplit.find(s => s.month === m) : null;
+            const factor = src ? src.factor : 1;
+            (r.factories || []).forEach(f => {
+              allFactoriesSet.add(f.factoryBuyer);
+              if (!md.factories[f.factoryBuyer]) md.factories[f.factoryBuyer] = { totalAudit: 0, totalFail: 0, measQty: 0, measDef: 0, visQty: 0, visDef: 0 };
+              const ff = md.factories[f.factoryBuyer];
+              ff.totalAudit += Math.round(f.totalAudit * factor);
+              ff.totalFail += Math.round(f.totalFail * factor);
+              ff.measQty += Math.round(f.measQty * factor);
+              ff.measDef += Math.round(f.measDef * factor);
+              ff.visQty += Math.round(f.visQty * factor);
+              ff.visDef += Math.round(f.visDef * factor);
+            });
+            md.totalAudit += Math.round((r.totals?.totalAudit || 0) * factor);
+            md.totalFail += Math.round((r.totals?.totalFail || 0) * factor);
+            md.measQty += Math.round((r.totals?.measQty || 0) * factor);
+            md.measDef += Math.round((r.totals?.measDef || 0) * factor);
+            md.visQty += Math.round((r.totals?.visQty || 0) * factor);
+            md.visDef += Math.round((r.totals?.visDef || 0) * factor);
+          });
+          const pct = (a: number, b: number) => b === 0 ? '0.00%' : ((a / b) * 100).toFixed(2) + '%';
+          const monthlyData = Object.entries(monthMap).sort(([a], [b]) => Number(a) - Number(b)).map(([m, d]) => ({
+            month: Number(m), ...d,
+            totalRate: pct(d.totalFail, d.totalAudit),
+            measRate: pct(d.measDef, d.measQty),
+            visRate: pct(d.visDef, d.visQty),
+          }));
+          const allFactories = Array.from(allFactoriesSet);
+          return <AnnualReportModal year={reportYear} monthlyData={monthlyData} allFactories={allFactories} onClose={() => setReportYear(null)} />;
+        })()}
       </CardContent>
     </Card>
   );
