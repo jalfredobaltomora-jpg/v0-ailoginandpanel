@@ -60,6 +60,7 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
   const [goalFR, setGoalFR] = useState('');
   const [goalOML, setGoalOML] = useState('');
   const [goalOQL, setGoalOQL] = useState('');
+  const [labelPos, setLabelPos] = useState<'auto' | 'top' | 'bottom'>('auto');
   const chartFailureRef = useRef<HTMLCanvasElement>(null);
   const chartOmlRef = useRef<HTMLCanvasElement>(null);
   const chartOqlRef = useRef<HTMLCanvasElement>(null);
@@ -197,7 +198,7 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
         },
       };
 
-      // Datalabels plugin — smart positioning to avoid overlap
+      // Datalabels plugin — configurable position with overlap avoidance
       const datalabelsPlugin = {
         id: 'qaDatalabels',
         afterDatasetsDraw(chart: any) {
@@ -216,19 +217,40 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
               const th = 11;
               ctx.restore();
 
-              // Try positions with enough distance from point circle (pointRadius=4-5, need 16+ gap)
-              const offsets = [
-                { dx: 0, dy: -18 },
-                { dx: 0, dy: 18 },
-                { dx: tw / 2 + 6, dy: -18 },
-                { dx: tw / 2 + 6, dy: 18 },
-                { dx: -(tw / 2 + 6), dy: -18 },
-                { dx: -(tw / 2 + 6), dy: 18 },
-                { dx: 0, dy: -24 },
-                { dx: 0, dy: 24 },
-              ];
+              let offsets: { dx: number; dy: number }[];
+              if (labelPos === 'top') {
+                offsets = [
+                  { dx: 0, dy: -18 },
+                  { dx: tw / 2 + 6, dy: -18 },
+                  { dx: -(tw / 2 + 6), dy: -18 },
+                  { dx: 0, dy: -26 },
+                  { dx: tw / 2 + 6, dy: -26 },
+                  { dx: -(tw / 2 + 6), dy: -26 },
+                ];
+              } else if (labelPos === 'bottom') {
+                offsets = [
+                  { dx: 0, dy: 18 },
+                  { dx: tw / 2 + 6, dy: 18 },
+                  { dx: -(tw / 2 + 6), dy: 18 },
+                  { dx: 0, dy: 26 },
+                  { dx: tw / 2 + 6, dy: 26 },
+                  { dx: -(tw / 2 + 6), dy: 26 },
+                ];
+              } else {
+                offsets = [
+                  { dx: 0, dy: -18 },
+                  { dx: 0, dy: 18 },
+                  { dx: tw / 2 + 6, dy: -18 },
+                  { dx: tw / 2 + 6, dy: 18 },
+                  { dx: -(tw / 2 + 6), dy: -18 },
+                  { dx: -(tw / 2 + 6), dy: 18 },
+                  { dx: 0, dy: -26 },
+                  { dx: 0, dy: 26 },
+                ];
+              }
+
               let bestX = point.x;
-              let bestY = point.y - (th + 6);
+              let bestY = point.y - 18;
               for (const off of offsets) {
                 const cx = point.x + off.dx;
                 const cy = point.y + off.dy;
@@ -313,7 +335,7 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
       chartsRef.current.forEach(c => { if (c) c.destroy(); });
       chartsRef.current = [];
     };
-  }, [chartLoaded, selectedFactories, monthlyData, goalFR, goalOML, goalOQL]);
+  }, [chartLoaded, selectedFactories, monthlyData, goalFR, goalOML, goalOQL, labelPos]);
 
   const buildTableRows = () => {
     const rows: { factory: string; month: string; failureRate: string; oml: string; oql: string }[] = [];
@@ -347,34 +369,58 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
 
   const handlePrint = () => {
     const rows = buildTableRows();
+    const frImg = chartFailureRef.current?.toDataURL('image/png') || '';
+    const omlImg = chartOmlRef.current?.toDataURL('image/png') || '';
+    const oqlImg = chartOqlRef.current?.toDataURL('image/png') || '';
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte Anual QA ${year}</title>
 <style>
   body{font-family:Arial,sans-serif;padding:20px;color:#1a1a2e}
   h1{text-align:center;color:#0f3460;margin-bottom:4px;font-size:18px}
   h2{text-align:center;color:#16213e;font-size:12px;margin-top:0}
+  h3{color:#0f3460;font-size:13px;margin:20px 0 8px;border-bottom:1px solid #ddd;padding-bottom:4px}
   .logo{text-align:center;margin-bottom:16px}.logo img{height:40px}
-  table{width:100%;border-collapse:collapse;margin-top:16px;font-size:11px}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:11px}
   th{background:#0f3460;color:white;padding:6px 4px;border:1px solid #ddd;text-align:center}
   th:first-child,th:nth-child(2){text-align:left}
   td{padding:5px 4px;border:1px solid #ddd;text-align:center}
   td:first-child,td:nth-child(2){text-align:left;font-weight:bold}
   tr:nth-child(even){background:#f8f9fa}
+  .charts{margin-top:24px;page-break-before:always}
+  .chart-img{width:100%;margin-bottom:16px}
   .footer{margin-top:20px;text-align:center;font-size:10px;color:#666}
-  @media print{body{padding:10px}}
+  @media print{body{padding:10px}.charts{page-break-before:always}}
 </style></head><body>
 <div class="logo"><img src="/logo.png" alt="Logo"></div>
 <h1>Reporte Anual de Calidad — ${year}</h1>
 <h2>Generado el ${new Date().toLocaleDateString('es-NI')}</h2>
+<h3>Detalle por Fábrica y Mes</h3>
 <table><thead><tr><th>Fábrica</th><th>Mes</th><th>Failure Rate %</th><th>OML %</th><th>OQL %</th></tr></thead>
 <tbody>${rows.map(r => `<tr><td>${r.factory}</td><td>${r.month}</td><td>${r.failureRate}</td><td>${r.oml}</td><td>${r.oql}</td></tr>`).join('')}</tbody></table>
+<div class="charts">
+  ${frImg ? `<h3>Failure Rate %</h3><img class="chart-img" src="${frImg}" />` : ''}
+  ${omlImg ? `<h3>OML %</h3><img class="chart-img" src="${omlImg}" />` : ''}
+  ${oqlImg ? `<h3>OQL %</h3><img class="chart-img" src="${oqlImg}" />` : ''}
+</div>
 <div class="footer">Sistema de Control QA — Panel Administrativo</div></body></html>`;
     const w = window.open('', '_blank');
     if (w) { w.document.write(html); w.document.close(); w.print(); }
   };
 
   const handleExcel = () => {
-    const rows = buildTableRows();
-    const csv = ['Fábrica,Mes,Failure Rate %,OML %,OQL %', ...rows.map(r => `${r.factory},${r.month},${r.failureRate},${r.oml},${r.oql}`)].join('\n');
+    const allRows: { factory: string; month: string; failureRate: string; oml: string; oql: string }[] = [];
+    allFactories.forEach(factory => {
+      monthlyData.forEach(m => {
+        const fd = m.factories[factory];
+        allRows.push({
+          factory,
+          month: MONTHS_FULL[m.month - 1],
+          failureRate: fd ? pct(fd.totalFail, fd.totalAudit) : '0.00%',
+          oml: fd ? pct(fd.measDef, fd.measQty) : '0.00%',
+          oql: fd ? pct(fd.visDef, fd.visQty) : '0.00%',
+        });
+      });
+    });
+    const csv = ['Fábrica,Mes,Failure Rate %,OML %,OQL %', ...allRows.map(r => `${r.factory},${r.month},${r.failureRate},${r.oml},${r.oql}`)].join('\n');
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -548,6 +594,20 @@ new Chart(document.getElementById('ch-oql'),{type:'line',data:{labels,datasets:o
             </div>
           </div>
         </div>
+
+        {/* Label position selector */}
+        <div className="px-6 pt-2 pb-2 border-b border-border/50 shrink-0 flex items-center gap-4">
+          <p className="text-xs text-muted-foreground">Etiquetas %:</p>
+          <div className="flex gap-1">
+            {([['auto', 'Automática'], ['top', 'Arriba'], ['bottom', 'Abajo']] as const).map(([val, lbl]) => (
+              <button key={val}
+                className={`px-3 py-1 rounded text-xs font-medium transition-colors ${labelPos === val ? 'bg-primary text-primary-foreground' : 'bg-muted/20 text-muted-foreground hover:bg-muted/30'}`}
+                onClick={() => setLabelPos(val)}
+              >{lbl}</button>
+            ))}
+          </div>
+        </div>
+
         <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-6">
           {chartError ? (
             <div className="text-center py-12 text-muted-foreground">
