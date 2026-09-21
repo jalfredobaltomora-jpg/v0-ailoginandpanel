@@ -50,18 +50,24 @@ function calcRate(def: number, total: number): number {
   return parseFloat(((def / total) * 100).toFixed(2));
 }
 
+function pct(a: number, b: number): string {
+  if (b === 0) return '0.00%';
+  return ((a / b) * 100).toFixed(2) + '%';
+}
+
 export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: AnnualReportModalProps) {
   const [selectedFactories, setSelectedFactories] = useState<string[]>(allFactories.length > 0 ? [allFactories[0]] : []);
-  const chartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstanceRef = useRef<any>(null);
+  const chartFailureRef = useRef<HTMLCanvasElement>(null);
+  const chartOmlRef = useRef<HTMLCanvasElement>(null);
+  const chartOqlRef = useRef<HTMLCanvasElement>(null);
+  const chartsRef = useRef<any[]>([]);
   const [chartLoaded, setChartLoaded] = useState(false);
   const [chartError, setChartError] = useState(false);
 
   const toggleFactory = (f: string) => {
-    setSelectedFactories(prev => {
-      if (prev.includes(f)) return prev.filter(x => x !== f);
-      return [...prev, f];
-    });
+    setSelectedFactories(prev =>
+      prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f]
+    );
   };
 
   const months = monthlyData.map(m => MONTHS[m.month - 1]);
@@ -86,7 +92,7 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
     }));
   };
 
-  // Build chart
+  // Load Chart.js
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const loadChart = () => {
@@ -107,73 +113,144 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
     loadChart();
   }, []);
 
+  // Build 3 charts
   useEffect(() => {
-    if (!chartLoaded || !chartRef.current) return;
-    if (chartInstanceRef.current) { chartInstanceRef.current.destroy(); chartInstanceRef.current = null; }
+    if (!chartLoaded) return;
+    chartsRef.current.forEach(c => { if (c) c.destroy(); });
+    chartsRef.current = [];
 
-    const datasets: any[] = [];
+    const buildDatasets = (metric: 'failureRate' | 'oml' | 'oql') => {
+      const datasets: any[] = [];
 
-    if (selectedFactories.includes('__TOTAL__')) {
-      const data = getAggregatedData();
-      const color = '#ffffff';
-      datasets.push(
-        { label: `Total — Failure Rate %`, data: data.map(d => d.failureRate), borderColor: color, backgroundColor: color + '20', borderWidth: 3, borderDash: [8, 4], pointRadius: 4, pointHoverRadius: 6, tension: 0.3 },
-        { label: `Total — OML %`, data: data.map(d => d.oml), borderColor: color, backgroundColor: color + '20', borderWidth: 3, borderDash: [8, 4], pointRadius: 4, pointHoverRadius: 6, tension: 0.3, hidden: true },
-        { label: `Total — OQL %`, data: data.map(d => d.oql), borderColor: color, backgroundColor: color + '20', borderWidth: 3, borderDash: [8, 4], pointRadius: 4, pointHoverRadius: 6, tension: 0.3, hidden: true }
-      );
-    }
-
-    selectedFactories.filter(f => f !== '__TOTAL__').forEach((factoryName, fi) => {
-      const colorIdx = fi % FACTORY_COLORS.length;
-      const color = FACTORY_COLORS[colorIdx];
-      const data = getFactoryData(factoryName);
-      const shortName = factoryName.length > 18 ? factoryName.slice(0, 16) + '…' : factoryName;
-      datasets.push(
-        { label: `${shortName} — Failure Rate %`, data: data.map(d => d.failureRate), borderColor: color, backgroundColor: color + '20', borderWidth: 2, pointRadius: 3, pointHoverRadius: 5, tension: 0.3 },
-        { label: `${shortName} — OML %`, data: data.map(d => d.oml), borderColor: color, backgroundColor: color + '20', borderWidth: 2, pointRadius: 3, pointHoverRadius: 5, tension: 0.3, borderDash: [6, 3], hidden: true },
-        { label: `${shortName} — OQL %`, data: data.map(d => d.oql), borderColor: color, backgroundColor: color + '20', borderWidth: 2, pointRadius: 3, pointHoverRadius: 5, tension: 0.3, borderDash: [3, 3], hidden: true }
-      );
-    });
-
-    if (datasets.length === 0) return;
-
-    chartInstanceRef.current = new (window as any).Chart(chartRef.current, {
-      type: 'line',
-      data: { labels: months, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { labels: { color: '#d1d5db', font: { size: 11 }, usePointStyle: true, pointStyle: 'line' }, position: 'bottom' },
-          tooltip: { backgroundColor: '#1f2937', titleColor: '#f3f4f6', bodyColor: '#d1d5db', borderColor: '#374151', borderWidth: 1 }
-        },
-        scales: {
-          x: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } },
-          y: { min: 0, max: 100, ticks: { color: '#9ca3af', callback: (v: any) => v + '%' }, grid: { color: '#374151' } }
-        }
+      if (selectedFactories.includes('__TOTAL__')) {
+        const data = getAggregatedData();
+        datasets.push({
+          label: 'Total General',
+          data: data.map(d => d[metric]),
+          borderColor: '#ffffff',
+          backgroundColor: '#ffffff22',
+          borderWidth: 3,
+          borderDash: [8, 4],
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          pointBackgroundColor: '#ffffff',
+          tension: 0.3,
+        });
       }
-    });
 
-    return () => { if (chartInstanceRef.current) { chartInstanceRef.current.destroy(); chartInstanceRef.current = null; } };
+      selectedFactories.filter(f => f !== '__TOTAL__').forEach((factoryName, fi) => {
+        const color = FACTORY_COLORS[fi % FACTORY_COLORS.length];
+        const data = getFactoryData(factoryName);
+        const shortName = factoryName.length > 22 ? factoryName.slice(0, 20) + '…' : factoryName;
+        datasets.push({
+          label: shortName,
+          data: data.map(d => d[metric]),
+          borderColor: color,
+          backgroundColor: color + '22',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: color,
+          tension: 0.3,
+        });
+      });
+
+      return datasets;
+    };
+
+    const makeChart = (canvas: HTMLCanvasElement | null, title: string, datasets: any[]) => {
+      if (!canvas || datasets.length === 0) return null;
+      // Calculate Y max from data
+      let yMax = 0;
+      datasets.forEach(ds => { ds.data.forEach((v: number) => { if (v > yMax) yMax = v; }); });
+      yMax = Math.ceil(yMax / 10) * 10 + 10;
+      if (yMax < 20) yMax = 20;
+
+      return new (window as any).Chart(canvas, {
+        type: 'line',
+        data: { labels: months, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              labels: { color: '#d1d5db', font: { size: 11 }, usePointStyle: true, pointStyle: 'circle', padding: 16 },
+              position: 'bottom',
+            },
+            title: {
+              display: true,
+              text: title,
+              color: '#f3f4f6',
+              font: { size: 14, weight: 'bold' },
+              padding: { bottom: 12 },
+            },
+            tooltip: {
+              backgroundColor: '#1f2937',
+              titleColor: '#f3f4f6',
+              bodyColor: '#d1d5db',
+              borderColor: '#374151',
+              borderWidth: 1,
+              callbacks: { label: (ctx: any) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%` },
+            },
+          },
+          scales: {
+            x: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } },
+            y: {
+              min: 0,
+              max: yMax,
+              ticks: { color: '#9ca3af', callback: (v: any) => v + '%', stepSize: yMax <= 30 ? 5 : undefined },
+              grid: { color: '#374151' },
+            },
+          },
+        },
+      });
+    };
+
+    const frDS = buildDatasets('failureRate');
+    const omlDS = buildDatasets('oml');
+    const oqlDS = buildDatasets('oql');
+
+    const timer = setTimeout(() => {
+      chartsRef.current[0] = makeChart(chartFailureRef.current, 'Failure Rate %', frDS);
+      chartsRef.current[1] = makeChart(chartOmlRef.current, 'OML % (Outbound Measurement Level)', omlDS);
+      chartsRef.current[2] = makeChart(chartOqlRef.current, 'OQL % (Outbound Quality Level)', oqlDS);
+    }, 50);
+
+    return () => {
+      clearTimeout(timer);
+      chartsRef.current.forEach(c => { if (c) c.destroy(); });
+      chartsRef.current = [];
+    };
   }, [chartLoaded, selectedFactories, monthlyData]);
-
-  const pct = (a: number, b: number) => b === 0 ? '0.00%' : ((a / b) * 100).toFixed(2) + '%';
 
   const buildTableRows = () => {
     const rows: { factory: string; month: string; failureRate: string; oml: string; oql: string }[] = [];
-    selectedFactories.filter(f => f !== '__TOTAL__').forEach(factory => {
+    const factoriesToShow = selectedFactories.filter(f => f !== '__TOTAL__');
+    if (factoriesToShow.length === 0) {
       monthlyData.forEach(m => {
-        const fd = m.factories[factory];
         rows.push({
-          factory,
+          factory: 'Total General',
           month: MONTHS_FULL[m.month - 1],
-          failureRate: fd ? pct(fd.totalFail, fd.totalAudit) : '—',
-          oml: fd ? pct(fd.measDef, fd.measQty) : '—',
-          oql: fd ? pct(fd.visDef, fd.visQty) : '—',
+          failureRate: pct(m.totalFail, m.totalAudit),
+          oml: pct(m.measDef, m.measQty),
+          oql: pct(m.visDef, m.visQty),
         });
       });
-    });
+    } else {
+      factoriesToShow.forEach(factory => {
+        monthlyData.forEach(m => {
+          const fd = m.factories[factory];
+          rows.push({
+            factory,
+            month: MONTHS_FULL[m.month - 1],
+            failureRate: fd ? pct(fd.totalFail, fd.totalAudit) : '—',
+            oml: fd ? pct(fd.measDef, fd.measQty) : '—',
+            oql: fd ? pct(fd.visDef, fd.visQty) : '—',
+          });
+        });
+      });
+    }
     return rows;
   };
 
@@ -248,26 +325,25 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
     const rows = buildTableRows();
     const factories = [...new Set(rows.map(r => r.factory))];
     const colorMap: Record<string, string> = {};
-    factories.forEach((f, i) => { colorMap[f] = FACTORY_COLORS[i % FACTORY_COLORS.length]; });
+    factories.forEach((f, i) => { colorMap[f] = i === 0 && f === 'Total General' ? '#ffffff' : FACTORY_COLORS[i % FACTORY_COLORS.length]; });
 
-    const datasetsJson = factories.map(f => {
-      const c = colorMap[f];
-      const fRows = rows.filter(r => r.factory === f);
-      const frData = fRows.map(r => parseFloat(r.failureRate) || 0);
-      const omlData = fRows.map(r => parseFloat(r.oml) || 0);
-      const oqlData = fRows.map(r => parseFloat(r.oql) || 0);
-      const sn = f.length > 16 ? f.slice(0, 14) + '…' : f;
-      return `{label:'${sn} — Failure Rate',data:${JSON.stringify(frData)},borderColor:'${c}',backgroundColor:'${c}22',borderWidth:2,pointRadius:3,tension:0.3}
-,{label:'${sn} — OML',data:${JSON.stringify(omlData)},borderColor:'${c}',backgroundColor:'${c}22',borderWidth:2,borderDash:[6,3],pointRadius:3,tension:0.3,hidden:true}
-,{label:'${sn} — OQL',data:${JSON.stringify(oqlData)},borderColor:'${c}',backgroundColor:'${c}22',borderWidth:2,borderDash:[3,3],pointRadius:3,tension:0.3,hidden:true}`;
-    }).join('\n');
+    const buildDSJson = (metric: 'failureRate' | 'oml' | 'oql') => {
+      return factories.map(f => {
+        const c = colorMap[f];
+        const fRows = rows.filter(r => r.factory === f);
+        const data = fRows.map(r => {
+          const val = r[metric];
+          return parseFloat(val) || 0;
+        });
+        const sn = f.length > 18 ? f.slice(0, 16) + '…' : f;
+        const isTotal = f === 'Total General';
+        return `{label:'${sn}',data:${JSON.stringify(data)},borderColor:'${c}',backgroundColor:'${c}22',borderWidth:${isTotal ? 3 : 2},${isTotal ? "borderDash:[8,4]," : ""}pointRadius:4,tension:0.3}`;
+      }).join(',');
+    };
 
-    const tableRowsHtml = rows.map(r => {
-      const frNum = parseFloat(r.failureRate) || 0;
-      const omlNum = parseFloat(r.oml) || 0;
-      const oqlNum = parseFloat(r.oql) || 0;
-      return `<tr><td style="text-align:left">${r.factory}</td><td style="text-align:left">${r.month}</td><td>${r.failureRate}</td><td>${r.oml}</td><td>${r.oql}</td></tr>`;
-    }).join('');
+    const tableRowsHtml = rows.map(r =>
+      `<tr><td style="text-align:left">${r.factory}</td><td style="text-align:left">${r.month}</td><td>${r.failureRate}</td><td>${r.oml}</td><td>${r.oql}</td></tr>`
+    ).join('');
 
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Power BI — QA ${year}</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"><\/script>
@@ -291,8 +367,10 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
   .footer{text-align:center;font-size:10px;color:#6b7280;margin-top:20px}
 </style></head><body>
 <div class="dashboard">
-<div class="title"><h1>Dashboard Anual de Calidad — ${year}</h1><h2>Failure Rate %, OML %, OQL % por Fábrica — Generado el ${new Date().toLocaleDateString('es-NI')}</h2></div>
-<div class="chart-box"><h3>Línea de Tiempo por Fábrica</h3><div style="height:400px"><canvas id="timeline"></canvas></div></div>
+<div class="title"><h1>Dashboard Anual — ${year}</h1><h2>Failure Rate %, OML %, OQL % por Fábrica — ${new Date().toLocaleDateString('es-NI')}</h2></div>
+<div class="chart-box"><h3>Failure Rate %</h3><div style="height:320px"><canvas id="ch-fr"></canvas></div></div>
+<div class="chart-box"><h3>OML % (Outbound Measurement Level)</h3><div style="height:320px"><canvas id="ch-oml"></canvas></div></div>
+<div class="chart-box"><h3>OQL % (Outbound Quality Level)</h3><div style="height:320px"><canvas id="ch-oql"></canvas></div></div>
 <div class="table-box"><h3>Detalle por Fábrica y Mes</h3>
 <table><thead><tr><th>Fábrica</th><th>Mes</th><th>Failure Rate %</th><th>OML %</th><th>OQL %</th></tr></thead>
 <tbody>${tableRowsHtml}</tbody></table></div>
@@ -300,11 +378,15 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
 </div>
 <script>
 const labels=${JSON.stringify(months)};
-new Chart(document.getElementById('timeline'),{type:'line',data:{labels,datasets:[${datasetsJson}]}
-,options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false}
-,plugins:{legend:{labels:{color:'#d1d5db',font:{size:11},usePointStyle:true,pointStyle:'line'},position:'bottom'}
-,tooltip:{backgroundColor:'#1f2937',titleColor:'#f3f4f6',bodyColor:'#d1d5db',borderColor:'#374151',borderWidth:1}}
-,scales:{x:{ticks:{color:'#9ca3af'},grid:{color:'#374151'}},y:{min:0,max:100,ticks:{color:'#9ca3af',callback:v=>v+'%'},grid:{color:'#374151'}}}}});
+const mkScales=(yMax)=>({x:{ticks:{color:'#9ca3af'},grid:{color:'#374151'}},y:{min:0,max:yMax,ticks:{color:'#9ca3af',callback:v=>v+'%'},grid:{color:'#374151'}}});
+const mkOpts=(title,yMax)=>({responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#d1d5db',font:{size:11},usePointStyle:true,pointStyle:'circle'},position:'bottom'},title:{display:true,text:title,color:'#f3f4f6',font:{size:14,weight:'bold'},padding:{bottom:12}},tooltip:{backgroundColor:'#1f2937',titleColor:'#f3f4f6',bodyColor:'#d1d5db',borderColor:'#374151',borderWidth:1,callbacks:{label:ctx=>ctx.dataset.label+': '+ctx.parsed.y.toFixed(2)+'%'}}},scales:mkScales(yMax)});
+function calcYMax(ds){let m=0;ds.forEach(d=>d.data.forEach(v=>{if(v>m)m=v}));return Math.ceil(m/10)*10+10}
+const frDS=[${buildDSJson('failureRate')}];
+const omlDS=[${buildDSJson('oml')}];
+const oqlDS=[${buildDSJson('oql')}];
+new Chart(document.getElementById('ch-fr'),{type:'line',data:{labels,datasets:frDS},options:mkOpts('Failure Rate %',calcYMax(frDS))});
+new Chart(document.getElementById('ch-oml'),{type:'line',data:{labels,datasets:omlDS},options:mkOpts('OML %',calcYMax(omlDS))});
+new Chart(document.getElementById('ch-oql'),{type:'line',data:{labels,datasets:oqlDS},options:mkOpts('OQL %',calcYMax(oqlDS))});
 <\/script></body></html>`;
     const w = window.open('', '_blank');
     if (w) { w.document.write(html); w.document.close(); }
@@ -329,15 +411,13 @@ new Chart(document.getElementById('timeline'),{type:'line',data:{labels,datasets
 
         {/* Factory selector */}
         <div className="px-6 pt-4 pb-2 border-b border-border/50 shrink-0">
-          <p className="text-xs text-muted-foreground mb-2">Selecciona fábricas para la gráfica:</p>
+          <p className="text-xs text-muted-foreground mb-2">Selecciona fábricas:</p>
           <div className="flex flex-wrap gap-2">
             <button
               className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selectedFactories.includes('__TOTAL__') ? 'bg-white text-gray-900 border-white' : 'bg-transparent text-gray-400 border-gray-600 hover:border-gray-400'}`}
-              onClick={() => {
-                setSelectedFactories(prev =>
-                  prev.includes('__TOTAL__') ? prev.filter(x => x !== '__TOTAL__') : [...prev, '__TOTAL__']
-                );
-              }}
+              onClick={() => setSelectedFactories(prev =>
+                prev.includes('__TOTAL__') ? prev.filter(x => x !== '__TOTAL__') : [...prev, '__TOTAL__']
+              )}
             >Total General</button>
             {allFactories.map((f, i) => {
               const color = FACTORY_COLORS[i % FACTORY_COLORS.length];
@@ -345,8 +425,8 @@ new Chart(document.getElementById('timeline'),{type:'line',data:{labels,datasets
               return (
                 <button
                   key={f}
-                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors`}
-                  style={active ? { backgroundColor: color, borderColor: color, color: '#fff' } : { borderColor: color + '66', color: color }}
+                  className="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
+                  style={active ? { backgroundColor: color, borderColor: color, color: '#fff' } : { borderColor: color + '66', color }}
                   onClick={() => toggleFactory(f)}
                 >{f}</button>
               );
@@ -354,19 +434,25 @@ new Chart(document.getElementById('timeline'),{type:'line',data:{labels,datasets
           </div>
         </div>
 
-        {/* Chart */}
-        <div className="flex-1 overflow-y-auto p-6 pt-4">
+        {/* Charts + Table */}
+        <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-6">
           {chartError ? (
             <div className="text-center py-12 text-muted-foreground">
               <BarChart3 className="mx-auto mb-3 h-12 w-12 opacity-30" />
               <p>No se pudieron cargar las gráficas. Verifica tu conexión a internet.</p>
             </div>
           ) : (
-            <div className="rounded-lg border border-border bg-muted/5 p-4 mb-6">
-              <div style={{ height: '350px' }}>
-                <canvas ref={chartRef}></canvas>
+            <>
+              <div className="rounded-lg border border-border bg-muted/5 p-4">
+                <div style={{ height: '280px' }}><canvas ref={chartFailureRef}></canvas></div>
               </div>
-            </div>
+              <div className="rounded-lg border border-border bg-muted/5 p-4">
+                <div style={{ height: '280px' }}><canvas ref={chartOmlRef}></canvas></div>
+              </div>
+              <div className="rounded-lg border border-border bg-muted/5 p-4">
+                <div style={{ height: '280px' }}><canvas ref={chartOqlRef}></canvas></div>
+              </div>
+            </>
           )}
 
           {/* Data table */}
