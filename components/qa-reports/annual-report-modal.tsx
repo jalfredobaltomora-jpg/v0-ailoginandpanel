@@ -160,19 +160,46 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
 
     const makeChart = (canvas: HTMLCanvasElement | null, title: string, datasets: any[]) => {
       if (!canvas || datasets.length === 0) return null;
-      // Calculate Y max from data
+      // Calculate Y max: highest value + ~15% buffer, min 5%
       let yMax = 0;
       datasets.forEach(ds => { ds.data.forEach((v: number) => { if (v > yMax) yMax = v; }); });
-      yMax = Math.ceil(yMax / 10) * 10 + 10;
-      if (yMax < 20) yMax = 20;
+      if (yMax === 0) yMax = 5;
+      const buffer = Math.max(yMax * 0.15, 0.5);
+      yMax = Math.ceil((yMax + buffer) * 10) / 10;
+
+      // Datalabels plugin (inline)
+      const datalabelsPlugin = {
+        id: 'qaDatalabels',
+        afterDatasetsDraw(chart: any) {
+          const { ctx } = chart;
+          chart.data.datasets.forEach((ds: any, di: number) => {
+            const meta = chart.getDatasetMeta(di);
+            if (meta.hidden) return;
+            meta.data.forEach((point: any, i: number) => {
+              const val = ds.data[i];
+              if (val === 0 && datasets.length > 1) return;
+              const label = val.toFixed(1) + '%';
+              ctx.save();
+              ctx.font = 'bold 9px sans-serif';
+              ctx.fillStyle = ds.borderColor || '#fff';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'bottom';
+              ctx.fillText(label, point.x, point.y - 6);
+              ctx.restore();
+            });
+          });
+        },
+      };
 
       return new (window as any).Chart(canvas, {
         type: 'line',
         data: { labels: months, datasets },
+        plugins: [datalabelsPlugin],
         options: {
           responsive: true,
           maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
+          layout: { padding: { top: 20 } },
           plugins: {
             legend: {
               labels: { color: '#d1d5db', font: { size: 11 }, usePointStyle: true, pointStyle: 'circle', padding: 16 },
@@ -199,7 +226,7 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
             y: {
               min: 0,
               max: yMax,
-              ticks: { color: '#9ca3af', callback: (v: any) => v + '%', stepSize: yMax <= 30 ? 5 : undefined },
+              ticks: { color: '#9ca3af', callback: (v: any) => v.toFixed(1) + '%', stepSize: yMax <= 10 ? 1 : yMax <= 30 ? 5 : undefined },
               grid: { color: '#374151' },
             },
           },
@@ -379,14 +406,15 @@ export function AnnualReportModal({ year, monthlyData, allFactories, onClose }: 
 <script>
 const labels=${JSON.stringify(months)};
 const mkScales=(yMax)=>({x:{ticks:{color:'#9ca3af'},grid:{color:'#374151'}},y:{min:0,max:yMax,ticks:{color:'#9ca3af',callback:v=>v+'%'},grid:{color:'#374151'}}});
-const mkOpts=(title,yMax)=>({responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#d1d5db',font:{size:11},usePointStyle:true,pointStyle:'circle'},position:'bottom'},title:{display:true,text:title,color:'#f3f4f6',font:{size:14,weight:'bold'},padding:{bottom:12}},tooltip:{backgroundColor:'#1f2937',titleColor:'#f3f4f6',bodyColor:'#d1d5db',borderColor:'#374151',borderWidth:1,callbacks:{label:ctx=>ctx.dataset.label+': '+ctx.parsed.y.toFixed(2)+'%'}}},scales:mkScales(yMax)});
-function calcYMax(ds){let m=0;ds.forEach(d=>d.data.forEach(v=>{if(v>m)m=v}));return Math.ceil(m/10)*10+10}
+const dlPlugin={id:'qaDL',afterDatasetsDraw(chart){const ctx=chart.ctx;chart.data.datasets.forEach((ds,di)=>{const meta=chart.getDatasetMeta(di);if(meta.hidden)return;meta.data.forEach((pt,i)=>{const v=ds.data[i];if(v===0&&chart.data.datasets.length>1)return;ctx.save();ctx.font='bold 9px sans-serif';ctx.fillStyle=ds.borderColor||'#fff';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(v.toFixed(1)+'%',pt.x,pt.y-6);ctx.restore()})})}};
+const mkOpts=(title,yMax)=>({responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},layout:{padding:{top:20}},plugins:{legend:{labels:{color:'#d1d5db',font:{size:11},usePointStyle:true,pointStyle:'circle'},position:'bottom'},title:{display:true,text:title,color:'#f3f4f6',font:{size:14,weight:'bold'},padding:{bottom:12}},tooltip:{backgroundColor:'#1f2937',titleColor:'#f3f4f6',bodyColor:'#d1d5db',borderColor:'#374151',borderWidth:1,callbacks:{label:ctx=>ctx.dataset.label+': '+ctx.parsed.y.toFixed(2)+'%'}}},scales:mkScales(yMax)});
+function calcYMax(ds){let m=0;ds.forEach(d=>d.data.forEach(v=>{if(v>m)m=v}));if(m===0)m=5;const b=Math.max(m*0.15,0.5);return Math.ceil((m+b)*10)/10}
 const frDS=[${buildDSJson('failureRate')}];
 const omlDS=[${buildDSJson('oml')}];
 const oqlDS=[${buildDSJson('oql')}];
-new Chart(document.getElementById('ch-fr'),{type:'line',data:{labels,datasets:frDS},options:mkOpts('Failure Rate %',calcYMax(frDS))});
-new Chart(document.getElementById('ch-oml'),{type:'line',data:{labels,datasets:omlDS},options:mkOpts('OML %',calcYMax(omlDS))});
-new Chart(document.getElementById('ch-oql'),{type:'line',data:{labels,datasets:oqlDS},options:mkOpts('OQL %',calcYMax(oqlDS))});
+new Chart(document.getElementById('ch-fr'),{type:'line',data:{labels,datasets:frDS},plugins:[dlPlugin],options:mkOpts('Failure Rate %',calcYMax(frDS))});
+new Chart(document.getElementById('ch-oml'),{type:'line',data:{labels,datasets:omlDS},plugins:[dlPlugin],options:mkOpts('OML %',calcYMax(omlDS))});
+new Chart(document.getElementById('ch-oql'),{type:'line',data:{labels,datasets:oqlDS},plugins:[dlPlugin],options:mkOpts('OQL %',calcYMax(oqlDS))});
 <\/script></body></html>`;
     const w = window.open('', '_blank');
     if (w) { w.document.write(html); w.document.close(); }
