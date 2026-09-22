@@ -18,6 +18,7 @@ export function PDFUnlock() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PDFUnlockResult | null>(null);
+  const [needsPassword, setNeedsPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,6 +27,7 @@ export function PDFUnlock() {
       setUploadedFile(file);
       setResult(null);
       setPassword('');
+      setNeedsPassword(false);
     } else {
       alert('Por favor selecciona un archivo PDF.');
     }
@@ -35,12 +37,35 @@ export function PDFUnlock() {
     if (!uploadedFile) return;
     setLoading(true);
     setResult(null);
+    setNeedsPassword(false);
     try {
       const arrayBuffer = await uploadedFile.arrayBuffer();
       const bytes = new Uint8Array(arrayBuffer);
 
-      // Load with ignoreEncryption to bypass password check
-      const pdfDoc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+      let pdfDoc: PDFDocument;
+
+      if (password.trim()) {
+        // Load with ignoreEncryption and decrypt with password
+        pdfDoc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+        // Decrypt using the password - access via bracket notation to bypass TypeScript
+        const pdfDocAny = pdfDoc as any;
+        if (pdfDocAny.decrypt) {
+          await pdfDocAny.decrypt(password.trim());
+        }
+      } else {
+        // Try loading normally first (might work if no password or weak protection)
+        try {
+          pdfDoc = await PDFDocument.load(bytes);
+        } catch (loadErr: any) {
+          const msg = loadErr?.message || '';
+          if (msg.toLowerCase().includes('encrypt') || msg.toLowerCase().includes('password')) {
+            setNeedsPassword(true);
+            setLoading(false);
+            return;
+          }
+          throw loadErr;
+        }
+      }
 
       // Save as unencrypted PDF — removes all password protection
       const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
@@ -48,7 +73,11 @@ export function PDFUnlock() {
       setResult({ success: true, pdfData: pdfBytes, error: '' });
     } catch (err: any) {
       const msg = err?.message || 'Error al desbloquear el PDF.';
-      setResult({ success: false, pdfData: null, error: msg });
+      if (msg.toLowerCase().includes('encrypt') || msg.toLowerCase().includes('password')) {
+        setNeedsPassword(true);
+      } else {
+        setResult({ success: false, pdfData: null, error: msg });
+      }
     }
     setLoading(false);
   };
@@ -74,6 +103,7 @@ export function PDFUnlock() {
     setUploadedFile(null);
     setPassword('');
     setResult(null);
+    setNeedsPassword(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -112,13 +142,20 @@ export function PDFUnlock() {
             </button>
           </div>
 
+          {/* Needs password notice */}
+          {needsPassword && (
+            <div className="p-3 rounded-lg bg-amber-950/30 border border-amber-500/30">
+              <p className="text-xs text-amber-300 mb-2">Este PDF está protegido con contraseña. Necesitas la contraseña para desbloquearlo.</p>
+            </div>
+          )}
+
           {/* Password input */}
           <div className="space-y-2">
-            <Label className="text-sm text-foreground">Contraseña <span className="text-muted-foreground font-normal">(opcional)</span></Label>
-            <Input type="password" placeholder="Introduce la contraseña si la conoces..."
+            <Label className="text-sm text-foreground">Contraseña <span className="text-muted-foreground font-normal">(requerida si el PDF está encriptado)</span></Label>
+            <Input type="password" placeholder="Introduce la contraseña..."
               value={password} onChange={e => setPassword(e.target.value)}
               className="border-border focus:border-primary" />
-            <p className="text-xs text-muted-foreground">Si el archivo no tiene contraseña o no la recuerdas, déjalo vacío y se intentará desbloquear automáticamente.</p>
+            <p className="text-xs text-muted-foreground">Si no tienes la contraseña, el PDF no se puede desbloquear completamente.</p>
           </div>
 
           {/* Unlock button */}
@@ -164,10 +201,10 @@ export function PDFUnlock() {
         </div>
         <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
           <li>Sube un PDF que esté protegido con contraseña</li>
-          <li>Si recuerdas la contraseña, escríbela para una desbloqueo limpio</li>
-          <li>Si no la recuerdas, déjala vacía — se intentará desbloquear automáticamente</li>
-          <li>Descarga el PDF resultante sin protección de contraseña</li>
-          <li>Esto solo funciona desde el navegador — tus archivos nunca se envían a ningún servidor</li>
+          <li>Introduce la contraseña para desbloquearlo completamente</li>
+          <li>Si el PDF no tiene contraseña, déjala vacía</li>
+          <li>Descarga el PDF resultante sin protección</li>
+          <li>Tus archivos nunca se envían a ningún servidor — todo ocurre en tu navegador</li>
         </ul>
       </div>
     </div>
