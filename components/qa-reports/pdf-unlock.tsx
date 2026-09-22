@@ -1,12 +1,10 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { FileLock, Unlock, Download, Upload, AlertCircle, CheckCircle, Loader2, FileText, X, Shield, Globe } from 'lucide-react';
+import { FileLock, Unlock, Download, Upload, AlertCircle, CheckCircle, Loader2, FileText, X, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
-const API_BASE = 'http://localhost:3210';
 
 interface PDFUnlockResult {
   success: boolean;
@@ -19,8 +17,6 @@ export function PDFUnlock() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PDFUnlockResult | null>(null);
-  const [needsPassword, setNeedsPassword] = useState(false);
-  const [serverOnline, setServerOnline] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,7 +25,6 @@ export function PDFUnlock() {
       setUploadedFile(file);
       setResult(null);
       setPassword('');
-      setNeedsPassword(false);
     } else {
       alert('Por favor selecciona un archivo PDF.');
     }
@@ -39,36 +34,14 @@ export function PDFUnlock() {
     if (!uploadedFile) return;
     setLoading(true);
     setResult(null);
-    setNeedsPassword(false);
     try {
-      const formData = new FormData();
-      formData.append('file', uploadedFile);
-      formData.append('password', password);
-
-      const response = await fetch(`${API_BASE}/unlock-pdf`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      const blob = await response.blob();
-      const text = await blob.text();
-
-      if (response.ok && blob.type === 'application/pdf') {
-        setResult({ success: true, pdfBlob: new Blob([blob], { type: 'application/pdf' }), error: '' });
-      } else {
-        try {
-          const errorData = JSON.parse(text);
-          if (errorData.error?.includes('Password required')) {
-            setNeedsPassword(true);
-          }
-          setResult({ success: false, pdfBlob: null, error: errorData.error || 'Failed to unlock PDF' });
-        } catch {
-          setResult({ success: false, pdfBlob: null, error: text || 'Failed to unlock PDF' });
-        }
-      }
+      const { decryptPDF } = await import('@localonlytools/pdf-decrypt');
+      const bytes = new Uint8Array(await uploadedFile.arrayBuffer());
+      const decrypted = await decryptPDF(bytes, password || '');
+      const blob = new Blob([decrypted], { type: 'application/pdf' });
+      setResult({ success: true, pdfBlob: blob, error: '' });
     } catch (err: any) {
-      setServerOnline(false);
-      setResult({ success: false, pdfBlob: null, error: 'No se conectó al servidor de desbloqueo. Asegúrate de ejecutar: cd server && pnpm start' });
+      setResult({ success: false, pdfBlob: null, error: err?.message || 'Error al desbloquear el PDF' });
     }
     setLoading(false);
   };
@@ -93,8 +66,6 @@ export function PDFUnlock() {
     setUploadedFile(null);
     setPassword('');
     setResult(null);
-    setNeedsPassword(false);
-    setServerOnline(true);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -109,18 +80,6 @@ export function PDFUnlock() {
           <p className="text-xs text-muted-foreground">Sube un PDF bloqueado y descárgalo sin contraseña</p>
         </div>
       </div>
-
-      {!serverOnline && (
-        <div className="p-3 rounded-lg bg-red-950/30 border border-red-500/30">
-          <div className="flex items-center gap-2 text-red-400 mb-1">
-            <AlertCircle className="h-4 w-4" />
-            <span className="font-semibold text-sm">Servidor no disponible</span>
-          </div>
-          <p className="text-xs text-red-300">El servidor de desbloqueo no responde en {API_BASE}.</p>
-          <p className="text-xs text-red-300 mt-1">Ejecuta en una terminal:</p>
-          <code className="block text-xs bg-black/30 p-2 rounded mt-1">cd server &amp;&amp; pnpm start</code>
-        </div>
-      )}
 
       {!uploadedFile ? (
         <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
@@ -143,21 +102,14 @@ export function PDFUnlock() {
             </button>
           </div>
 
-          {needsPassword && (
-            <div className="p-3 rounded-lg bg-amber-950/30 border border-amber-500/30">
-              <p className="text-xs text-amber-300 mb-2">Este PDF está protegido con contraseña. Necesitas la contraseña para desbloquearlo.</p>
-            </div>
-          )}
-
           <div className="space-y-2">
-            <Label className="text-sm text-foreground">Contraseña <span className="text-muted-foreground font-normal">(requerida si el PDF está encriptado)</span></Label>
+            <Label className="text-sm text-foreground">Contraseña <span className="text-muted-foreground font-normal">(déjala vacía si el PDF no tiene contraseña)</span></Label>
             <Input type="password" placeholder="Introduce la contraseña..."
               value={password} onChange={e => setPassword(e.target.value)}
               className="border-border focus:border-primary" />
-            <p className="text-xs text-muted-foreground">Si no tienes la contraseña, déjala vacía.</p>
           </div>
 
-          <Button onClick={handleUnlock} disabled={loading || !serverOnline} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button onClick={handleUnlock} disabled={loading} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
             {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Desbloqueando...</> : <><Unlock className="mr-2 h-4 w-4" /> Desbloquear PDF</>}
           </Button>
 
@@ -192,15 +144,15 @@ export function PDFUnlock() {
 
       <div className="bg-muted/10 rounded-lg p-4 border border-border">
         <div className="flex items-center gap-2 mb-2">
-          <Globe className="h-4 w-4 text-primary" />
+          <Shield className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-semibold text-foreground">¿Cómo funciona?</h3>
         </div>
         <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-          <li>Primero ejecuta el servidor: <code className="bg-black/20 px-1 rounded">cd server &amp;&amp; pnpm start</code></li>
-          <li>Sube un PDF que esté protegido con contraseña</li>
-          <li>Introduce la contraseña para desbloquearlo</li>
+          <li>Sube un PDF protegido con contraseña</li>
+          <li>Introduce la contraseña (o déjala vacía si no tiene)</li>
+          <li>El desbloqueo se hace completamente en tu navegador</li>
           <li>Descarga el PDF resultante sin protección</li>
-          <li>El archivo se procesa localmente en tu computadora</li>
+          <li>El archivo no se envía a ningún servidor</li>
         </ul>
       </div>
     </div>
