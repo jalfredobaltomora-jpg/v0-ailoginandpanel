@@ -50,15 +50,15 @@ importers:
       '@hookform/resolvers':
         specifier: ^3.9.1
         version: 3.10.0(react-hook-form@7.76.1(react@19.2.6))
-      '@localonlytools/pdf-decrypt':
-        specifier: ^1.0.1
-        version: 1.0.1(pdf-lib@1.17.1)
       '@mediapipe/tasks-vision':
         specifier: 0.10.35
         version: 0.10.35
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.55.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@pdfsmaller/pdf-decrypt':
+        specifier: ^1.0.1
+        version: 1.0.1(pdf-lib@1.17.1)
       '@radix-ui/react-accordion':
         specifier: 1.2.12
         version: 1.2.12(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -817,12 +817,6 @@ packages:
   '@kurkle/color@0.3.4':
     resolution: {integrity: sha512-M5UknZPHRu3DEDWoipU6sE8PdkZ6Z/S+v4dD+Ke8IaNlpdSQah50lz1KtcFBa2vsdOnwbbnxJwVM4wty6udA5w==}
 
-  '@localonlytools/pdf-decrypt@1.0.1':
-    resolution: {integrity: sha512-izJmTqKqqZgVvCtwG1FxtZZ1mVVN0ogZYMhyKrNGo6RJDgIcZGoMStNRBmC+I7VjAbkSGW13ly4wJ0r4682ogw==}
-    engines: {node: '>=18.0.0'}
-    peerDependencies:
-      pdf-lib: ^1.17.1
-
   '@mapbox/node-pre-gyp@2.0.3':
     resolution: {integrity: sha512-uwPAhccfFJlsfCxMYTwOdVfOz3xqyj8xYL3zJj8f0pb30tLohnnFPhLuqp4/qoEz8sNxe4SESZedcBojRefIzg==}
     engines: {node: '>=18'}
@@ -905,6 +899,12 @@ packages:
 
   '@pdf-lib/upng@1.0.1':
     resolution: {integrity: sha512-dQK2FUMQtowVP00mtIksrlZhdFXQZPC+taih1q4CvPZ5vqdxR/LKBaFg0oAfzd1GlHZXXSPdQfzQnt+ViGvEIQ==}
+
+  '@pdfsmaller/pdf-decrypt@1.0.1':
+    resolution: {integrity: sha512-UO5KyC+jvcXPTuxfTcEDODHBqO5+YFyuYz/f8tQfiRw5hqZTYTh0ea72OjGw6kuYEUiCyT+A/Ymg2A948Vwx0w==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      pdf-lib: ^1.17.1
 
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
@@ -3763,10 +3763,6 @@ snapshots:
 
   '@kurkle/color@0.3.4': {}
 
-  '@localonlytools/pdf-decrypt@1.0.1(pdf-lib@1.17.1)':
-    dependencies:
-      pdf-lib: 1.17.1
-
   '@mapbox/node-pre-gyp@2.0.3':
     dependencies:
       consola: 3.4.2
@@ -3828,6 +3824,10 @@ snapshots:
   '@pdf-lib/upng@1.0.1':
     dependencies:
       pako: 1.0.11
+
+  '@pdfsmaller/pdf-decrypt@1.0.1(pdf-lib@1.17.1)':
+    dependencies:
+      pdf-lib: 1.17.1
 
   '@protobufjs/aspromise@1.1.2': {}
 

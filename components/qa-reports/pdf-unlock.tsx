@@ -35,7 +35,7 @@ export function PDFUnlock() {
     setLoading(true);
     setResult(null);
     try {
-      const { decryptPDF } = await import('@localonlytools/pdf-decrypt');
+      const { decryptPDF } = await import('@pdfsmaller/pdf-decrypt');
       const bytes = new Uint8Array(await uploadedFile.arrayBuffer());
       const decrypted = await decryptPDF(bytes, password || '');
       const blob = new Blob([decrypted], { type: 'application/pdf' });
