@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+const API_BASE = 'http://localhost:3210';
+
 interface PDFUnlockResult {
   success: boolean;
   pdfBlob: Blob | null;
@@ -17,6 +19,7 @@ export function PDFUnlock() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PDFUnlockResult | null>(null);
+  const [serverOnline, setServerOnline] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,14 +37,33 @@ export function PDFUnlock() {
     if (!uploadedFile) return;
     setLoading(true);
     setResult(null);
+    setServerOnline(true);
     try {
-      const { decryptPDF } = await import('@pdfsmaller/pdf-decrypt');
-      const bytes = new Uint8Array(await uploadedFile.arrayBuffer());
-      const decrypted = await decryptPDF(bytes, password || '');
-      const blob = new Blob([decrypted], { type: 'application/pdf' });
-      setResult({ success: true, pdfBlob: blob, error: '' });
+      const formData = new FormData();
+      formData.append('file', uploadedFile);
+      formData.append('password', password);
+
+      const response = await fetch(`${API_BASE}/unlock-pdf`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const blob = await response.blob();
+      const text = await blob.text();
+
+      if (response.ok && blob.type === 'application/pdf') {
+        setResult({ success: true, pdfBlob: new Blob([blob], { type: 'application/pdf' }), error: '' });
+      } else {
+        try {
+          const errorData = JSON.parse(text);
+          setResult({ success: false, pdfBlob: null, error: errorData.error || 'Failed to unlock PDF' });
+        } catch {
+          setResult({ success: false, pdfBlob: null, error: text || 'Failed to unlock PDF' });
+        }
+      }
     } catch (err: any) {
-      setResult({ success: false, pdfBlob: null, error: err?.message || 'Error al desbloquear el PDF' });
+      setServerOnline(false);
+      setResult({ success: false, pdfBlob: null, error: 'No se conectó al servidor. Ejecuta: cd server && pnpm start' });
     }
     setLoading(false);
   };
@@ -66,6 +88,7 @@ export function PDFUnlock() {
     setUploadedFile(null);
     setPassword('');
     setResult(null);
+    setServerOnline(true);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -80,6 +103,17 @@ export function PDFUnlock() {
           <p className="text-xs text-muted-foreground">Sube un PDF bloqueado y descárgalo sin contraseña</p>
         </div>
       </div>
+
+      {!serverOnline && (
+        <div className="p-3 rounded-lg bg-red-950/30 border border-red-500/30">
+          <div className="flex items-center gap-2 text-red-400 mb-1">
+            <AlertCircle className="h-4 w-4" />
+            <span className="font-semibold text-sm">Servidor no disponible</span>
+          </div>
+          <p className="text-xs text-red-300">El servidor no responde en {API_BASE}.</p>
+          <code className="block text-xs bg-black/30 p-2 rounded mt-1">cd server &amp;&amp; pnpm start</code>
+        </div>
+      )}
 
       {!uploadedFile ? (
         <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
@@ -103,13 +137,13 @@ export function PDFUnlock() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm text-foreground">Contraseña <span className="text-muted-foreground font-normal">(déjala vacía si el PDF no tiene contraseña)</span></Label>
+            <Label className="text-sm text-foreground">Contraseña <span className="text-muted-foreground font-normal">(déjala vacía si no tiene)</span></Label>
             <Input type="password" placeholder="Introduce la contraseña..."
               value={password} onChange={e => setPassword(e.target.value)}
               className="border-border focus:border-primary" />
           </div>
 
-          <Button onClick={handleUnlock} disabled={loading} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button onClick={handleUnlock} disabled={loading || !serverOnline} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
             {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Desbloqueando...</> : <><Unlock className="mr-2 h-4 w-4" /> Desbloquear PDF</>}
           </Button>
 
@@ -148,11 +182,11 @@ export function PDFUnlock() {
           <h3 className="text-sm font-semibold text-foreground">¿Cómo funciona?</h3>
         </div>
         <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-          <li>Sube un PDF protegido con contraseña</li>
-          <li>Introduce la contraseña (o déjala vacía si no tiene)</li>
-          <li>El desbloqueo se hace completamente en tu navegador</li>
+          <li>Primero ejecuta el servidor: <code className="bg-black/20 px-1 rounded">cd server &amp;&amp; pnpm start</code></li>
+          <li>Sube un PDF que esté protegido con contraseña</li>
+          <li>Introduce la contraseña (o déjala vacía)</li>
           <li>Descarga el PDF resultante sin protección</li>
-          <li>El archivo no se envía a ningún servidor</li>
+          <li>El archivo se procesa localmente en tu computadora</li>
         </ul>
       </div>
     </div>
