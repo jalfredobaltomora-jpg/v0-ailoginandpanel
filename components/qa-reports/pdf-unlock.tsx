@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { PDFDocument } from 'pdf-lib';
 import { FileLock, Unlock, Download, Upload, AlertCircle, CheckCircle, Loader2, FileText, X, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +9,7 @@ import { Label } from '@/components/ui/label';
 
 interface PDFUnlockResult {
   success: boolean;
-  pdfData: ArrayBuffer | null;
+  pdfData: Uint8Array | null;
   error: string;
 }
 
@@ -17,22 +18,7 @@ export function PDFUnlock() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PDFUnlockResult | null>(null);
-  const [pdfLibLoaded, setPdfLibLoaded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const loadPdfLib = async () => {
-    if (pdfLibLoaded) return true;
-    try {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js';
-      script.onload = () => { setPdfLibLoaded(true); return true; };
-      script.onerror = () => { return false; };
-      document.head.appendChild(script);
-      // Wait a bit for it to load
-      await new Promise(r => setTimeout(r, 500));
-      return typeof (window as any).PDFLib !== 'undefined';
-    } catch { return false; }
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -50,45 +36,19 @@ export function PDFUnlock() {
     setLoading(true);
     setResult(null);
     try {
-      const ok = await loadPdfLib();
-      if (!ok) {
-        setResult({ success: false, pdfData: null, error: 'No se pudo cargar pdf-lib. Verifica tu conexión a internet.' });
-        setLoading(false);
-        return;
-      }
-
-      const { PDFDocument } = (window as any).PDFLib;
       const arrayBuffer = await uploadedFile.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+      const bytes = new Uint8Array(arrayBuffer);
 
-      // Check if the PDF is encrypted
-      const isEncrypted = pdfDoc.isEncrypted;
+      // Load with ignoreEncryption to bypass password check
+      const pdfDoc = await PDFDocument.load(bytes, { ignoreEncryption: true });
 
-      if (isEncrypted && password.trim()) {
-        await pdfDoc.decrypt(password.trim());
-      }
-
-      // Remove encryption
-      const pdfBytes = await pdfDoc.save({ useObjectStreams: false, addDefaultPage: false });
+      // Save as unencrypted PDF — removes all password protection
+      const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
 
       setResult({ success: true, pdfData: pdfBytes, error: '' });
     } catch (err: any) {
       const msg = err?.message || 'Error al desbloquear el PDF.';
-      // If the error mentions encryption/permission, try without password
-      if (msg.toLowerCase().includes('encrypt') || msg.toLowerCase().includes('permission')) {
-        try {
-          const { PDFDocument } = (window as any).PDFLib;
-          const arrayBuffer = await uploadedFile.arrayBuffer();
-          // Try loading without encryption check
-          const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-          const pdfBytes = await pdfDoc.save({ useObjectStreams: false, addDefaultPage: false });
-          setResult({ success: true, pdfData: pdfBytes, error: '' });
-        } catch (retryErr: any) {
-          setResult({ success: false, pdfData: null, error: `No se pudo desbloquear: ${retryErr?.message || 'Introduce la contraseña.'}` });
-        }
-      } else {
-        setResult({ success: false, pdfData: null, error: msg });
-      }
+      setResult({ success: false, pdfData: null, error: msg });
     }
     setLoading(false);
   };
@@ -114,7 +74,6 @@ export function PDFUnlock() {
     setUploadedFile(null);
     setPassword('');
     setResult(null);
-    setPdfLibLoaded(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -132,7 +91,6 @@ export function PDFUnlock() {
       </div>
 
       {!uploadedFile ? (
-        /* Upload section */
         <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
           onClick={() => fileInputRef.current?.click()}>
           <Upload className="mx-auto mb-4 h-12 w-12 text-muted-foreground opacity-50" />
@@ -141,7 +99,6 @@ export function PDFUnlock() {
           <input ref={fileInputRef} type="file" accept=".pdf" onChange={handleFileChange} className="hidden" />
         </div>
       ) : (
-        /* Password + Unlock */
         <div className="space-y-4">
           {/* File info */}
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/10 border border-border">
@@ -161,7 +118,7 @@ export function PDFUnlock() {
             <Input type="password" placeholder="Introduce la contraseña si la conoces..."
               value={password} onChange={e => setPassword(e.target.value)}
               className="border-border focus:border-primary" />
-            <p className="text-xs text-muted-foreground">Si el archivo no tiene contraseña o no la recuerdas, déjalo vacío y se intentará desbloquear.</p>
+            <p className="text-xs text-muted-foreground">Si el archivo no tiene contraseña o no la recuerdas, déjalo vacío y se intentará desbloquear automáticamente.</p>
           </div>
 
           {/* Unlock button */}
