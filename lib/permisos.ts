@@ -184,6 +184,17 @@ export const ARBOL_PERMISOS: PermisoItem[] = [
           { key: 'qa_analytics_nuevo', label: 'Nuevo' },
         ],
       },
+      {
+        key: 'qa_pdf_unlock',
+        label: 'PDF Unlock',
+        children: [
+          { key: 'qa_pdf_unlock_ver', label: 'Ver' },
+          { key: 'qa_pdf_unlock_editar', label: 'Editar' },
+          { key: 'qa_pdf_unlock_copiar', label: 'Copiar' },
+          { key: 'qa_pdf_unlock_eliminar', label: 'Eliminar' },
+          { key: 'qa_pdf_unlock_nuevo', label: 'Nuevo' },
+        ],
+      },
     ],
   },
 ];

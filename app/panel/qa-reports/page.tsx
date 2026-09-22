@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ScanLine, CalendarDays, CalendarRange, BarChart3, Database, LineChart, ClipboardList, BookOpen, Trash2, Pencil, Bug, Upload, Search, Activity } from 'lucide-react';
+import { ArrowLeft, ScanLine, CalendarDays, CalendarRange, BarChart3, Database, LineChart, ClipboardList, BookOpen, Trash2, Pencil, Bug, Upload, Search, Activity, Unlock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getStoredUser } from '@/lib/auth-store';
@@ -15,6 +15,7 @@ const WeeklyIssues = dynamic(() => import('@/components/qa-reports/weekly-issues
 const MonthlyIssues = dynamic(() => import('@/components/qa-reports/monthly-issues').then(m => m.MonthlyIssues), { ssr: false });
 const KpiReports = dynamic(() => import('@/components/qa-reports/kpi-reports').then(m => m.KpiReports), { ssr: false });
 const WeeklyRegistry = dynamic(() => import('@/components/qa-reports/weekly-registry').then(m => m.WeeklyRegistry), { ssr: false });
+const PDFUnlock = dynamic(() => import('@/components/qa-reports/pdf-unlock').then(m => m.PDFUnlock), { ssr: false });
 const QAOQLModal = dynamic(() => import('@/components/inventario/qa-oql-modal').then(m => m.QAOQLModal), { ssr: false });
 const InLineDefectModal = dynamic(() => import('@/components/inventario/in-line-defect-modal').then(m => m.InLineDefectModal), { ssr: false });
 const AnalyticsModal = dynamic(() => import('@/components/inventario/analytics-modal').then(m => m.AnalyticsModal), { ssr: false });
@@ -46,9 +47,10 @@ function Tile({ title, subtitle, icon, color, onClick }: TileProps) {
 export default function QAReportsPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UsuarioIT | null>(null);
-  const [view, setView] = useState<'tiles' | 'extractor' | 'weekly' | 'monthly' | 'kpi' | 'registry' | 'dhu'>('tiles');
+  const [view, setView] = useState<'tiles' | 'extractor' | 'weekly' | 'monthly' | 'kpi' | 'registry' | 'dhu' | 'pdfUnlock'>('tiles');
   const [oqlTab, setDhuTab] = useState<'inline' | 'defect' | 'catalog'>('inline');
   const [qaOqlOpen, setQaDhuOpen] = useState(false);
+  const [pdfUnlockOpen, setPdfUnlockOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [qaOqlRecords, setQaDhuRecords] = useState<any[]>([]);
   const [catalogItems, setCatalogItems] = useState<any[]>([]);
@@ -668,6 +670,11 @@ function formatMonth(dateStr: string): string {
               <Tile title="Reportes KPI" subtitle="Reportes KPI" icon={<BarChart3 className="h-8 w-8" />}
                 color="bg-gradient-to-br from-green-500 to-green-700" onClick={() => setView('kpi')} />
             )}
+            {/* Desbloqueo de PDF tile */}
+            {puedeVer(currentUser, 'qa_pdf_unlock') && (
+              <Tile title="Desbloqueo de PDF" subtitle="Quitar contraseña de PDF" icon={<Unlock className="h-8 w-8" />}
+                color="bg-gradient-to-br from-indigo-500 to-indigo-700" onClick={() => setView('pdfUnlock')} />
+            )}
             {puedeVer(currentUser, 'qa_dhu') && (
               <Tile title="QA - OQL % SAE" subtitle="Indicador" icon={<LineChart className="h-8 w-8" />}
                 color="bg-gradient-to-br from-rose-500 to-rose-700" onClick={() => setView('dhu')} />
@@ -680,7 +687,11 @@ function formatMonth(dateStr: string): string {
         {view === 'monthly' && <MonthlyIssues />}
         {view === 'registry' && <WeeklyRegistry />}
         {view === 'kpi' && <KpiReports />}
-
+        {view === 'pdfUnlock' && (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <PDFUnlock />
+          </div>
+        )}
         {view === 'dhu' && (
           <div className="h-full flex flex-col gap-6">
             <div className="bg-background pb-2">
