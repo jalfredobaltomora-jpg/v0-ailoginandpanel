@@ -24,6 +24,7 @@ const PermisosManager = dynamic(() => import('@/components/rrhh/permisos-manager
 const BirthdayPoster = dynamic(() => import('@/components/rrhh/birthday-poster').then(m => m.BirthdayPoster), { ssr: false });
 const QRBadgeModal = dynamic(() => import('@/components/rrhh/qr-badge-modal').then(m => m.QRBadgeModal), { ssr: false });
 const IDCarnetModal = dynamic(() => import('@/components/rrhh/id-carnet-modal').then(m => m.IDCarnetModal), { ssr: false });
+const PersonalCatalogReport = dynamic(() => import('@/components/rrhh/personal-catalog-report').then(m => m.PersonalCatalogReport), { ssr: false });
 
 interface TileProps {
   title: string;
@@ -408,6 +409,7 @@ export default function RRHHPage() {
                     className="w-full sm:w-64 border-border bg-input pl-9"
                   />
                 </div>
+                <PersonalCatalogReport empleados={filteredEmpleados} showInactivos={showInactivos} />
                 <Button onClick={handleCreateNew} className="bg-primary text-primary-foreground">
                   <Plus className="mr-2 h-4 w-4" />
                   Nuevo
