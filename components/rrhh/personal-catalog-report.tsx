@@ -51,7 +51,16 @@ const FIELDS: FieldDef[] = [
   { key: 'antiguedad', label: 'Antigüedad', getValue: (e) => calcAntiguedad(e.fechaIng) },
   { key: 'area', label: 'Área', getValue: (e) => e.area || '-' },
   { key: 'cargo', label: 'Cargo', getValue: (e) => e.cargo || '-' },
-  { key: 'sexo', label: 'Sexo', getValue: (e) => e.sexo || '-' },
+  {
+    key: 'sexo',
+    label: 'Sexo',
+    getValue: (e) => {
+      const s = (e.sexo || '').toLowerCase();
+      if (s.startsWith('f')) return 'F';
+      if (s.startsWith('m')) return 'M';
+      return '-';
+    },
+  },
   { key: 'estadoCivil', label: 'Estado civil', getValue: (e) => e.estadoCivil || '-' },
   { key: 'nacionalidad', label: 'Nacionalidad', getValue: (e) => e.nacionalidad || '-' },
   { key: 'hijos', label: 'Hijos', getValue: (e) => `${e.hijos ?? 0}` },
